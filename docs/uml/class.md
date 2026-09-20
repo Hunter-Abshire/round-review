@@ -138,6 +138,7 @@ classDiagram
     class ParseError
     class CapExceeded
     class LedgerError
+    class AlreadyProcessed
 
     Transport <|.. UrllibTransport
     FfprobeRunner <|.. SubprocessRunner
@@ -160,6 +161,7 @@ classDiagram
     RoundReviewError <|-- ParseError
     RoundReviewError <|-- CapExceeded
     RoundReviewError <|-- LedgerError
+    RoundReviewError <|-- AlreadyProcessed
 ```
 
 ## Module map

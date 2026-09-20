@@ -52,7 +52,10 @@ Requirements live in `docs/requirements.md`; UML (use-case, class, sequence, dep
 - **Daily cap is checked before the network.** `llm.client.send_review` raises `CapExceeded` when `calls_today >= cap`; retries count as calls. Never call a transport directly from coaching code.
 - **Parse is lenient on format, strict on content.** `coaching.parse.extract_json` slices the first `{` to the last `}`; missing required fields raise `ParseError`; findings outside the window, over the 3-per-window limit, or with confidence out of range become warnings, not errors.
 - **Anti-hindsight is enforced in code, not just the prompt.** A finding with non-placeholder `information_revealed_later` and confidence above 0.7 is downgraded to 0.5 with a warning. Keep this in sync with `docs/requirements.md` AH-1..AH-5.
-- **One retry.** `coaching.review.review_window` re-asks once with `RETRY_NUDGE` on `ParseError`, then raises. The pipeline decides what a failed window means for the file.
+- **One retry.** `coaching.review.review_window` re-asks once with `RETRY_NUDGE` on `ParseError`, then raises a `ParseError` carrying `model_calls`. `pipeline.review_file` turns one bad window into a warning and only fails the file when every window is unparseable.
+- **Ledger is the last write.** `pipeline.review_file` writes the report, then the ledger line. Status: `ok`, `failed` (VideoError/OllamaError/ParseError), `skipped` (CapExceeded). A file already in the ledger raises `AlreadyProcessed` unless `force=True`. Failed Ollama calls are counted so a flapping server cannot bypass the cap.
+- **Watcher is polling, not inotify.** `watcher.poll_once` is pure given `stat_fn`/`now`; a file is ready after `quiet_polls` unchanged sightings (first sighting counts as 1) and `min_age_s` of mtime age. The loop probes before reviewing (probe failure = still being written, stay pending), attempts each file once per session, and pauses on `CapExceeded` until the date changes.
+- **CLI is thin.** `cli.py` only parses, wires `make_default_deps`, and maps `RoundReviewError` to exit 1 with the class name. Tests monkeypatch `cli.load_config`, `cli.review_file`, `cli.watch_loop`.
 - Windows: `-ss` before `-i` (fast seek, keyframe-approximate). Frame files are `w{window:02d}_{n:03d}.jpg`; timestamps are `start + n/fps`.
 
 ---
@@ -63,4 +66,14 @@ Requirements live in `docs/requirements.md`; UML (use-case, class, sequence, dep
 - Fakes over mocks: small classes with a `calls` list, no `unittest.mock`.
 - Every module has a matching `tests/<layer>/test_<module>.py`.
 
-Status (2026-09-20): milestones 1-9 of 13 done (scaffold, config, ledger, video, llm, coaching). Remaining: report, pipeline, watcher, cli.
+---
+
+## Status and Next Steps
+
+2026-09-20: walking skeleton complete (13/13 milestones, 108 tests, ruff + mypy strict clean). Never run against a real model yet.
+
+Next, in order:
+1. Live validation on the Windows gaming PC with `qwen3-vl:8b`: measure latency per window, check the JSON contract holds, judge advice quality on real clips.
+2. Tune `fps`/`frame_width`/`num_ctx` from those measurements; add `options.num_ctx` to `llm.transport.build_body` if context overflows.
+3. Overwolf game-events JSON to anchor windows on kills/deaths (`video.windows` already has a `source="events"` slot).
+4. PyInstaller Windows build + GitHub Actions release to the personal AWS account (see `docs/uml/deployment.md`).

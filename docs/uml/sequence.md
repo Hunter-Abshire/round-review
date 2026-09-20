@@ -112,3 +112,4 @@ sequenceDiagram
 | `ParseError` (after retry) | review | ok, with warning | 0 | report written with the window marked as unparseable |
 | `LedgerError` | ledger | n/a | non-zero | loop aborts; a corrupt ledger must be fixed by hand |
 | `ConfigError` | config | n/a | non-zero | never starts |
+| `AlreadyProcessed` | pipeline | n/a (existing entry) | non-zero unless `--force` | never raised; the watcher filters known files first |

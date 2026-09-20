@@ -218,3 +218,26 @@ def test_all_windows_unparseable_is_failed(video: Path, tmp_path: Path) -> None:
     (entry,) = read_ledger(deps.config.ledger_path)
     assert entry.status == "failed"
     assert entry.model_calls == 6
+
+
+@pytest.mark.integration
+def test_end_to_end_real_ffmpeg_fake_model(sample_video: Path, tmp_path: Path) -> None:
+    from round_review.video.probe import SubprocessRunner
+
+    # 5 s clip -> a single whole-file window; the fake model returns one finding at 2.5 s
+    transport = FakeTransport(good(2.5))
+    deps = make_deps(
+        tmp_path,
+        transport,
+        probe=SubprocessRunner("ffprobe"),
+        ffmpeg=SubprocessRunner("ffmpeg"),
+    )
+    report = review_file(sample_video, deps, context="Gold 2, Jett")
+    assert len(report.results) == 1
+    (finding,) = report.results[0].findings
+    assert finding.evidence_frame is not None and finding.evidence_frame.exists()
+    assert len(transport.calls[0].images_b64) == 5  # 1 fps over 5 s
+    (entry,) = read_ledger(deps.config.ledger_path)
+    text = Path(entry.report_path or "").read_text(encoding="utf-8")
+    assert "# Review: sample.mp4" in text
+    assert "![t=2.5s](frames/w00_003.jpg)" in text

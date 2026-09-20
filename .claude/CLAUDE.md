@@ -1,6 +1,6 @@
 # round-review
 
-Guidance for Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code (claude.ai/code) when working with code in this repository. `AGENTS.md` at the repo root is the Codex equivalent; keep both in sync when commands or patterns change.
 
 ## Project Purpose
 

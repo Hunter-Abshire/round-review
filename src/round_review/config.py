@@ -35,6 +35,7 @@ class Config:
     quiet_polls: int = 3
     min_age_s: float = 120.0
     request_timeout_s: float = 300.0
+    api_port: int = 8765
 
 
 # Keys whose values must be strictly positive. Everything else is a path or string.
@@ -49,6 +50,7 @@ POSITIVE_KEYS: frozenset[str] = frozenset(
         "quiet_polls",
         "min_age_s",
         "request_timeout_s",
+        "api_port",
     }
 )
 PATH_KEYS: frozenset[str] = frozenset({"recordings_dir", "reports_dir", "ledger_path"})

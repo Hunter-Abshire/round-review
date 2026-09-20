@@ -12,15 +12,21 @@ from pathlib import Path
 from typing import Any
 
 import click
+import uvicorn
 
 from round_review.config import Config, load_config
 from round_review.errors import RoundReviewError
 from round_review.ledger import is_processed, read_ledger, recording_key
 from round_review.pipeline import Deps, make_default_deps, review_file
+from round_review.server.app import create_app
+from round_review.server.jobs import JobQueue
 from round_review.video.probe import probe
 from round_review.watcher import stat_snapshot, watch_loop
 
 log = logging.getLogger("round_review")
+
+# Module-level alias so tests can replace the blocking server start.
+uvicorn_run = uvicorn.run
 
 
 def _fail(exc: RoundReviewError) -> None:
@@ -114,6 +120,20 @@ def watch(config: Config, directory: Path | None) -> None:
         click.echo("stopped")
     except RoundReviewError as exc:
         _fail(exc)
+
+
+@main.command()
+@click.option("--port", type=int, default=None, help="Loopback port (default: config api_port).")
+@click.pass_obj
+def serve(config: Config, port: int | None) -> None:
+    """Run the local API used by the desktop app. Binds to 127.0.0.1 only."""
+    deps: Deps = make_default_deps(config)
+    jobs = JobQueue(
+        lambda path, on_progress: review_file(path, deps, on_progress=on_progress),
+        clock=deps.clock,
+    )
+    app = create_app(config, jobs)
+    uvicorn_run(app, host="127.0.0.1", port=port or config.api_port, log_level="info")
 
 
 @main.group(name="config")

@@ -123,6 +123,27 @@ classDiagram
         +run(args) str
     }
 
+    class Job {
+        +str id
+        +Path path
+        +str key
+        +str status
+        +int windows_done
+        +int windows_total
+        +str error
+        +datetime created_at
+        +datetime finished_at
+    }
+
+    class JobQueue {
+        +submit(path, key) Job
+        +get(job_id) Job
+        +list() list~Job~
+        +start()
+        +stop()
+        +wait_idle(timeout) bool
+    }
+
     class Deps {
         +Config config
         +FfprobeRunner probe_runner
@@ -147,6 +168,8 @@ classDiagram
     Deps o-- FfprobeRunner
     Deps o-- FfmpegRunner
     Deps o-- Transport
+    JobQueue o-- Job
+    JobQueue ..> Deps : run callable
     Report o-- Recording
     Report o-- WindowResult
     WindowResult o-- Window
@@ -179,7 +202,10 @@ classDiagram
 | `coaching.parse` | `Finding` | `parse_findings(text, window)`, `extract_json(text)` |
 | `coaching.review` | `WindowResult` | `review_window(window, samples, deps, calls_so_far)` |
 | `report.markdown` | `Report` | `render_report`, `write_report` |
-| `pipeline` | `Deps` | `review_file(path, deps)`, `make_default_deps(config)` |
+| `pipeline` | `Deps` | `review_file(path, deps, on_progress)`, `make_default_deps(config)`, `key_for(path)`, `report_dir_for(config, path)` |
+| `report.json_report` | | `report_to_dict`, `write_report_json`, `load_report_json` |
+| `server.jobs` | `Job`, `JobQueue` | single worker thread; `submit` dedups queued/running paths |
+| `server.app` | | `create_app(config, deps, jobs)`: `/api/clips`, `/api/jobs`, `/api/reports/{key}`, `/api/media/{key}/video`, `/api/media/{key}/frames/{name}` |
 | `watcher` | `FileSnapshot`, `WatchState` | `poll_once`, `is_stable`, `watch_loop` |
 | `cli` | | `main` (click group) |
 | `errors` | exception hierarchy | |

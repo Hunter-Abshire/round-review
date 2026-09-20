@@ -1,6 +1,6 @@
 # round-review requirements
 
-Version 0.1 (walking skeleton). Last updated 2026-09-20.
+Version 0.2 (desktop UI). Last updated 2026-09-20.
 
 ## Purpose
 
@@ -30,6 +30,11 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | FR-7 | Record every processed file in an append-only ledger (status ok / failed / skipped, model call count, report path, error). Never re-review a file already in the ledger. Enforce a daily cap on model calls; retries count. |
 | FR-8 | CLI commands: `review <file>`, `watch <dir>`, `config show`, `ledger list`. Non-zero exit with the error class name on failure. |
 | FR-9 | All configuration from a TOML file in the user config dir with `ROUND_REVIEW_*` environment overrides. No hardcoded paths, URLs, or model names in code. |
+| FR-10 | Alongside the Markdown, write `report.json`: the same findings in a machine-readable form with evidence frames as relative paths. |
+| FR-11 | A local HTTP API (bound to 127.0.0.1 only) lists clips in the recordings folder with their status (new / queued / running / done / failed / skipped), enqueues reviews, reports job progress (windows done of total), serves `report.json`, and streams the MP4 with HTTP Range support plus evidence JPEGs. |
+| FR-12 | Reviews requested from the UI run on a single background worker, one at a time, in submission order. Submitting a clip that is already queued or running returns the existing job. |
+| FR-13 | Desktop app (Electron) starts the Python API as a sidecar, shows the clip list with status, lets the player click Analyze, shows progress, and opens a finished review. |
+| FR-14 | The review view plays the clip in an HTML5 video element with a marker track underneath: one marker per finding at its timestamp. Clicking a marker seeks the video and shows that finding (observation, what you could see, what you couldn't have known, assumptions, alternative, confidence, evidence frame). |
 
 ## Anti-hindsight requirements
 
@@ -52,6 +57,8 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | NFR-5 | No error is swallowed. Failures are logged with context and recorded in the ledger, or re-raised to the CLI. |
 | NFR-6 | A crash mid-review never loses a written report: the ledger entry is the last write. |
 | NFR-7 | Python 3.12, type hints on every signature, `mypy --strict` and `ruff` clean. |
+| NFR-8 | Desktop code is TypeScript with `strict: true`, jest tests for every pure module, ESLint + Prettier clean. Electron renderer runs with `contextIsolation` on and `nodeIntegration` off; all Node access goes through the preload bridge. |
+| NFR-9 | The API only ever binds to loopback. No authentication is added because nothing else can reach it; do not change the bind address without adding auth. |
 
 ## Out of scope for 0.1
 
@@ -59,7 +66,7 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 - Whole-match review (only sampled windows)
 - Overwolf game-events integration (round start, kills, deaths) for event-anchored sampling
 - HUD / minimap OCR
-- GUI, tray app, installer, auto-update
+- Installer, auto-update, code signing (the Electron shell exists; packaging does not)
 - Cross-match habit tracking
 - AWS CI/CD and downloadable build (planned, see deployment diagram)
 
@@ -82,6 +89,7 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | `quiet_polls` | 3 | Consecutive unchanged polls before a file is stable |
 | `min_age_s` | 120 | Minimum mtime age before a file is stable |
 | `request_timeout_s` | 300 | Ollama request timeout |
+| `api_port` | 8765 | Loopback port for the local API used by the desktop app |
 
 ## Known risks
 
@@ -89,3 +97,5 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 - Outplayed writes MP4 progressively. Whether it writes to a temp name and renames is unverified; the stability rule in FR-2 covers both cases.
 - ffmpeg `-ss` before `-i` is keyframe-approximate. Timestamps may be off by up to a GOP; acceptable for 12 s windows.
 - Coaching quality from a general vision model is unproven. Validate on real clips against a human coach before trusting `watch` mode.
+- Browser playback needs H.264/AAC. Outplayed can be set to HEVC (H.265), which Chromium will not decode; the UI must show a clear error rather than a black player. ffprobe already reports the codec.
+- Electron packaging must bundle a PyInstaller build of the Python API plus ffmpeg/ffprobe; the dev flow uses the repo `.venv`.

@@ -241,3 +241,23 @@ def test_end_to_end_real_ffmpeg_fake_model(sample_video: Path, tmp_path: Path) -
     text = Path(entry.report_path or "").read_text(encoding="utf-8")
     assert "# Review: sample.mp4" in text
     assert "![t=2.5s](frames/w00_003.jpg)" in text
+
+
+def test_progress_callback_and_json_report(video: Path, tmp_path: Path) -> None:
+    transport = FakeTransport(good(35.0), good(65.0), good(85.0))
+    deps = make_deps(tmp_path, transport)
+    seen: list[tuple[int, int]] = []
+    review_file(video, deps, on_progress=lambda done, total: seen.append((done, total)))
+    assert seen == [(0, 3), (1, 3), (2, 3), (3, 3)]
+    (entry,) = read_ledger(deps.config.ledger_path)
+    report_dir = Path(entry.report_path or "").parent
+    assert (report_dir / "report.json").exists()
+
+
+def test_key_for_and_report_dir_for(video: Path, tmp_path: Path) -> None:
+    from round_review.pipeline import key_for, report_dir_for
+
+    deps = make_deps(tmp_path, FakeTransport())
+    key = key_for(video)
+    assert len(key) == 16
+    assert report_dir_for(deps.config, video) == deps.config.reports_dir / f"match_{key}"

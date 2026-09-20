@@ -9,8 +9,14 @@ flowchart TB
         Valorant["Valorant"]
         Outplayed["Outplayed (Overwolf)"]
         RecDir[("Recordings folder<br/>*.mp4")]
-        subgraph RRProc["round-review process (Python 3.12)"]
-            CLI["cli: review / watch"]
+        subgraph Desktop["round-review desktop (Electron)"]
+            Main["main process<br/>spawns sidecar, owns window"]
+            Renderer["renderer<br/>clip list, player, marker track"]
+        end
+        subgraph RRProc["round-review API sidecar (Python 3.12)"]
+            CLI["cli: review / watch / serve"]
+            API["FastAPI on 127.0.0.1:8765"]
+            Jobs["single worker thread"]
             Pipeline["pipeline"]
         end
         FF["ffmpeg / ffprobe"]
@@ -38,6 +44,9 @@ flowchart TB
     Valorant --> Outplayed --> RecDir
     RecDir --> Pipeline
     CLI --> Pipeline
+    Main -->|spawn| CLI
+    Renderer -->|HTTP JSON + Range video| API
+    API --> Jobs --> Pipeline
     Pipeline -->|subprocess| FF
     Pipeline -->|HTTP JSON| OllamaSrv
     Model --> GPU
@@ -52,7 +61,8 @@ flowchart TB
 
 | Node | Detail |
 | --- | --- |
-| round-review process | Single process, single thread, polling watcher. Installed via `pip install` in 0.1; PyInstaller bundle later. |
+| round-review API sidecar | The same Python package, started by the Electron main process as `round-review serve`. One worker thread runs reviews sequentially. Loopback only. |
+| round-review desktop | Electron; `contextIsolation` on. Renderer talks only to the sidecar over HTTP. Dev: uses the repo `.venv`; packaged: PyInstaller binary next to the app. |
 | ffmpeg / ffprobe | Required on PATH or set via `ffmpeg_path` / `ffprobe_path`. Bundled with the future installer. |
 | Ollama server | Installed separately by the player. Must have the configured model pulled. |
 | User data dir | Resolved with `platformdirs` (`%LOCALAPPDATA%\round-review` on Windows, `~/Library/Application Support/round-review` on macOS). |

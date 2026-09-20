@@ -28,6 +28,7 @@ from round_review.ledger import (
     recording_key,
 )
 from round_review.llm.transport import Transport, UrllibTransport
+from round_review.report.json_report import write_report_json
 from round_review.report.markdown import Report, write_report
 from round_review.video.frames import extract_frames
 from round_review.video.probe import CommandRunner, SubprocessRunner, probe
@@ -36,6 +37,7 @@ from round_review.video.windows import select_windows
 log = logging.getLogger(__name__)
 
 Clock = Callable[[], datetime]
+ProgressFn = Callable[[int, int], None]
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,6 +63,19 @@ def make_default_deps(config: Config) -> Deps:
     )
 
 
+def key_for(path: Path) -> str:
+    """Ledger/report identity of a recording as it exists on disk right now."""
+    try:
+        st = path.stat()
+    except OSError as exc:
+        raise VideoError(f"{path}: cannot stat: {exc}") from exc
+    return recording_key(path, st.st_size, st.st_mtime)
+
+
+def report_dir_for(config: Config, path: Path) -> Path:
+    return config.reports_dir / f"{path.stem}_{key_for(path)}"
+
+
 def _record(
     deps: Deps,
     key: str,
@@ -84,15 +99,18 @@ def _record(
     )
 
 
-def review_file(path: Path, deps: Deps, context: str | None = None, force: bool = False) -> Report:
+def review_file(
+    path: Path,
+    deps: Deps,
+    context: str | None = None,
+    force: bool = False,
+    on_progress: ProgressFn | None = None,
+) -> Report:
     """Review one recording and write its report. The ledger entry is always the last write,
-    and every failure class is recorded before being re-raised."""
+    and every failure class is recorded before being re-raised. `on_progress(done, total)`
+    is called once windows are known and after each window."""
     cfg = deps.config
-    try:
-        stat = path.stat()
-    except OSError as exc:
-        raise VideoError(f"{path}: cannot stat: {exc}") from exc
-    key = recording_key(path, stat.st_size, stat.st_mtime)
+    key = key_for(path)
     entries = read_ledger(cfg.ledger_path)
     if not force and is_processed(entries, key):
         raise AlreadyProcessed(f"{path.name} is already in the ledger (key {key})")
@@ -110,6 +128,8 @@ def review_file(path: Path, deps: Deps, context: str | None = None, force: bool 
             recording.duration_s, cfg.window_s, cfg.windows_per_file, cfg.edge_skip_s
         )
         log.info("%s: %.1fs, reviewing %d window(s)", path.name, recording.duration_s, len(windows))
+        if on_progress:
+            on_progress(0, len(windows))
         for window in windows:
             samples = extract_frames(
                 recording, window, deps.ffmpeg_runner, cfg.fps, cfg.frame_width, frames_dir
@@ -131,9 +151,13 @@ def review_file(path: Path, deps: Deps, context: str | None = None, force: bool 
                 results.append(
                     WindowResult(window, tuple(samples), (), exc.model_calls, (str(exc),))
                 )
+                if on_progress:
+                    on_progress(len(results), len(windows))
                 continue
             calls += result.model_calls
             results.append(result)
+            if on_progress:
+                on_progress(len(results), len(windows))
 
         if windows and all(not r.findings and r.warnings for r in results):
             raise ParseError(f"{path.name}: all {len(windows)} windows unparseable", model_calls=0)
@@ -151,5 +175,6 @@ def review_file(path: Path, deps: Deps, context: str | None = None, force: bool 
 
     report = Report(recording, deps.clock(), cfg.model, tuple(results), tuple(warnings))
     report_path = write_report(report, out_dir)
+    write_report_json(report, out_dir)
     _record(deps, key, path, "ok", calls, report_path, None)
     return report

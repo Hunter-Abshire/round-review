@@ -102,6 +102,43 @@ sequenceDiagram
     end
 ```
 
+## 3. Desktop: Analyze a clip and view markers
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Player
+    participant R as Electron renderer
+    participant M as Electron main
+    participant API as FastAPI (127.0.0.1)
+    participant Q as JobQueue worker
+    participant P as pipeline.review_file
+
+    M->>API: spawn `round-review serve --port 8765`
+    M->>API: GET /api/health (retry until 200)
+    R->>API: GET /api/clips
+    API-->>R: [{name, key, status: new|queued|running|done|failed|skipped}]
+    Player->>R: click Analyze on clip
+    R->>API: POST /api/jobs {path}
+    API->>Q: submit(path, key)
+    API-->>R: 202 {id, status: queued}
+    Q->>P: review_file(path, deps, on_progress)
+    loop every 2 s until done/failed
+        R->>API: GET /api/jobs/{id}
+        P-->>Q: on_progress(done, total)
+        API-->>R: {status: running, windows_done, windows_total}
+    end
+    P-->>Q: Report (report.md + report.json written)
+    R->>API: GET /api/reports/{key}
+    API-->>R: report.json
+    R->>API: GET /api/media/{key}/video (Range)
+    API-->>R: 206 partial MP4
+    R->>R: draw one marker per finding at timestamp_s / duration_s
+    Player->>R: click marker
+    R->>R: video.currentTime = timestamp_s; show finding card
+    R->>API: GET /api/media/{key}/frames/w01_004.jpg
+```
+
 ## Failure semantics
 
 | Error | Raised by | Ledger status | `review` exit | `watch` behaviour |

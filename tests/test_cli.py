@@ -110,3 +110,20 @@ def test_watch_invokes_loop_with_directory(
     result = CliRunner().invoke(cli.main, ["watch", str(d)])
     assert result.exit_code == 0, result.output
     assert seen["directory"] == d
+
+
+def test_serve_binds_loopback_and_uses_config_port(
+    monkeypatch: pytest.MonkeyPatch, patched: dict[str, object], cfg: Config
+) -> None:
+    seen: dict[str, object] = {}
+
+    def fake_run(app: object, host: str, port: int, log_level: str) -> None:
+        seen.update(app=app, host=host, port=port)
+
+    monkeypatch.setattr(cli, "uvicorn_run", fake_run)
+    result = CliRunner().invoke(cli.main, ["serve"])
+    assert result.exit_code == 0, result.output
+    assert seen["host"] == "127.0.0.1"
+    assert seen["port"] == cfg.api_port
+    result = CliRunner().invoke(cli.main, ["serve", "--port", "9999"])
+    assert result.exit_code == 0 and seen["port"] == 9999

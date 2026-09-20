@@ -44,4 +44,23 @@ Requirements live in `docs/requirements.md`; UML (use-case, class, sequence, dep
 | `tests/` | Mirrors `src/`; `conftest.py` holds shared fixtures |
 | `docs/` | Requirements and Mermaid UML |
 
-Status (2026-09-20): milestone 1 of 13 (scaffold + errors) done. See the plan in `docs/requirements.md` and the milestone list in the commit history.
+---
+
+## Important Patterns
+
+- **Dependency injection by argument.** `video.probe.CommandRunner` (ffprobe/ffmpeg), `llm.transport.Transport` (Ollama) and the `opener` on `UrllibTransport` are Protocols/callables passed in. Tests use `FakeRunner`/`FakeTransport` classes defined next to the tests; production wiring happens once in `pipeline.make_default_deps`.
+- **Daily cap is checked before the network.** `llm.client.send_review` raises `CapExceeded` when `calls_today >= cap`; retries count as calls. Never call a transport directly from coaching code.
+- **Parse is lenient on format, strict on content.** `coaching.parse.extract_json` slices the first `{` to the last `}`; missing required fields raise `ParseError`; findings outside the window, over the 3-per-window limit, or with confidence out of range become warnings, not errors.
+- **Anti-hindsight is enforced in code, not just the prompt.** A finding with non-placeholder `information_revealed_later` and confidence above 0.7 is downgraded to 0.5 with a warning. Keep this in sync with `docs/requirements.md` AH-1..AH-5.
+- **One retry.** `coaching.review.review_window` re-asks once with `RETRY_NUDGE` on `ParseError`, then raises. The pipeline decides what a failed window means for the file.
+- Windows: `-ss` before `-i` (fast seek, keyframe-approximate). Frame files are `w{window:02d}_{n:03d}.jpg`; timestamps are `start + n/fps`.
+
+---
+
+## Testing
+
+- `tests/conftest.py` builds a 5 s colour-bar MP4 with ffmpeg once per session (`sample_video`). Tests that need it are marked `integration` and skip when ffmpeg is absent.
+- Fakes over mocks: small classes with a `calls` list, no `unittest.mock`.
+- Every module has a matching `tests/<layer>/test_<module>.py`.
+
+Status (2026-09-20): milestones 1-9 of 13 done (scaffold, config, ledger, video, llm, coaching). Remaining: report, pipeline, watcher, cli.

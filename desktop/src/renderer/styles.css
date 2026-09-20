@@ -1,0 +1,161 @@
+:root {
+  color-scheme: dark;
+  --bg: #121417;
+  --panel: #1c2027;
+  --text: #e6e8eb;
+  --muted: #8b93a1;
+  --accent: #ff4655;
+  --ok: #3ddc84;
+  --warn: #ffb347;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font:
+    14px/1.4 system-ui,
+    sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--panel);
+}
+h1 {
+  font-size: 18px;
+  margin: 0;
+}
+h2 {
+  font-size: 15px;
+  margin: 0;
+  font-weight: 500;
+}
+h3 {
+  margin: 0 0 6px;
+}
+button {
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+button:hover {
+  filter: brightness(1.1);
+}
+.banner {
+  margin: 0;
+  padding: 8px 20px;
+  background: #3a2a10;
+  color: var(--warn);
+}
+section {
+  padding: 16px 20px;
+}
+.clips {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.clip {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--panel);
+  border-radius: 8px;
+}
+.clip .name {
+  font-weight: 500;
+}
+.clip .status {
+  color: var(--muted);
+  text-transform: capitalize;
+}
+.clip.status-running .status {
+  color: var(--warn);
+}
+.clip.status-done .status {
+  color: var(--ok);
+}
+.clip.status-failed .status {
+  color: var(--accent);
+}
+.clip .error {
+  grid-column: 1 / -1;
+  color: var(--accent);
+  font-size: 12px;
+}
+.empty,
+.placeholder {
+  color: var(--muted);
+}
+.review-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+video {
+  width: 100%;
+  max-height: 60vh;
+  background: #000;
+  border-radius: 8px 8px 0 0;
+}
+.track {
+  position: relative;
+  height: 22px;
+  background: var(--panel);
+  border-radius: 0 0 8px 8px;
+  margin-bottom: 12px;
+}
+.marker {
+  position: absolute;
+  top: 3px;
+  width: 10px;
+  height: 16px;
+  margin-left: -5px;
+  padding: 0;
+  border-radius: 3px;
+  background: var(--warn);
+}
+.marker.selected {
+  background: var(--accent);
+  outline: 2px solid #fff;
+}
+.marker.cat-positioning {
+  background: #7aa2f7;
+}
+.marker.cat-utility {
+  background: #bb9af7;
+}
+.marker.cat-timing {
+  background: #e0af68;
+}
+.marker.cat-economy {
+  background: #9ece6a;
+}
+.finding {
+  padding: 14px;
+  background: var(--panel);
+  border-radius: 8px;
+}
+.finding .section {
+  margin: 6px 0;
+}
+.finding img.evidence {
+  max-width: 100%;
+  border-radius: 6px;
+  margin: 8px 0;
+}
+.finding .confidence {
+  color: var(--muted);
+  margin-bottom: 0;
+}

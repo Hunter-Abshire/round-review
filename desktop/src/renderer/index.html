@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src http://127.0.0.1:*; img-src 'self' http://127.0.0.1:*; media-src http://127.0.0.1:*; style-src 'self'; script-src 'self'"
+    />
+    <title>round-review</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>round-review</h1>
+      <button id="refresh">Refresh</button>
+    </header>
+    <p id="banner" class="banner" hidden></p>
+
+    <section id="list-view">
+      <div id="clips" class="clips"></div>
+    </section>
+
+    <section id="review-view" hidden>
+      <div class="review-header">
+        <button id="back">← Clips</button>
+        <h2 id="review-title"></h2>
+      </div>
+      <video id="video" controls preload="metadata"></video>
+      <div id="track" class="track"></div>
+      <div id="finding" class="finding"></div>
+    </section>
+
+    <script src="app.js"></script>
+  </body>
+</html>

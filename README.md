@@ -2,7 +2,7 @@
 
 Local, offline coaching for recorded Valorant gameplay. Watches your Outplayed (Overwolf) recordings folder, samples frames from finished clips with ffmpeg, asks a local Ollama vision model for timestamped findings, and writes a Markdown report with evidence screenshots. Nothing leaves your machine.
 
-Status: walking skeleton. The pipeline runs end to end against a fake model in tests. Coaching quality with a real model is unvalidated. Try `review` on a few clips before enabling `watch`.
+Status: pipeline, CLI, local API and Electron desktop app all run end to end against a fake model in tests and boot on macOS. Coaching quality with a real model is unvalidated. Try `review` on a few clips before trusting anything.
 
 ## Overview
 
@@ -56,6 +56,19 @@ round-review ledger list
 
 `review` exits non-zero with the error class name (`OllamaError: ...`, `VideoError: ...`) on failure. A file already in the ledger is refused unless you pass `--force`.
 
+## Desktop app
+
+`desktop/` is an Electron shell. It starts `round-review serve` from the repo `.venv` as a sidecar on a free loopback port, lists the clips in `recordings_dir` with their status, queues analyses one at a time with progress, and opens a finished review as the clip playing in a video element with one clickable marker per finding underneath. Clicking a marker seeks the video and shows the finding: what you could see, what you knew, what you couldn't have known, assumptions, the alternative, and the evidence frame.
+
+```
+cd desktop
+npm install
+npm test
+env -u ELECTRON_RUN_AS_NODE npm start     # the env var is set by VS Code terminals and breaks Electron
+```
+
+Clips must be H.264 for playback; Outplayed set to HEVC records fine but the player shows an unsupported-codec message.
+
 ## Debugger
 
 Run the CLI module directly with `-v` for debug logging:
@@ -73,9 +86,13 @@ Standard `logging`, root logger `round_review`, INFO by default and DEBUG with `
 ## Tests
 
 ```
-.venv/bin/pytest                 # 108 tests, generates its own 5 s MP4 with ffmpeg
+.venv/bin/pytest                 # 128 tests, generates its own 5 s MP4 with ffmpeg
 .venv/bin/pytest -m "not integration"
 .venv/bin/ruff check . && .venv/bin/mypy
 ```
 
 No test talks to Ollama. The model is a fake transport with canned JSON.
+
+```
+cd desktop && npm test && npm run typecheck && npm run lint
+```

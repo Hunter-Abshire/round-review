@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "module": "ES2022", "types": [], "noEmit": true },
+  "include": ["src/renderer/**/*.ts", "src/shared/**/*.ts"],
+  "exclude": []
+}

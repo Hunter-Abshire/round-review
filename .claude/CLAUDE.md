@@ -4,7 +4,9 @@ Guidance for Claude Code (claude.ai/code) when working with code in this reposit
 
 ## Project Purpose
 
-Local, offline coaching tool for recorded Valorant gameplay. It picks up finished Outplayed (Overwolf) MP4 recordings, samples frames with ffmpeg, sends them to a local Ollama vision model, and writes a Markdown report of timestamped findings with evidence screenshots. Personal project by Hunter-Abshire; Windows is the runtime target, macOS is the dev machine. No cloud, no telemetry.
+Local, offline coaching tool for recorded Valorant gameplay. It picks up finished Outplayed (Overwolf) MP4 recordings, samples frames with ffmpeg, sends them to a local Ollama vision model, and writes a Markdown + JSON report of timestamped findings with evidence screenshots. An Electron desktop app (`desktop/`) lists clips, queues analyses, and plays a clip with one marker per finding under the video. Personal project by Hunter-Abshire; Windows is the runtime target, macOS is the dev machine. No cloud, no telemetry.
+
+Two toolchains: Python package in `src/round_review/` (pipeline, watcher, CLI, loopback FastAPI) and TypeScript in `desktop/` (Electron main/preload/renderer). The desktop app never touches the filesystem or ffmpeg itself; it starts `round-review serve` as a sidecar and talks HTTP.
 
 Requirements live in `docs/requirements.md`; UML (use-case, class, sequence, deployment) in `docs/uml/`. Update both when behaviour changes.
 
@@ -21,7 +23,12 @@ Requirements live in `docs/requirements.md`; UML (use-case, class, sequence, dep
 | `.venv/bin/pytest --cov=round_review` | Coverage |
 | `.venv/bin/ruff check . && .venv/bin/ruff format .` | Lint and format |
 | `.venv/bin/mypy` | Strict type check of `src/` |
-| `.venv/bin/round-review --help` | CLI entry point |
+| `.venv/bin/round-review --help` | CLI entry point (`review`, `watch`, `serve`, `config show`, `ledger list`) |
+| `cd desktop && npm install` | Desktop deps (Electron download is ~100 MB) |
+| `cd desktop && npm test` | jest (ts-jest; renderer tests use `@jest-environment jsdom` docblocks) |
+| `cd desktop && npm run typecheck && npm run lint` | tsc strict for main and renderer, ESLint + Prettier |
+| `cd desktop && npm run build` | tsc for main/preload, esbuild bundle for the renderer, copy static |
+| `cd desktop && env -u ELECTRON_RUN_AS_NODE npm start` | Run the app against the repo `.venv` sidecar |
 
 ---
 
@@ -55,7 +62,13 @@ Requirements live in `docs/requirements.md`; UML (use-case, class, sequence, dep
 - **One retry.** `coaching.review.review_window` re-asks once with `RETRY_NUDGE` on `ParseError`, then raises a `ParseError` carrying `model_calls`. `pipeline.review_file` turns one bad window into a warning and only fails the file when every window is unparseable.
 - **Ledger is the last write.** `pipeline.review_file` writes the report, then the ledger line. Status: `ok`, `failed` (VideoError/OllamaError/ParseError), `skipped` (CapExceeded). A file already in the ledger raises `AlreadyProcessed` unless `force=True`. Failed Ollama calls are counted so a flapping server cannot bypass the cap.
 - **Watcher is polling, not inotify.** `watcher.poll_once` is pure given `stat_fn`/`now`; a file is ready after `quiet_polls` unchanged sightings (first sighting counts as 1) and `min_age_s` of mtime age. The loop probes before reviewing (probe failure = still being written, stay pending), attempts each file once per session, and pauses on `CapExceeded` until the date changes.
-- **CLI is thin.** `cli.py` only parses, wires `make_default_deps`, and maps `RoundReviewError` to exit 1 with the class name. Tests monkeypatch `cli.load_config`, `cli.review_file`, `cli.watch_loop`.
+- **CLI is thin.** `cli.py` only parses, wires `make_default_deps`, and maps `RoundReviewError` to exit 1 with the class name. Tests monkeypatch `cli.load_config`, `cli.review_file`, `cli.watch_loop`, `cli.uvicorn_run`.
+- **API is loopback-only and unauthenticated.** `server.app.create_app` binds via `serve` to 127.0.0.1. Keys are validated with a 16-hex regex and frame names with `w\d\d_\d\d\d.jpg` before touching the filesystem; job submission rejects paths outside `recordings_dir`. Do not change the bind address without adding auth.
+- **Jobs run one at a time.** `server.jobs.JobQueue` is the one class with real state (worker thread + job table); every method returns snapshots. `submit` dedups queued/running jobs by key. Clip status precedence in `/api/clips`: active job > latest job > ledger > `new`.
+- **Progress is a callback.** `review_file(on_progress=)` reports `(done, total)` windows; the queue stores it and the renderer polls `/api/jobs/{id}` every 2 s.
+- **Desktop renderer is a pure reducer + DOM functions.** `renderer/state.ts` (reduce), `renderer/timeline.ts` (marker math), `renderer/dom.ts` (render functions taking a root element) are all jest-tested; `renderer/app.ts` is the only file that wires `fetch`, `<video>` and timers. Types in `shared/types.ts` mirror the API JSON (snake_case).
+- **Sidecar paths join with the target platform's separator** (`path.win32`/`path.posix`), so Windows commands are testable on macOS. Dev uses `<repo>/.venv/bin/round-review`; packaged uses `process.resourcesPath/round-review(.exe)` which does not exist yet.
+- **`ELECTRON_RUN_AS_NODE=1` is set in VS Code / Claude Code terminals** and makes `require('electron')` return a path string (`app` undefined). Always launch with `env -u ELECTRON_RUN_AS_NODE`.
 - Windows: `-ss` before `-i` (fast seek, keyframe-approximate). Frame files are `w{window:02d}_{n:03d}.jpg`; timestamps are `start + n/fps`.
 
 ---
@@ -70,10 +83,10 @@ Requirements live in `docs/requirements.md`; UML (use-case, class, sequence, dep
 
 ## Status and Next Steps
 
-2026-09-20: walking skeleton complete (13/13 milestones, 108 tests, ruff + mypy strict clean). Never run against a real model yet.
+2026-09-20: pipeline + CLI (128 pytest) and desktop app (29 jest) complete and smoke-tested on macOS: Electron spawns the sidecar, lists clips, queues a job, and the job fails cleanly at Ollama because none is installed here. Never run against a real model yet.
 
 Next, in order:
-1. Live validation on the Windows gaming PC with `qwen3-vl:8b`: measure latency per window, check the JSON contract holds, judge advice quality on real clips.
+1. Live validation on the Windows gaming PC with `qwen3-vl:8b`: measure latency per window, check the JSON contract holds, judge advice quality on real clips, and confirm Outplayed clips are H.264 (HEVC will not play in the app).
 2. Tune `fps`/`frame_width`/`num_ctx` from those measurements; add `options.num_ctx` to `llm.transport.build_body` if context overflows.
 3. Overwolf game-events JSON to anchor windows on kills/deaths (`video.windows` already has a `source="events"` slot).
-4. PyInstaller Windows build + GitHub Actions release to the personal AWS account (see `docs/uml/deployment.md`).
+4. Packaging: PyInstaller build of `round-review serve` (+ ffmpeg/ffprobe) placed in Electron `resourcesPath`, electron-builder for the installer, GitHub Actions release to the personal AWS account (see `docs/uml/deployment.md`).

@@ -18,7 +18,15 @@ class OllamaError(RoundReviewError):
 
 
 class ParseError(RoundReviewError):
-    """The model response could not be parsed into findings."""
+    """The model response could not be parsed into findings.
+
+    `model_calls` carries how many calls were spent before giving up, so the ledger can
+    still count them against the daily cap.
+    """
+
+    def __init__(self, message: str, model_calls: int = 0) -> None:
+        super().__init__(message)
+        self.model_calls = model_calls
 
 
 class CapExceeded(RoundReviewError):
@@ -27,3 +35,7 @@ class CapExceeded(RoundReviewError):
 
 class LedgerError(RoundReviewError):
     """The ledger file is unreadable or corrupt."""
+
+
+class AlreadyProcessed(RoundReviewError):
+    """The recording is already in the ledger; pass force=True to review it again."""

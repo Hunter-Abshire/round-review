@@ -66,4 +66,7 @@ def review_window(
         )
 
     assert last_error is not None
-    raise ParseError(f"window {window.index}: model output unparseable after retry: {last_error}")
+    raise ParseError(
+        f"window {window.index}: model output unparseable after retry: {last_error}",
+        model_calls=calls,
+    )

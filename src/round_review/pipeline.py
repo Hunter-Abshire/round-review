@@ -1,0 +1,155 @@
+"""End-to-end review of one recording. Wires the layers together and owns ledger semantics."""
+
+from __future__ import annotations
+
+import logging
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+
+from round_review.coaching.review import WindowResult, review_window
+from round_review.config import Config
+from round_review.errors import (
+    AlreadyProcessed,
+    CapExceeded,
+    OllamaError,
+    ParseError,
+    RoundReviewError,
+    VideoError,
+)
+from round_review.ledger import (
+    LedgerEntry,
+    Status,
+    append_entry,
+    calls_today,
+    is_processed,
+    read_ledger,
+    recording_key,
+)
+from round_review.llm.transport import Transport, UrllibTransport
+from round_review.report.markdown import Report, write_report
+from round_review.video.frames import extract_frames
+from round_review.video.probe import CommandRunner, SubprocessRunner, probe
+from round_review.video.windows import select_windows
+
+log = logging.getLogger(__name__)
+
+Clock = Callable[[], datetime]
+
+
+@dataclass(frozen=True, slots=True)
+class Deps:
+    config: Config
+    probe_runner: CommandRunner
+    ffmpeg_runner: CommandRunner
+    transport: Transport
+    clock: Clock
+
+
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
+def make_default_deps(config: Config) -> Deps:
+    return Deps(
+        config=config,
+        probe_runner=SubprocessRunner(config.ffprobe_path),
+        ffmpeg_runner=SubprocessRunner(config.ffmpeg_path),
+        transport=UrllibTransport(config.ollama_url),
+        clock=_utc_now,
+    )
+
+
+def _record(
+    deps: Deps,
+    key: str,
+    path: Path,
+    status: Status,
+    model_calls: int,
+    report_path: Path | None,
+    error: RoundReviewError | None,
+) -> None:
+    append_entry(
+        deps.config.ledger_path,
+        LedgerEntry(
+            key=key,
+            path=str(path),
+            processed_at=deps.clock(),
+            model_calls=model_calls,
+            report_path=str(report_path) if report_path else None,
+            status=status,
+            error=f"{type(error).__name__}: {error}" if error else None,
+        ),
+    )
+
+
+def review_file(path: Path, deps: Deps, context: str | None = None, force: bool = False) -> Report:
+    """Review one recording and write its report. The ledger entry is always the last write,
+    and every failure class is recorded before being re-raised."""
+    cfg = deps.config
+    try:
+        stat = path.stat()
+    except OSError as exc:
+        raise VideoError(f"{path}: cannot stat: {exc}") from exc
+    key = recording_key(path, stat.st_size, stat.st_mtime)
+    entries = read_ledger(cfg.ledger_path)
+    if not force and is_processed(entries, key):
+        raise AlreadyProcessed(f"{path.name} is already in the ledger (key {key})")
+    history_calls = calls_today(entries, deps.clock().date())
+
+    out_dir = cfg.reports_dir / f"{path.stem}_{key}"
+    frames_dir = out_dir / "frames"
+    calls = 0
+    results: list[WindowResult] = []
+    warnings: list[str] = []
+
+    try:
+        recording = probe(path, deps.probe_runner)
+        windows = select_windows(
+            recording.duration_s, cfg.window_s, cfg.windows_per_file, cfg.edge_skip_s
+        )
+        log.info("%s: %.1fs, reviewing %d window(s)", path.name, recording.duration_s, len(windows))
+        for window in windows:
+            samples = extract_frames(
+                recording, window, deps.ffmpeg_runner, cfg.fps, cfg.frame_width, frames_dir
+            )
+            try:
+                result = review_window(
+                    window,
+                    samples,
+                    deps.transport,
+                    cfg.model,
+                    history_calls + calls,
+                    cfg.daily_call_cap,
+                    cfg.request_timeout_s,
+                    context,
+                )
+            except ParseError as exc:
+                calls += exc.model_calls
+                warnings.append(str(exc))
+                results.append(
+                    WindowResult(window, tuple(samples), (), exc.model_calls, (str(exc),))
+                )
+                continue
+            calls += result.model_calls
+            results.append(result)
+
+        if windows and all(not r.findings and r.warnings for r in results):
+            raise ParseError(f"{path.name}: all {len(windows)} windows unparseable", model_calls=0)
+    except CapExceeded as exc:
+        # One failed attempt still costs nothing at the transport, but calls so far do count.
+        _record(deps, key, path, "skipped", calls, None, exc)
+        raise
+    except OllamaError as exc:
+        # The failed call was sent; count it so a flapping server cannot bypass the cap.
+        _record(deps, key, path, "failed", calls + 1, None, exc)
+        raise
+    except (VideoError, ParseError) as exc:
+        _record(deps, key, path, "failed", calls, None, exc)
+        raise
+
+    report = Report(recording, deps.clock(), cfg.model, tuple(results), tuple(warnings))
+    report_path = write_report(report, out_dir)
+    _record(deps, key, path, "ok", calls, report_path, None)
+    return report

@@ -89,10 +89,10 @@ Requirements live in `docs/requirements.md`; UML (use-case, class, sequence, dep
 
 ## Status and Next Steps
 
-2026-09-20: pipeline + CLI (128 pytest) and desktop app (29 jest) complete and smoke-tested on macOS: Electron spawns the sidecar, lists clips, queues a job, and the job fails cleanly at Ollama because none is installed here. Never run against a real model yet.
+2026-09-20: pipeline + CLI (128 pytest) and desktop app (29 jest) complete and smoke-tested on macOS: Electron spawns the sidecar, lists clips, queues a job, and the job fails cleanly at Ollama because none is installed here. Hunter has run it on the Windows PC with qwen3-vl:8b (2026-09-20): output was thin and generic, which drove the knowledge base + two-pass work.
 
 Next, in order:
-1. Live validation on the Windows gaming PC with `qwen3-vl:8b`: measure latency per window, check the JSON contract holds, judge advice quality on real clips, and confirm Outplayed clips are H.264 (HEVC will not play in the app).
+1. Re-validate on the Windows PC with the knowledge base and two-pass review: compare findings against the same clips, watch for context overflow (coach prompt is 2-6k tokens of text plus 12 images; raise `num_ctx` to 32768 or lower `frame_width`/`fps` if Ollama truncates), and check the situation pass detects agent/map from the HUD.
 2. Tune `fps`/`frame_width`/`num_ctx` from those measurements; `options.num_ctx` is now sent on every request and defaults to 16384.
 3. Overwolf game-events JSON to anchor windows on kills/deaths (`video.windows` already has a `source="events"` slot).
 4. Packaging: PyInstaller build of `round-review serve` (+ ffmpeg/ffprobe) placed in Electron `resourcesPath`, electron-builder for the installer, GitHub Actions release to the personal AWS account (see `docs/uml/deployment.md`).

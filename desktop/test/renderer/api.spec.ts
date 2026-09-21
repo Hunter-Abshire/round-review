@@ -1,4 +1,5 @@
 import { createApi, type FetchLike } from '../../src/renderer/api';
+import { EMPTY_CONTEXT } from '../../src/shared/types';
 
 const fakeFetch = (
   status: number,
@@ -27,13 +28,26 @@ describe('createApi', () => {
     expect(calls[0]?.[0]).toBe(`${base}/api/clips`);
   });
 
-  it('submitJob posts JSON', async () => {
+  it('submitJob posts JSON with the player context', async () => {
     const { fetch, calls } = fakeFetch(202, { id: 'j' });
-    await createApi(base, fetch).submitJob('/v/a.mp4');
+    await createApi(base, fetch).submitJob('/v/a.mp4', {
+      ...EMPTY_CONTEXT,
+      rank: 'Gold 2',
+      agent: 'Jett',
+    });
     const [url, init] = calls[0]!;
     expect(url).toBe(`${base}/api/jobs`);
     expect(init?.method).toBe('POST');
-    expect(JSON.parse(String(init?.body))).toEqual({ path: '/v/a.mp4' });
+    expect(JSON.parse(String(init?.body))).toEqual({
+      path: '/v/a.mp4',
+      context: { rank: 'Gold 2', agent: 'Jett', map: null, side: null, focus: null, notes: null },
+    });
+  });
+
+  it('getKnowledge hits /api/knowledge', async () => {
+    const { fetch, calls } = fakeFetch(200, { agents: [], maps: [], ranks: [], checklist: [] });
+    await createApi(base, fetch).getKnowledge();
+    expect(calls[0]?.[0]).toBe(`${base}/api/knowledge`);
   });
 
   it('getJob and getReport build paths', async () => {

@@ -8,17 +8,19 @@ import queue
 import threading
 import uuid
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
+
+from round_review.coaching.context import PlayerContext
 
 log = logging.getLogger(__name__)
 
 JobStatus = Literal["queued", "running", "done", "failed"]
 ACTIVE: frozenset[str] = frozenset({"queued", "running"})
 ProgressFn = Callable[[int, int], None]
-RunFn = Callable[[Path, ProgressFn], object]
+RunFn = Callable[[Path, PlayerContext, ProgressFn], object]
 
 
 @dataclass(slots=True)
@@ -32,6 +34,7 @@ class Job:
     error: str | None
     created_at: datetime
     finished_at: datetime | None
+    context: PlayerContext = field(default_factory=PlayerContext)
 
 
 class JobQueue:
@@ -100,7 +103,7 @@ class JobQueue:
 
     # -- commands --------------------------------------------------------------------------
 
-    def submit(self, path: Path, key: str) -> Job:
+    def submit(self, path: Path, key: str, context: PlayerContext | None = None) -> Job:
         with self._lock:
             existing = next(
                 (j for j in self._jobs.values() if j.key == key and j.status in ACTIVE), None
@@ -117,6 +120,7 @@ class JobQueue:
                 error=None,
                 created_at=self._clock(),
                 finished_at=None,
+                context=context or PlayerContext(),
             )
             self._jobs[job.id] = job
             self._order.append(job.id)
@@ -154,7 +158,7 @@ class JobQueue:
                 self._set(job_id, windows_done=done, windows_total=total)
 
             try:
-                self._run(job.path, on_progress)
+                self._run(job.path, job.context, on_progress)
             except Exception as exc:  # the worker must survive any job failure
                 log.error(
                     "job %s (%s) failed: %s: %s", job_id, job.path.name, type(exc).__name__, exc

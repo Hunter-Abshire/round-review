@@ -2,6 +2,7 @@ import threading
 from datetime import UTC, datetime
 from pathlib import Path
 
+from round_review.coaching.context import PlayerContext
 from round_review.errors import OllamaError
 from round_review.server.jobs import Job, JobQueue, ProgressFn
 
@@ -11,12 +12,14 @@ NOW = datetime(2026, 9, 20, 12, 0, tzinfo=UTC)
 class FakeRun:
     def __init__(self, fail: Exception | None = None) -> None:
         self.calls: list[Path] = []
+        self.contexts: list[PlayerContext] = []
         self.fail = fail
         self.release = threading.Event()
         self.started = threading.Event()
 
-    def __call__(self, path: Path, on_progress: ProgressFn) -> None:
+    def __call__(self, path: Path, context: PlayerContext, on_progress: ProgressFn) -> None:
         self.calls.append(path)
+        self.contexts.append(context)
         self.started.set()
         on_progress(0, 2)
         self.release.wait(timeout=5)
@@ -28,9 +31,10 @@ class FakeRun:
 def test_submit_returns_queued_job() -> None:
     run = FakeRun()
     q = JobQueue(run, clock=lambda: NOW)
-    job = q.submit(Path("/v/a.mp4"), key="k1")
+    job = q.submit(Path("/v/a.mp4"), key="k1", context=PlayerContext(rank="Gold 2"))
     assert isinstance(job, Job)
     assert job.status == "queued"
+    assert job.context == PlayerContext(rank="Gold 2")
     assert job.key == "k1"
     assert job.created_at == NOW
     assert q.get(job.id) == job
@@ -65,6 +69,7 @@ def test_worker_runs_jobs_in_order_with_progress(tmp_path: Path) -> None:
         assert done_first.finished_at == NOW
         assert q.get(second.id).status == "done"  # type: ignore[union-attr]
         assert run.calls == [tmp_path / "a.mp4", tmp_path / "b.mp4"]
+        assert run.contexts == [PlayerContext(), PlayerContext()]
     finally:
         q.stop()
 

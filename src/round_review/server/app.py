@@ -13,6 +13,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+from round_review.coaching.context import context_from_mapping
+from round_review.coaching.knowledge import load_knowledge
 from round_review.config import Config
 from round_review.errors import LedgerError, VideoError
 from round_review.ledger import LedgerEntry, read_ledger
@@ -22,18 +24,32 @@ from round_review.server.jobs import Job, JobQueue
 from round_review.watcher import list_candidates
 
 KEY_RE = re.compile(r"^[0-9a-f]{16}$")
-FRAME_RE = re.compile(r"^w\d{2}_\d{3}\.jpg$")
+FRAME_RE = re.compile(r"^(w\d{2}_\d{3}|e\d{2}_\d{2})\.jpg$")
+
+RANKS: tuple[str, ...] = (
+    "Iron",
+    "Bronze",
+    "Silver",
+    "Gold",
+    "Platinum",
+    "Diamond",
+    "Ascendant",
+    "Immortal",
+    "Radiant",
+)
 
 LEDGER_STATUS_TO_CLIP: dict[str, str] = {"ok": "done", "failed": "failed", "skipped": "skipped"}
 
 
 class SubmitJob(BaseModel):
     path: str
+    context: dict[str, Any] | None = None
 
 
 def _job_json(job: Job) -> dict[str, Any]:
     data = dataclasses.asdict(job)
     data["path"] = str(job.path)
+    data["context"] = dataclasses.asdict(job.context)
     data["created_at"] = job.created_at.isoformat()
     data["finished_at"] = job.finished_at.isoformat() if job.finished_at else None
     return data
@@ -131,7 +147,29 @@ def create_app(config: Config, jobs: JobQueue) -> FastAPI:
             raise HTTPException(status_code=400, detail="path is outside recordings_dir")
         if not path.is_file():
             raise HTTPException(status_code=404, detail="clip not found")
-        return _job_json(jobs.submit(path, key_for(path)))
+        return _job_json(jobs.submit(path, key_for(path), context_from_mapping(body.context)))
+
+    @app.get("/api/knowledge")
+    def knowledge() -> dict[str, Any]:
+        k = load_knowledge()
+        return {
+            "agents": [
+                {"id": a.id, "name": a.name, "role": a.role}
+                for a in sorted(k.agents.values(), key=lambda a: a.name)
+            ],
+            "maps": [
+                {"id": m.id, "name": m.name} for m in sorted(k.maps.values(), key=lambda m: m.name)
+            ],
+            "ranks": list(RANKS),
+            "checklist": [
+                {
+                    "id": cat.id,
+                    "name": cat.name,
+                    "checks": [{"id": c.id, "check": c.check, "fix": c.fix} for c in cat.checks],
+                }
+                for cat in k.checklist.categories
+            ],
+        }
 
     @app.get("/api/jobs")
     def list_jobs() -> dict[str, Any]:

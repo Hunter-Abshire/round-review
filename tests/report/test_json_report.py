@@ -19,7 +19,8 @@ def test_report_to_dict_is_json_serialisable_with_relative_frames(tmp_path: Path
     assert finding["evidence_frame"] == "frames/w00_004.jpg"
     assert finding["check_id"] == "crosshair.head_level"
     assert finding["check_label"] is not None
-    assert finding["check_label"].startswith("Crosshair placement / Crosshair is at head height")
+    assert finding["check_label"].startswith("Crosshair placement")
+    assert " / " in finding["check_label"]
     assert window["situation"]["agent"] == "Jett"
     assert window["situation"]["summary"] == "Entering A main with dash up."
     assert window["context"] == {

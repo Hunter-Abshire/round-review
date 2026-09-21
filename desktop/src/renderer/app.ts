@@ -1,6 +1,6 @@
 // Renderer entry point. Bundled by esbuild into dist/renderer/app.js; no Node access here.
 import { createApi, type Api } from './api';
-import { renderClipList, renderFindingCard, renderMarkers } from './dom';
+import { renderClipList, renderContextBar, renderFindingCard, renderMarkers } from './dom';
 import { initialState, reduce, type Action, type State } from './state';
 import { nearestMarker } from './timeline';
 
@@ -23,6 +23,7 @@ const byId = (id: string): HTMLElement => {
 const run = (api: Api): void => {
   let state: State = initialState;
   const listView = byId('list-view');
+  const contextBar = byId('context-bar');
   const reviewView = byId('review-view');
   const clipsRoot = byId('clips');
   const banner = byId('banner');
@@ -30,6 +31,7 @@ const run = (api: Api): void => {
   const track = byId('track');
   const card = byId('finding');
   const title = byId('review-title');
+  const situationLine = byId('situation');
 
   const dispatch = (action: Action): void => {
     state = reduce(state, action);
@@ -42,6 +44,11 @@ const run = (api: Api): void => {
     listView.hidden = state.view !== 'list';
     reviewView.hidden = state.view !== 'review';
     if (state.view === 'list') {
+      if (state.knowledge) {
+        renderContextBar(contextBar, state.context, state.knowledge, (field, value) =>
+          dispatch({ type: 'context_changed', field, value }),
+        );
+      }
       renderClipList(clipsRoot, state.clips, state.jobs, { onAnalyze: analyze, onOpen: open });
       return;
     }
@@ -56,6 +63,11 @@ const run = (api: Api): void => {
       select,
     );
     const marker = state.markers.find(m => m.id === state.selectedMarkerId) ?? null;
+    const windowInfo = marker
+      ? report.windows.find(w => w.index === marker.windowIndex)
+      : undefined;
+    situationLine.textContent = windowInfo?.situation?.summary ?? '';
+    situationLine.hidden = situationLine.textContent === '';
     const frame = marker?.finding.evidence_frame
       ? api.frameUrl(state.reviewKey, marker.finding.evidence_frame)
       : null;
@@ -78,7 +90,7 @@ const run = (api: Api): void => {
     const clip = state.clips.find(c => c.key === key);
     if (!clip) return;
     try {
-      dispatch({ type: 'job_submitted', job: await api.submitJob(clip.path) });
+      dispatch({ type: 'job_submitted', job: await api.submitJob(clip.path, state.context) });
     } catch (err) {
       fail(err);
     }
@@ -132,10 +144,19 @@ const run = (api: Api): void => {
     );
   });
 
+  const loadKnowledge = async (): Promise<void> => {
+    try {
+      dispatch({ type: 'knowledge_loaded', knowledge: await api.getKnowledge() });
+    } catch (err) {
+      fail(err);
+    }
+  };
+
   window.setInterval(() => void pollJobs(), POLL_MS);
   window.setInterval(() => {
     if (state.view === 'list' && state.activeJobIds.length === 0) void refreshClips();
   }, CLIP_REFRESH_MS);
+  void loadKnowledge();
   void refreshClips();
 };
 

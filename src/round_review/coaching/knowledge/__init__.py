@@ -254,13 +254,51 @@ def find_map(maps: Mapping[str, MapBrief], name: str | None) -> MapBrief | None:
     )
 
 
+# -- phase relevance -------------------------------------------------------------------------
+
+CORE_CATEGORIES: frozenset[str] = frozenset(
+    {
+        "crosshair",
+        "movement",
+        "peeking",
+        "positioning",
+        "utility",
+        "trading",
+        "info",
+        "timing",
+        "mental",
+    }
+)
+PHASE_CATEGORIES: dict[str, frozenset[str]] = {
+    "pre_round": frozenset({"economy", "info", "mental", "positioning", "utility"}),
+    "early": CORE_CATEGORIES,
+    "mid": CORE_CATEGORIES,
+    "post_plant": CORE_CATEGORIES | {"postplant"},
+    "retake": CORE_CATEGORIES | {"retake"},
+}
+
+
+def relevant_categories(phase: str | None) -> frozenset[str] | None:
+    """Checklist categories worth sending for a round phase; None means send everything.
+    Keeps the coach prompt small enough to fit next to a dozen images."""
+    if phase is None:
+        return None
+    return PHASE_CATEGORIES.get(phase)
+
+
 # -- rendering for prompts -------------------------------------------------------------------
 
 
-def render_checklist(checklist: Checklist, visible_only: bool = False) -> str:
+def render_checklist(
+    checklist: Checklist,
+    visible_only: bool = False,
+    categories: frozenset[str] | None = None,
+) -> str:
     """Compact: one header line per category, one line per check with its id."""
     lines: list[str] = []
     for cat in checklist.categories:
+        if categories is not None and cat.id not in categories:
+            continue
         checks = [c for c in cat.checks if c.visible_in_frames or not visible_only]
         if not checks:
             continue

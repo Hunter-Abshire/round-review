@@ -1,4 +1,4 @@
-import type { Clip, Finding } from '../shared/types';
+import type { Clip, Finding, Knowledge, PlayerContext } from '../shared/types';
 import { formatClock, markerPercent, type Marker } from './timeline';
 
 export interface Progress {
@@ -107,6 +107,7 @@ export const renderFindingCard = (
     return;
   }
   card.append(el('h3', undefined, `${formatClock(finding.timestamp_s)} · ${finding.category}`));
+  if (finding.check_label) card.append(el('p', 'check', finding.check_label));
   card.append(el('p', 'observation', finding.observation));
   if (frameUrl) {
     const img = el('img', 'evidence');
@@ -124,4 +125,71 @@ export const renderFindingCard = (
   }
   card.append(section('Try instead', finding.suggested_alternative));
   card.append(el('p', 'confidence', `Confidence: ${Math.round(finding.confidence * 100)}%`));
+};
+
+const SIDES: ReadonlyArray<[string, string]> = [
+  ['', 'Side: auto'],
+  ['attack', 'Attack'],
+  ['defense', 'Defense'],
+];
+
+const select = (
+  field: keyof PlayerContext,
+  options: ReadonlyArray<[string, string]>,
+  current: string | null,
+  onChange: (field: keyof PlayerContext, value: string) => void,
+): HTMLSelectElement => {
+  const node = el('select');
+  node.dataset['field'] = field;
+  for (const [value, label] of options) {
+    const option = el('option', undefined, label);
+    option.value = value;
+    node.append(option);
+  }
+  node.value = current ?? '';
+  node.addEventListener('change', () => onChange(field, node.value));
+  return node;
+};
+
+/** Rank / agent / map / side / focus controls. Blank means "let the model detect it". */
+export const renderContextBar = (
+  bar: HTMLElement,
+  context: PlayerContext,
+  knowledge: Knowledge,
+  onChange: (field: keyof PlayerContext, value: string) => void,
+): void => {
+  bar.replaceChildren();
+  const blank = (label: string): [string, string] => ['', label];
+  bar.append(
+    select(
+      'rank',
+      [blank('Rank'), ...knowledge.ranks.map((r): [string, string] => [r, r])],
+      context.rank,
+      onChange,
+    ),
+  );
+  bar.append(
+    select(
+      'agent',
+      [blank('Agent: auto'), ...knowledge.agents.map((a): [string, string] => [a.name, a.name])],
+      context.agent,
+      onChange,
+    ),
+  );
+  bar.append(
+    select(
+      'map',
+      [blank('Map: auto'), ...knowledge.maps.map((m): [string, string] => [m.name, m.name])],
+      context.map,
+      onChange,
+    ),
+  );
+  bar.append(select('side', SIDES, context.side, onChange));
+  const focus = el('input');
+  focus.type = 'text';
+  focus.placeholder = 'Focus (e.g. entries, post-plant)';
+  focus.dataset['field'] = 'focus';
+  focus.value = context.focus ?? '';
+  focus.addEventListener('change', () => onChange('focus', focus.value));
+  bar.append(focus);
 };

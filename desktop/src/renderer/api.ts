@@ -1,4 +1,4 @@
-import type { Clip, Job, Report } from '../shared/types';
+import type { Clip, Job, Knowledge, PlayerContext, Report } from '../shared/types';
 
 export interface FetchResponseLike {
   ok: boolean;
@@ -15,7 +15,8 @@ export interface ClipsResponse {
 
 export interface Api {
   getClips: () => Promise<ClipsResponse>;
-  submitJob: (path: string) => Promise<Job>;
+  submitJob: (path: string, context: PlayerContext) => Promise<Job>;
+  getKnowledge: () => Promise<Knowledge>;
   getJob: (id: string) => Promise<Job>;
   getReport: (key: string) => Promise<Report>;
   videoUrl: (key: string) => string;
@@ -40,12 +41,13 @@ export const createApi = (baseUrl: string, fetchFn: FetchLike): Api => {
   };
   return {
     getClips: () => request<ClipsResponse>('/api/clips'),
-    submitJob: path =>
+    submitJob: (path, context) =>
       request<Job>('/api/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path }),
+        body: JSON.stringify({ path, context }),
       }),
+    getKnowledge: () => request<Knowledge>('/api/knowledge'),
     getJob: id => request<Job>(`/api/jobs/${encodeURIComponent(id)}`),
     getReport: key => request<Report>(`/api/reports/${encodeURIComponent(key)}`),
     videoUrl: key => `${baseUrl}/api/media/${encodeURIComponent(key)}/video`,

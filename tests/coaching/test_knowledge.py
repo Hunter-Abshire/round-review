@@ -239,3 +239,37 @@ def test_data_files_are_valid_json(tmp_path: Path) -> None:
     root = files("round_review.coaching.knowledge")
     for name in ("checklist.json", "agents.json", "maps.json"):
         json.loads(root.joinpath(name).read_text(encoding="utf-8"))
+
+
+def test_bundled_checklist_is_substantial() -> None:
+    checklist = load_checklist()
+    assert len(checklist.categories) >= 12
+    assert len(checklist.check_ids()) >= 60
+    assert {"crosshair", "utility", "economy", "postplant", "retake"} <= {
+        c.id for c in checklist.categories
+    }
+
+
+def test_relevant_categories_by_phase() -> None:
+    from round_review.coaching.knowledge import relevant_categories
+
+    assert relevant_categories(None) is None  # unknown phase = everything
+    assert relevant_categories("unknown") is None
+    pre = relevant_categories("pre_round")
+    assert pre is not None and "economy" in pre and "postplant" not in pre and "retake" not in pre
+    early = relevant_categories("early")
+    assert early is not None and {"crosshair", "peeking", "utility", "trading"} <= early
+    assert "postplant" not in early and "retake" not in early
+    post = relevant_categories("post_plant")
+    assert (
+        post is not None and "postplant" in post and "retake" not in post and "economy" not in post
+    )
+    retake = relevant_categories("retake")
+    assert retake is not None and "retake" in retake and "postplant" not in retake
+
+
+def test_render_checklist_filters_categories() -> None:
+    checklist = load_checklist()
+    text = render_checklist(checklist, visible_only=True, categories=frozenset({"crosshair"}))
+    assert "[crosshair." in text
+    assert "[utility." not in text

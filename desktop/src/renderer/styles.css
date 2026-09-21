@@ -159,3 +159,31 @@ video {
   color: var(--muted);
   margin-bottom: 0;
 }
+.context-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.context-bar select,
+.context-bar input {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid #2c323c;
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+.context-bar input {
+  flex: 1;
+  min-width: 200px;
+}
+.situation {
+  color: var(--muted);
+  margin: 0 0 12px;
+  font-style: italic;
+}
+.finding .check {
+  color: var(--warn);
+  margin: 0 0 6px;
+  font-size: 13px;
+}

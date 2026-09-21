@@ -1,4 +1,11 @@
-import type { Clip, Job, Report } from '../shared/types';
+import {
+  EMPTY_CONTEXT,
+  type Clip,
+  type Job,
+  type Knowledge,
+  type PlayerContext,
+  type Report,
+} from '../shared/types';
 import { collectMarkers, type Marker } from './timeline';
 
 export const VIEW = { list: 'list', review: 'review' } as const;
@@ -15,7 +22,11 @@ export interface State {
   report: Report | null;
   markers: Marker[];
   selectedMarkerId: string | null;
+  context: PlayerContext;
+  knowledge: Knowledge | null;
 }
+
+export type ContextField = keyof PlayerContext;
 
 export type Action =
   | { type: 'clips_loaded'; clips: Clip[]; warning: string | null }
@@ -24,6 +35,8 @@ export type Action =
   | { type: 'report_loaded'; key: string; report: Report }
   | { type: 'marker_selected'; id: string }
   | { type: 'back_to_list' }
+  | { type: 'context_changed'; field: ContextField; value: string }
+  | { type: 'knowledge_loaded'; knowledge: Knowledge }
   | { type: 'error'; message: string };
 
 export const initialState: State = {
@@ -37,6 +50,8 @@ export const initialState: State = {
   report: null,
   markers: [],
   selectedMarkerId: null,
+  context: EMPTY_CONTEXT,
+  knowledge: null,
 };
 
 const ACTIVE_JOB = new Set<string>(['queued', 'running']);
@@ -83,6 +98,16 @@ export const reduce = (state: State, action: Action): State => {
         markers: [],
         selectedMarkerId: null,
       };
+    case 'context_changed':
+      return {
+        ...state,
+        context: {
+          ...state.context,
+          [action.field]: action.value.trim() === '' ? null : action.value.trim(),
+        },
+      };
+    case 'knowledge_loaded':
+      return { ...state, knowledge: action.knowledge };
     case 'error':
       return { ...state, error: action.message };
   }

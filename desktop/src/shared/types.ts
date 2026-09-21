@@ -40,10 +40,64 @@ export interface Job {
   error: string | null;
   created_at: string;
   finished_at: string | null;
+  context: PlayerContext;
+}
+
+export interface PlayerContext {
+  rank: string | null;
+  agent: string | null;
+  map: string | null;
+  side: string | null;
+  focus: string | null;
+  notes: string | null;
+}
+
+export const EMPTY_CONTEXT: PlayerContext = {
+  rank: null,
+  agent: null,
+  map: null,
+  side: null,
+  focus: null,
+  notes: null,
+};
+
+export interface KnowledgeCheck {
+  id: string;
+  check: string;
+  fix: string;
+}
+
+export interface KnowledgeCategory {
+  id: string;
+  name: string;
+  checks: KnowledgeCheck[];
+}
+
+export interface Knowledge {
+  agents: Array<{ id: string; name: string; role: string }>;
+  maps: Array<{ id: string; name: string }>;
+  ranks: string[];
+  checklist: KnowledgeCategory[];
+}
+
+export interface Situation {
+  agent: string | null;
+  map: string | null;
+  side: string | null;
+  phase: string | null;
+  weapon: string | null;
+  abilities_available: string[];
+  credits: number | null;
+  teammates_alive: number | null;
+  enemies_visible: number;
+  timeline: Array<{ t: number; event: string }>;
+  summary: string;
 }
 
 export interface Finding {
   timestamp_s: number;
+  check_id: string;
+  check_label: string | null;
   category: string;
   observation: string;
   visible_evidence: string;
@@ -60,6 +114,8 @@ export interface ReportWindow {
   start_s: number;
   end_s: number;
   model_calls: number;
+  context: PlayerContext;
+  situation: Situation | null;
   findings: Finding[];
   warnings: string[];
 }

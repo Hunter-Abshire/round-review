@@ -64,7 +64,7 @@ GOOD = json.dumps(
         "findings": [
             {
                 "timestamp_s": 61.0,
-                "check_id": "utility.unused_at_death",
+                "check_id": "utility.has_purpose",
                 "category": "utility",
                 "observation": "o",
                 "visible_evidence": "v",
@@ -95,7 +95,7 @@ def test_two_pass_happy_path(samples: list[FrameSample]) -> None:
     assert isinstance(result, WindowResult)
     assert result.model_calls == 2
     assert len(result.findings) == 1
-    assert result.findings[0].check_id == "utility.unused_at_death"
+    assert result.findings[0].check_id == "utility.has_purpose"
     assert result.warnings == ()
     assert result.situation is not None and result.situation.agent == "Jett"
     # detected agent/map merged into the context the coach pass saw; user rank kept

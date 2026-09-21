@@ -80,7 +80,7 @@ def review_window(
         else:
             context = merge_context(context, situation.to_context())
 
-    system = build_system_prompt(knowledge)
+    system = build_system_prompt(knowledge, situation.phase if situation else None)
     prompt = build_coach_prompt(window, samples, context, situation, knowledge)
     check_ids = knowledge.checklist.check_ids()
     last_error: ParseError | None = None

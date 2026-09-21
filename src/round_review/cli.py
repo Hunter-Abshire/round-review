@@ -159,7 +159,9 @@ def serve(config: Config, port: int | None) -> None:
     """Run the local API used by the desktop app. Binds to 127.0.0.1 only."""
     deps: Deps = make_default_deps(config)
     jobs = JobQueue(
-        lambda path, on_progress: review_file(path, deps, on_progress=on_progress),
+        lambda path, ctx, on_progress: review_file(
+            path, deps, context=ctx, on_progress=on_progress
+        ),
         clock=deps.clock,
     )
     app = create_app(config, jobs)

@@ -5,6 +5,7 @@ import {
   nearestMarker,
 } from '../../src/renderer/timeline';
 import { finding, report } from './fixtures';
+import { EMPTY_CONTEXT } from '../../src/shared/types';
 
 describe('collectMarkers', () => {
   it('flattens windows into markers ordered by timestamp with stable ids', () => {
@@ -49,6 +50,8 @@ describe('nearestMarker', () => {
             start_s: 0,
             end_s: 12,
             model_calls: 1,
+            context: EMPTY_CONTEXT,
+            situation: null,
             warnings: [],
             findings: [finding({ timestamp_s: 5 }), finding({ timestamp_s: 6 })],
           },

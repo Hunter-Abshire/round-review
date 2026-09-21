@@ -14,6 +14,7 @@ from round_review.coaching.knowledge import (
     CoachingKnowledge,
     find_agent,
     find_map,
+    relevant_categories,
     render_agent_brief,
     render_checklist,
     render_map_brief,
@@ -167,11 +168,13 @@ def _window_line(window: Window, samples: Sequence[FrameSample]) -> str:
     )
 
 
-def build_system_prompt(knowledge: CoachingKnowledge) -> str:
-    return (
-        f"{PERSONA}\n\n{RULES}\n\nReview checklist (cite ids in check_id):\n"
-        f"{render_checklist(knowledge.checklist, visible_only=True)}"
+def build_system_prompt(knowledge: CoachingKnowledge, phase: str | None) -> str:
+    """Persona, rules and the checklist. When the round phase is known only the relevant
+    categories are included, which keeps the prompt small next to the images."""
+    checklist = render_checklist(
+        knowledge.checklist, visible_only=True, categories=relevant_categories(phase)
     )
+    return f"{PERSONA}\n\n{RULES}\n\nReview checklist (cite ids in check_id):\n{checklist}"
 
 
 def build_situation_prompt(

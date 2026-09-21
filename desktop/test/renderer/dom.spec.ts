@@ -1,7 +1,13 @@
 /**
  * @jest-environment jsdom
  */
-import { renderClipList, renderFindingCard, renderMarkers } from '../../src/renderer/dom';
+import {
+  renderClipList,
+  renderContextBar,
+  renderFindingCard,
+  renderMarkers,
+} from '../../src/renderer/dom';
+import { EMPTY_CONTEXT } from '../../src/shared/types';
 import { collectMarkers } from '../../src/renderer/timeline';
 import { clip, finding, report } from './fixtures';
 
@@ -61,6 +67,7 @@ describe('renderFindingCard', () => {
     const text = card.textContent ?? '';
     expect(text).toContain('1:04');
     expect(text).toContain('positioning');
+    expect(text).toContain('Crosshair placement / Crosshair is at head height');
     expect(text).toContain('Held a wide angle.');
     expect(text).toContain('What you could see');
     expect(text).toContain("What you couldn't have known");
@@ -74,5 +81,44 @@ describe('renderFindingCard', () => {
     const card = document.createElement('div');
     renderFindingCard(card, null, null);
     expect(card.textContent).toContain('Click a marker');
+  });
+});
+
+describe('renderContextBar', () => {
+  it('renders rank, agent, map and side controls from knowledge and reports changes', () => {
+    const bar = document.createElement('div');
+    const changes: Array<[string, string]> = [];
+    renderContextBar(
+      bar,
+      { ...EMPTY_CONTEXT, rank: 'Gold', agent: 'Jett' },
+      {
+        agents: [
+          { id: 'jett', name: 'Jett', role: 'duelist' },
+          { id: 'sova', name: 'Sova', role: 'initiator' },
+        ],
+        maps: [{ id: 'ascent', name: 'Ascent' }],
+        ranks: ['Silver', 'Gold'],
+        checklist: [],
+      },
+      (field, value) => changes.push([field, value]),
+    );
+    const rank = bar.querySelector('select[data-field="rank"]') as HTMLSelectElement;
+    const agent = bar.querySelector('select[data-field="agent"]') as HTMLSelectElement;
+    const map = bar.querySelector('select[data-field="map"]') as HTMLSelectElement;
+    const side = bar.querySelector('select[data-field="side"]') as HTMLSelectElement;
+    const focus = bar.querySelector('input[data-field="focus"]') as HTMLInputElement;
+    expect(rank.value).toBe('Gold');
+    expect(agent.value).toBe('Jett');
+    expect(map.value).toBe('');
+    expect(Array.from(agent.options).map(o => o.value)).toEqual(['', 'Jett', 'Sova']);
+    expect(Array.from(side.options).map(o => o.value)).toEqual(['', 'attack', 'defense']);
+    map.value = 'Ascent';
+    map.dispatchEvent(new Event('change'));
+    focus.value = 'entries';
+    focus.dispatchEvent(new Event('change'));
+    expect(changes).toEqual([
+      ['map', 'Ascent'],
+      ['focus', 'entries'],
+    ]);
   });
 });

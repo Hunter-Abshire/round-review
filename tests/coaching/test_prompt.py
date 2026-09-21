@@ -41,7 +41,7 @@ def test_schemas_are_json_serialisable_and_require_anti_hindsight_fields() -> No
 
 def test_system_prompt_contains_persona_rules_and_checklist() -> None:
     knowledge = load_knowledge()
-    text = build_system_prompt(knowledge)
+    text = build_system_prompt(knowledge, phase=None)
     lower = text.lower()
     assert "coach" in lower
     assert "later" in lower and "earlier" in lower
@@ -90,3 +90,11 @@ def test_coach_prompt_without_context_or_situation_still_works() -> None:
     text = build_coach_prompt(WINDOW, SAMPLES, PlayerContext(), None, knowledge)
     assert "Agent brief" not in text and "Map brief" not in text
     assert "t=100.0s" in text
+
+
+def test_system_prompt_drops_irrelevant_categories_for_known_phase() -> None:
+    knowledge = load_knowledge()
+    text = build_system_prompt(knowledge, phase="early")
+    assert "[crosshair." in text and "[postplant." not in text and "[retake." not in text
+    full = build_system_prompt(knowledge, phase=None)
+    assert "[postplant." in full

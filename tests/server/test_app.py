@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from round_review.coaching.context import PlayerContext
 from round_review.config import Config
 from round_review.ledger import LedgerEntry, append_entry
 from round_review.pipeline import key_for, report_dir_for
@@ -38,12 +39,15 @@ class FakeRun:
     def __init__(self, cfg: Config) -> None:
         self.cfg = cfg
         self.calls: list[Path] = []
+        self.contexts: list[PlayerContext] = []
 
-    def __call__(self, path: Path, on_progress: ProgressFn) -> None:
+    def __call__(self, path: Path, context: PlayerContext, on_progress: ProgressFn) -> None:
         self.calls.append(path)
+        self.contexts.append(context)
         out = report_dir_for(self.cfg, path)
         (out / "frames").mkdir(parents=True, exist_ok=True)
         (out / "frames" / "w00_002.jpg").write_bytes(b"\xff\xd8jpeg")
+        (out / "frames" / "e00_01.jpg").write_bytes(b"\xff\xd8exact")
         (out / "report.json").write_text(
             json.dumps(
                 {
@@ -105,7 +109,7 @@ def test_clips_status_from_ledger(client: TestClient, cfg: Config, clip: Path) -
 
 def test_clips_without_recordings_dir(tmp_path: Path) -> None:
     cfg = Config(reports_dir=tmp_path, ledger_path=tmp_path / "l.jsonl")
-    with TestClient(create_app(cfg, JobQueue(lambda p, f: None, clock=lambda: NOW))) as c:
+    with TestClient(create_app(cfg, JobQueue(lambda p, c, f: None, clock=lambda: NOW))) as c:
         r = c.get("/api/clips")
     assert r.status_code == 200
     assert r.json()["clips"] == []
@@ -173,3 +177,44 @@ def test_frames_served_with_name_validation(client: TestClient, clip: Path) -> N
     assert client.get(f"/api/media/{key}/frames/report.json").status_code == 404
     assert client.get(f"/api/media/{key}/frames/..%2Freport.json").status_code == 404
     assert client.get("/api/media/ffffffffffffffff/frames/w00_002.jpg").status_code == 404
+
+
+def test_submit_job_passes_context(client: TestClient, clip: Path) -> None:
+    r = client.post(
+        "/api/jobs",
+        json={
+            "path": str(clip),
+            "context": {"rank": "Gold 2", "agent": "Jett", "map": "", "side": "Attack"},
+        },
+    )
+    assert r.status_code == 202, r.text
+    assert r.json()["context"] == {
+        "rank": "Gold 2",
+        "agent": "Jett",
+        "map": None,
+        "side": "attack",
+        "focus": None,
+        "notes": None,
+    }
+    assert client.app.state.jobs.wait_idle(timeout=5)  # type: ignore[attr-defined]
+    run = client.app.state.fake_run  # type: ignore[attr-defined]
+    assert run.contexts == [PlayerContext(rank="Gold 2", agent="Jett", side="attack")]
+
+
+def test_exact_evidence_frames_are_served(client: TestClient, clip: Path) -> None:
+    key = key_for(clip)
+    client.post("/api/jobs", json={"path": str(clip)})
+    assert client.app.state.jobs.wait_idle(timeout=5)  # type: ignore[attr-defined]
+    assert client.get(f"/api/media/{key}/frames/e00_01.jpg").status_code == 200
+
+
+def test_knowledge_endpoint_lists_agents_maps_ranks_and_checklist(client: TestClient) -> None:
+    r = client.get("/api/knowledge")
+    assert r.status_code == 200
+    body = r.json()
+    assert {"id": "jett", "name": "Jett", "role": "duelist"} in body["agents"]
+    assert any(m["id"] == "ascent" and m["name"] == "Ascent" for m in body["maps"])
+    assert "Gold" in body["ranks"]
+    assert any(
+        c["id"] == "crosshair.head_level" for cat in body["checklist"] for c in cat["checks"]
+    )

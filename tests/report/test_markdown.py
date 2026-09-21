@@ -67,7 +67,7 @@ def test_render_contains_all_sections(tmp_path: Path) -> None:
     assert "2026-09-20" in text
     assert "## Window 1: 1:00 - 1:12" in text
     assert "### 1:04 positioning" in text
-    assert "Checklist: Crosshair placement / Crosshair is at head height" in text
+    assert "Checklist: Crosshair placement" in text
     assert "Situation: Entering A main with dash up." in text
     assert "Jett on Ascent (attack)" in text
     assert "**What you could see:** Minimap at t=64.0s shows no teammate right." in text

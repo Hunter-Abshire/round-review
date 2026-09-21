@@ -2,27 +2,744 @@
   "categories": [
     {
       "id": "crosshair",
-      "name": "Crosshair placement",
-      "principle": "The crosshair sits at head height on the next corner an enemy could appear from.",
+      "name": "Crosshair placement and pre-aim",
+      "principle": "The crosshair is already at head height on the nearest edge an enemy can appear from, so the first shot needs no vertical correction and at most a small horizontal flick.",
       "checks": [
-        {"id": "crosshair.head_level", "check": "Crosshair is at head height of the nearest corner, not on the floor or sky.", "common_mistake": "Aiming at the ground while moving.", "fix": "Pre-aim the corner you are about to clear before you reach it.", "visible_in_frames": true},
-        {"id": "crosshair.next_angle", "check": "Crosshair is on the next uncleared angle, not on a cleared or empty area.", "common_mistake": "Looking at the wall or teammate while walking.", "fix": "Move the crosshair to the next danger point as you move.", "visible_in_frames": true}
+        {
+          "id": "crosshair.head_level",
+          "check": "Is the crosshair at head height of the space the player is looking into (aligned with head-level map cues such as crate tops, door-frame lines, railing tops), not on the floor, on the sky, or on the player's own gun?",
+          "common_mistake": "Crosshair drifts to chest or floor while moving, especially on ramps, stairs and after using an ability, so every duel starts with a vertical flick.",
+          "fix": "Walk the map in a custom game keeping the crosshair glued to head-level landmarks; treat crate tops and door lines as the rail the crosshair rides on.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "crosshair.corner_edge",
+          "check": "Is the crosshair placed within roughly one head-width of the edge of the nearest corner or cover an enemy could swing from, rather than in the middle of open space?",
+          "common_mistake": "Aiming at the centre of a doorway or hallway, so an enemy peeking the near edge is a full body-width away from the crosshair.",
+          "fix": "Hug the edge: if the threat can come from the right of a box, rest the crosshair just right of the box edge at head height and slide it as you move.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "crosshair.not_on_cover",
+          "check": "Is the crosshair pointed into the actual angle being held instead of resting on the wall, box or smoke directly in front of the player?",
+          "common_mistake": "Player stares at the cover they are hiding behind, or into a smoke, and has to reacquire an enemy who appears to the side.",
+          "fix": "Pick the one line where the enemy is most likely to appear and keep the crosshair on the open part of that line; if there is nothing to aim at, move to a spot where there is.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "crosshair.slice_pie",
+          "check": "As the player moves past a corner, does the crosshair sweep from the far side of the angle to the near side in successive frames (clearing one slice at a time), rather than staying fixed straight ahead?",
+          "common_mistake": "Walking through a doorway with the crosshair locked forward, so both flanks of the door are unchecked and a close enemy gets a free shot.",
+          "fix": "Clear angles progressively: step, reveal a slice, move the crosshair with the reveal, step again. Never expose a new slice without the crosshair already on it.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "crosshair.distance_adjust",
+          "check": "Is the crosshair pre-aimed for the closest realistic threat (near corner, close cubby) rather than pre-aimed at a distant head-level while a close angle is uncleared?",
+          "common_mistake": "Pre-aiming the far end of a long lane and getting killed by an enemy in the near cubby who was one metre away.",
+          "fix": "Close angles first, then far. Only put the crosshair on the far angle once every near cubby on the way has been cleared or is covered by a teammate.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "crosshair.no_ads_close",
+          "check": "Is the player hip-firing (not scoped) with a rifle at close and medium range, and only ADS on long lanes?",
+          "common_mistake": "Right-clicking on every peek with a Vandal or Phantom, which slows movement and turn speed and makes close-range strafing duels lose.",
+          "fix": "Hip-fire everything under roughly 25 metres; reserve ADS for long, static sight lines with time to set up.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "crosshair.elevation",
+          "check": "On stairs, ramps, boxes and heaven positions, is the crosshair adjusted up or down to the head height of the elevated or lowered position rather than kept at ground-level head height?",
+          "common_mistake": "Holding site entrance at flat head height while the enemy drops from heaven or comes up a ramp, so the first shots hit body or miss entirely.",
+          "fix": "Identify the elevation of the most likely entry point and place the crosshair on that head height; on multi-level sites default to the higher position since it is harder to correct upward.",
+          "visible_in_frames": true
+        }
+      ]
+    },
+    {
+      "id": "movement",
+      "name": "Movement and shooting discipline",
+      "principle": "The player is fully stopped when the first bullet leaves the gun, moves off the angle immediately after shooting, and never gives a stationary head for free.",
+      "checks": [
+        {
+          "id": "movement.counter_strafe",
+          "check": "When the player fires a rifle or pistol, is the character stationary (no visible strafe displacement between the frame before and the frame of the shot, no widened bloom)?",
+          "common_mistake": "Running into an angle and spraying while still moving, so the first 3-4 bullets have running inaccuracy and land nowhere near the head.",
+          "fix": "Tap the opposite strafe key to kill momentum, fire in the dead stop, then strafe again. Drill it in the Range: A, then D plus click, until the timing is automatic.",
+          "visible_in_frames": false
+        },
+        {
+          "id": "movement.no_crouch_default",
+          "check": "Is the player standing (not crouched) in open duels, only crouching to break a pre-aim or to use low cover?",
+          "common_mistake": "Crouch-spraying in every fight, which drops the head straight into the enemy's crosshair and removes the option to strafe back to cover.",
+          "fix": "Default to standing counter-strafes; crouch only as a deliberate one-time surprise or when cover is chest height.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "movement.strafe_after_shot",
+          "check": "After firing or getting a kill, does the player strafe back behind cover or to a new angle within the next second instead of standing still on the same spot?",
+          "common_mistake": "Getting a kill and staying in the open admiring it, then dying to the trade from the second enemy who already pre-aimed the spot.",
+          "fix": "Shoot, move. Reset behind cover after every exchange, then re-peek from a different spot or hold from depth.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "movement.no_jump_in_duels",
+          "check": "Is the player keeping feet on the ground during gunfights, using jumps only as a deliberate jump-peek for information from behind cover?",
+          "common_mistake": "Jump-spamming or bunny-hopping through doorways and then landing in front of an enemy with full jump inaccuracy.",
+          "fix": "Jump only to gather info from a corner and land back behind cover; never jump into a line where a fight can start.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "movement.walk_when_silent",
+          "check": "When enemies may be near and unaware, is the player shift-walking (small displacement per frame, no footstep noise), and running only when already known or when a trade must arrive fast?",
+          "common_mistake": "Running to every position and announcing rotations and lurks with footsteps, or the reverse: shift-walking across the map after a spike plant.",
+          "fix": "Walk when silence would change the enemy's decision; run when they already know where you are or when time matters more than noise.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "movement.cover_path",
+          "check": "While moving between positions, is the player hugging cover and walls (short exposure windows) rather than walking down the centre of an open lane?",
+          "common_mistake": "Crossing mid or a long lane down the middle, exposed to two or three angles for several seconds.",
+          "fix": "Plan the route as a chain of cover: box to box, wall to wall, with the crosshair on the one angle open at each hop.",
+          "visible_in_frames": true
+        }
+      ]
+    },
+    {
+      "id": "peeking",
+      "name": "Peeking and angle clearing",
+      "principle": "Every peek has a purpose (info, bait, or kill), uses utility or a teammate to tilt the odds, and is executed with pre-aim, a full stop, and no immediate re-peek.",
+      "checks": [
+        {
+          "id": "peeking.utility_first",
+          "check": "Before the player swings a held angle, was a flash, smoke, stun or recon ability used on that angle (ability effect visible in-frame or ability charge consumed on HUD)?",
+          "common_mistake": "Dry-peeking a defender who has been holding the angle for 30 seconds with a rifle and full pre-aim.",
+          "fix": "Either use your own utility, wait for an initiator's flash or dart, or pick a different angle. A dry peek into a set defender is a coin flip at best.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "peeking.jiggle_for_info",
+          "check": "When the enemy position is unknown, does the player use a short jiggle or shoulder peek (brief partial exposure then back behind cover) before committing?",
+          "common_mistake": "Wide-swinging into an angle without knowing if anyone is there, exposing the full body to every position at once.",
+          "fix": "Jiggle first: strafe out for a fraction of a second and back, reading the minimap and any shots fired, then decide on the wide swing.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "peeking.wide_swing_known",
+          "check": "When the player wide-swings, is the enemy position already known (spotted on minimap, seen on a jiggle, or called), and is the swing fast, wide and finished with a dead stop?",
+          "common_mistake": "Slow, narrow swings that give the defender a small target hugging the corner, or wide swings into an unknown angle.",
+          "fix": "Commit to the swing: start tight to the wall, pre-aim head height at the known spot, swing wide and fast, counter-strafe, shoot.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "peeking.shoulder_vs_operator",
+          "check": "Against an Operator, does the player bait the shot with a shoulder or jump peek and swing only during the rechamber window instead of walking into the scope?",
+          "common_mistake": "Peeking an Operator angle normally, repeatedly, and losing to a one-shot every time.",
+          "fix": "Shoulder peek to draw the shot, then swing immediately or smoke the angle and go around it.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "peeking.no_repeek",
+          "check": "After taking contact (shots fired either way) and retreating, does the player avoid re-peeking the identical angle within the next few seconds?",
+          "common_mistake": "Peek, get shot at, hide, peek the exact same pixel again while the enemy is now pre-aimed on it.",
+          "fix": "After contact, change something: a different spot, a different height, a teammate swinging together, or utility first.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "peeking.single_angle",
+          "check": "At the moment of the peek, is the player exposed to one angle only, not standing where two or more separate lines can see them?",
+          "common_mistake": "Standing in a doorway that is visible from site, heaven and the connector at once, so even winning one duel gets you killed by another.",
+          "fix": "Isolate angles: use walls and smokes so only one enemy position can see you at a time, and clear that one before opening the next.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "peeking.with_support",
+          "check": "When the player peeks, is a teammate within trade distance (adjacent on the minimap, roughly 5 metres) or is an ability covering the swing?",
+          "common_mistake": "Solo peeking into a site while the team is 20 metres back, so the kill cannot be traded.",
+          "fix": "Peek together or not at all: call the swing, wait for the teammate to arrive at trade distance, then go.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "peeking.hp_awareness",
+          "check": "At low HP (under ~40 on the HUD) or with no armor, does the player avoid initiating peeks and instead hold from an off-angle or play for a teammate's trade?",
+          "common_mistake": "Taking the same aggressive duels at 20 HP as at 150, and losing to one body shot.",
+          "fix": "At low HP switch to holding: let the enemy come to you where any single hit you land matters and their first hit kills you either way.",
+          "visible_in_frames": true
+        }
+      ]
+    },
+    {
+      "id": "positioning",
+      "name": "Positioning and angle selection",
+      "principle": "The player holds one line from a spot the enemy is not pre-aiming, with cover to fall back to and a teammate able to trade, and changes that spot after every contact.",
+      "checks": [
+        {
+          "id": "positioning.not_hugging_corner",
+          "check": "Is the player holding from depth (several metres back from the corner or dividing wall) rather than standing right on the corner that attackers clear first?",
+          "common_mistake": "Hugging the near corner of a site entrance, which is the first pixel every attacker pre-aims and gives the peeker the angle advantage.",
+          "fix": "Step back and off-line so the enemy must fully commit through the doorway before they can see you; play the angle from farther away than they expect.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "positioning.one_line",
+          "check": "Does the player's position expose them to a single entry lane, not two or more separated entries they cannot cover with one crosshair?",
+          "common_mistake": "Standing on site where main, connector and heaven can all see you, then dying to whichever one you were not looking at.",
+          "fix": "Pick one line; let a teammate, a trap, or a smoke handle the other. If nobody can cover it, move to a spot where only one line is open.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "positioning.off_angle_has_exit",
+          "check": "When holding an off-angle, does the player have visible cover or a fall-back route behind or beside them, not a dead-end in the open?",
+          "common_mistake": "Sitting in a surprising but open spot where after the first kill the next two attackers trade instantly and there is nowhere to go.",
+          "fix": "Every off-angle needs an exit: cover within one strafe, a smoke to fall back into, or a teammate watching the swing path.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "positioning.off_angle_static",
+          "check": "When holding an off-angle, is the player still (not jiggling or strafing in and out), while on common angles they are moving and repeeking?",
+          "common_mistake": "Jiggle-peeking from an off-angle far from the wall, revealing the position and throwing away the surprise.",
+          "fix": "Off-angle: hold still and let them walk into it. Common angle: keep strafing and re-peeking so you are not a static target.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "positioning.varied_holds",
+          "check": "Across rounds, does the player hold different spots and depths on the same site rather than the same position every round?",
+          "common_mistake": "Same corner every round; by round 5 the attackers pre-fire it.",
+          "fix": "Rotate between two or three holds per site and change depth and timing; after a kill from a spot, do not return to it next round.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "positioning.crossfire",
+          "check": "On defense, are two teammates positioned so their sight lines converge on the same entrance from different directions (crossfire) rather than both stacked in one spot or both looking at different entrances alone?",
+          "common_mistake": "Two defenders standing together behind the same box, or split across the site each in a 1v1 with no support.",
+          "fix": "Set one player as contact and the other watching the swing path; both should see the attacker's likely position but from separate angles.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "positioning.reposition_after_contact",
+          "check": "After getting a kill or being seen, does the player change position within the next few seconds?",
+          "common_mistake": "Kill from a spot, stay there, die to the next attacker who watched the killfeed and pre-aimed the spot.",
+          "fix": "Assume the enemy team knows where you are the moment you fire; move to a second pre-planned spot immediately.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "positioning.anchor_depth",
+          "check": "When solo-anchoring a site, is the player playing deep and behind cover (retreat available, not aggressive in the entrance) so they can delay until rotates arrive?",
+          "common_mistake": "Anchor pushes out into main alone, dies, and the site is open with no info given.",
+          "fix": "Anchor's job is to survive and delay: hold from the back of site, use utility on first contact, and fall back rather than fight five.",
+          "visible_in_frames": true
+        }
       ]
     },
     {
       "id": "utility",
       "name": "Utility usage",
-      "principle": "Utility is used before contact to create the fight you want, and saved when it has no purpose.",
+      "principle": "Every ability is used for a specific purpose, timed to a teammate's action, never doubled up on one angle, and at least one piece is held for the late round.",
       "checks": [
-        {"id": "utility.unused_at_death", "check": "Ability icons are still lit at the moment of death.", "common_mistake": "Dying with flash, dash or smoke unused.", "fix": "Use utility before peeking, not after taking damage.", "visible_in_frames": true}
+        {
+          "id": "utility.has_purpose",
+          "check": "For each ability used, is there an observable purpose: it blocks a sight line someone is crossing, reveals a space someone is about to take, or denies space the enemy is using?",
+          "common_mistake": "Throwing smokes and flashes on autopilot at round start with no teammate using them.",
+          "fix": "Before using anything, name the purpose out loud (vision denial, info, space control, kill). If you cannot, hold it.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "utility.timed_to_teammate",
+          "check": "Do flashes, stuns and smokes land within a second or two of a teammate's swing or crossing (teammate moving through the affected area in the following frames)?",
+          "common_mistake": "Flashing when nobody is ready to swing, or smoking after the duelist is already dead.",
+          "fix": "Call the timing: 'flashing in 3', then throw. Smoke before the entry, not after.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "utility.no_stacking",
+          "check": "Are two of the same utility (two smokes, two flashes, two mollies) avoided on the same angle at the same time?",
+          "common_mistake": "Two controllers smoke the same choke, or two players flash the same corner back to back, wasting half the team's utility for one crossing.",
+          "fix": "One smoke per crossing, one flash per swing. Coordinate who covers which angle before the round starts.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "utility.held_for_late_round",
+          "check": "At spike plant or when a retake starts, does the player's HUD still show at least one usable ability?",
+          "common_mistake": "Every ability spent in the first 30 seconds, leaving nothing to deny a defuse or support a retake.",
+          "fix": "Reserve one ability (molly, smoke, flash) explicitly for after the plant; do not spend it on the entry unless it wins the round on the spot.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "utility.not_early_wasted",
+          "check": "In the first ~10-15 seconds of the round with no enemy information, is the player holding utility rather than throwing it blindly at default spots?",
+          "common_mistake": "Nervous round-start smokes and flashes into empty space that are all on cooldown when the real fight starts.",
+          "fix": "Wait for a trigger: enemy footsteps, a dart, a callout, or a planned execute time. Utility after info is worth several times utility before it.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "utility.defuse_denial",
+          "check": "Post-plant, is damaging utility (molly, Viper wall, Killjoy, ult) used on the spike when the defuser is actually tapping, not thrown early?",
+          "common_mistake": "Throwing the molly onto the spike at 30 seconds before anyone is defusing, then having nothing when they tap at 8.",
+          "fix": "Wait for a tap (defuse indicator or minimap ping) before committing denial utility; it is the highest-value ability in ranked post-plants.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "utility.no_team_flash",
+          "check": "Are flashes thrown so they pop past the corner rather than in the player's or a teammate's face (no white-out on the reviewer's own screen, no 'blinded' teammate icon)?",
+          "common_mistake": "Popping the flash in the doorway everyone is standing in, blinding the whole team as the enemy swings.",
+          "fix": "Learn one safe lineup per angle: bounce off the far wall or throw high so it pops on the enemy side of the corner.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "utility.acts_on_info",
+          "check": "After a recon dart, drone, or trip triggers and shows enemies on the minimap, does the player act on it within a few seconds (peek the flagged position, avoid it, or rotate)?",
+          "common_mistake": "Dart reveals two enemies on site, team keeps pushing the same way or waits until the reveal expires.",
+          "fix": "Treat reveals as a timer: swing while the enemy is marked, or use the info to change plan immediately.",
+          "visible_in_frames": true
+        }
+      ]
+    },
+    {
+      "id": "trading",
+      "name": "Trading and spacing",
+      "principle": "Teammates move at a distance that lets the second player swing the same fight within about one second of the first player's death, and the trade is followed by taking the space.",
+      "checks": [
+        {
+          "id": "trading.distance",
+          "check": "On the minimap, is the player within roughly 5 metres (about one second of movement) of the teammate who is about to take contact?",
+          "common_mistake": "Following 15-20 metres behind, which feels safe but means the entry dies alone and the defender resets before anyone can punish.",
+          "fix": "Ask: if my teammate dies right now, can I be shooting the same enemy within a second? If not, close the gap.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "trading.swing_on_contact",
+          "check": "When a nearby teammate's death appears in the killfeed, does the player swing the same angle in the next frame or two rather than retreating or waiting?",
+          "common_mistake": "Watching the teammate die, then backing off or holding, giving the enemy a free reset and reload.",
+          "fix": "Swing on contact, not after reading the killfeed. Your crosshair should already be tracking the danger your teammate is clearing.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "trading.same_threat",
+          "check": "Is the trading player's crosshair pointed at the same angle the entry player is clearing, not at a different corner?",
+          "common_mistake": "Two teammates walk in together but each watches a different angle, creating two isolated 1v1s instead of one 2v1.",
+          "fix": "Entry clears the danger, trader watches the same danger; a third player takes the secondary angle.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "trading.not_stacked",
+          "check": "Are teammates spaced so they are not in the same doorway or spray line (no body-blocking, one molly cannot hit both)?",
+          "common_mistake": "Whole team bunched in one choke, one Raze nade or one spray kills two.",
+          "fix": "Trade distance is close but staggered: slightly behind and to the side, never directly in the entry player's path.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "trading.not_baiting",
+          "check": "When the team executes, is the player entering with the group rather than staying back behind the last cover until the fight is over?",
+          "common_mistake": "'Support' player waits behind smoke, lets three teammates die, then walks in alone for a kill on a reloading enemy.",
+          "fix": "Being alive with a kill after the round is lost is not value. Enter with the second wave, at trade distance, every time.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "trading.claim_space_after",
+          "check": "After a successful trade, does the group keep moving to take site or plant rather than stopping and re-setting at the doorway?",
+          "common_mistake": "Trade the kill and then everyone stops, giving defenders time to rotate and re-hold.",
+          "fix": "A trade opens space for a few seconds; use it immediately to advance to the next cover or plant.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "trading.defense_tradeable",
+          "check": "On defense, is the player positioned so that if the teammate holding contact dies, they can see and punish the attacker who did it?",
+          "common_mistake": "Two defenders on the same site with no line to each other's fights; each dies alone.",
+          "fix": "Set up so the contact player's death happens in your sight line or swing path; do not stack in one spot but do not split beyond trade range either.",
+          "visible_in_frames": true
+        }
+      ]
+    },
+    {
+      "id": "economy",
+      "name": "Economy management",
+      "principle": "The player buys with the team, full-buys only from about 3,900 credits, saves when a full buy next round is the better outcome, and reads the enemy's likely buy to choose distances and fights.",
+      "checks": [
+        {
+          "id": "economy.team_sync",
+          "check": "At round start, do all five teammates' weapons match the same tier (all rifles, all pistols/SMGs, or all saving), rather than a split of two rifles and three Classics?",
+          "common_mistake": "One player forces a Vandal while the rest save, or a rich player saves while the team forces.",
+          "fix": "Check the scoreboard credits in the buy phase and call the team buy: full, force, or save. If two can afford rifles and three cannot, the team should either drop guns or all save.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "economy.full_buy_threshold",
+          "check": "Does the player only buy a rifle when they can also afford heavy armor (rifle 2,900 + armor 1,000 = 3,900 minimum; about 4,500 with core abilities), and does a full buy include heavy armor?",
+          "common_mistake": "Vandal with light or no armor at 3,300 credits, or heavy armor with a Classic.",
+          "fix": "Under 3,900: either force with Spectre/Bulldog plus armor, or save. At 3,900+: rifle plus heavy armor first, abilities with the remainder.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "economy.eco_discipline",
+          "check": "On a save round (under roughly 2,000 credits), is the player holding a Classic, Sheriff or light shields only, positioned to survive rather than hunting kills?",
+          "common_mistake": "Spending 1,500 on a Stinger and light armor, then having 2,400 next round and being forced to save again.",
+          "fix": "Full eco: keep spend under ~800 so that 1,900-2,900 loss bonus plus current credits crosses 3,900 next round.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "economy.force_logic",
+          "check": "When the player forces (spending most credits on a partial buy), is there an observable justification: pistol-round loss with plant bonus, enemy match point, last round of the half, or enemy on a bonus round?",
+          "common_mistake": "Forcing every round after every loss until the team is permanently on 1,900.",
+          "fix": "Force only when the round matters more than the next two: after a pistol-loss plant (300 bonus), at match point, or in round 12/24 where credits reset to 800 anyway.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "economy.loss_bonus_math",
+          "check": "Given the loss streak (1,900 for one loss, 2,400 for two, 2,900 for three or more), does the player's buy set up a full buy on the next round rather than breaking the streak's value with a half buy?",
+          "common_mistake": "Half-buying on 2,400 when saving would reach 3,900+ next round; or not knowing a win resets the bonus to 1,900.",
+          "fix": "Track the streak: after two losses you are guaranteed 2,900 next loss, so a save now almost always lands a full buy; after a win the counter resets.",
+          "visible_in_frames": false
+        },
+        {
+          "id": "economy.bonus_round_awareness",
+          "check": "After winning the pistol round, does the player buy (Spectre/Bulldog plus armor, or rifle if affordable from the 3,000 win plus kills) and play aggressively for the bonus, and after losing pistol does the team save or buy together?",
+          "common_mistake": "Winning pistol and then buying nothing, or losing pistol and forcing Sheriffs into a team with SMGs and armor.",
+          "fix": "Round 2 after a win: buy armor plus SMG or rifle and press. Round 2 after a loss: eco together so round 3 is a full buy.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "economy.enemy_buy_read",
+          "check": "When the enemy is on an eco or force (Shorty, Judge, pistols visible in killfeed or scoreboard), is the player holding long angles and refusing close-range fights, and when the enemy has Operators is the player avoiding long dry lanes?",
+          "common_mistake": "Rushing into a corner to fight a Judge at 2 metres on the anti-eco, giving the poor team a rifle.",
+          "fix": "Anti-eco: play distance, hold with rifles from far, let them come. Versus Operator buys: smoke or avoid the long lanes.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "economy.save_when_lost",
+          "check": "In a clearly lost round (e.g. 1v4 with the spike planted and under 20 seconds), does the player hide and save the rifle (worth 2,900 next round) instead of taking a hopeless fight?",
+          "common_mistake": "Running at four enemies in a 1v4 and losing a rifle and armor for nothing.",
+          "fix": "If the round is unwinnable, exit the fight and survive; a saved rifle is a free 2,900 next round.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "economy.drop_teammate",
+          "check": "When the player has surplus credits (over ~6,000) and a teammate is short of a rifle, does the player drop a weapon in the buy phase?",
+          "common_mistake": "Sitting on 8,000 credits while a teammate plays the full buy with a Sheriff.",
+          "fix": "Ask who needs a gun before the barrier drops; five rifles beat one bank balance.",
+          "visible_in_frames": true
+        }
+      ]
+    },
+    {
+      "id": "info",
+      "name": "Information and awareness",
+      "principle": "The player continuously reads the minimap, killfeed and enemy utility, and changes what they do based on it.",
+      "checks": [
+        {
+          "id": "info.reacts_to_minimap",
+          "check": "When enemies are shown on the minimap (teammate spot, recon, trip), does the player's position or crosshair change in the following frames to respond?",
+          "common_mistake": "Tunnel vision on one angle while the minimap shows two enemies pushing the flank.",
+          "fix": "Check the minimap every few seconds, especially after any ability sound or callout, and adjust the held angle to the confirmed threat.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "info.reacts_to_killfeed",
+          "check": "When the killfeed changes the player count (e.g. 5v3 or 2v4), does the player's behaviour change: slower and safer with a numbers advantage, more decisive when down?",
+          "common_mistake": "Playing a 4v1 like a 1v4 (rushing solo) or a 1v4 like a 4v1 (holding passively until the spike is planted).",
+          "fix": "After every killfeed change, ask 'how many are left and where?' and pick a plan for that count: group up when ahead, isolate 1v1s when behind.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "info.flank_covered",
+          "check": "During an attack default or post-plant, is at least one teammate positioned or a trap placed on the flank route?",
+          "common_mistake": "All five attackers facing forward in main; a lurking defender kills three from behind.",
+          "fix": "Assign a flank watcher or a trip/turret before moving up; the sentinel or last player holds the rear.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "info.avoids_enemy_recon",
+          "check": "When enemy recon (Sova dart, Fade haunt, Cypher cam, Skye dog) is visible in the frame, does the player leave its area or shoot it rather than stand in it?",
+          "common_mistake": "Standing in a recon dart's reveal radius, marked for the whole enemy team, and then getting pushed with utility.",
+          "fix": "Break line of sight from recon immediately or destroy it, then assume the enemy knows the spot and reposition.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "info.no_tunnel_vision",
+          "check": "After taking one fight, does the player check other angles and the minimap (crosshair sweep or camera turn) before re-committing?",
+          "common_mistake": "Staring down one lane for 30 seconds while the round develops elsewhere.",
+          "fix": "After every exchange: minimap check, listen, then re-hold. Info first, then decide.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "info.communicates",
+          "check": "Does the player give callouts (voice or text pings) with enemy position and count when they take contact?",
+          "common_mistake": "Dies silently to two enemies in a spot the team could have retaken with the info.",
+          "fix": "Say where, how many, and what utility, in that order, before or as you die. Use the ping wheel when not on mic.",
+          "visible_in_frames": false
+        },
+        {
+          "id": "info.reads_sound",
+          "check": "Does the player react to audio cues (footsteps, spike plant beeps, ability sounds) by adjusting position or crosshair?",
+          "common_mistake": "Ignoring the spike-plant sound and continuing to lurk the wrong side of the map.",
+          "fix": "Treat sound as a callout: footsteps close means pre-aim the near corner; plant sound means start the rotate.",
+          "visible_in_frames": false
+        }
+      ]
+    },
+    {
+      "id": "timing",
+      "name": "Round timing and rotations",
+      "principle": "The player takes space and gathers info early, commits to a site with the team on a shared timing, rotates on confirmed information, and manages the clock so the spike goes down with time to defend it.",
+      "checks": [
+        {
+          "id": "timing.default_first",
+          "check": "On attack, does the team spread to take map control in the first 20-30 seconds (round timer above ~1:10) instead of running straight into a site at the buy barrier?",
+          "common_mistake": "Five-man rush into main at round start every round, straight into stacked utility.",
+          "fix": "Default first: take mid and a lane or two, use info utility, then decide the hit at 15-25 seconds based on where defenders show.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "timing.execute_together",
+          "check": "When the team hits a site, do all attackers move in within a few seconds of each other (minimap cluster at the entrance at the same time)?",
+          "common_mistake": "Duelist enters at 0:60, controller arrives at 0:45, sentinel is still in spawn.",
+          "fix": "Set an execute call ('going at 0:50') and have everyone at the entry point with utility ready before it.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "timing.rotate_on_confirmation",
+          "check": "On defense, does the player rotate only after confirmed information (spike planted, multiple enemies seen, teammate calls for help) and not on the first footstep or a single smoke?",
+          "common_mistake": "Rotating on a single fake smoke and leaving the site open for the real hit.",
+          "fix": "Rotate on spike plant or two-plus enemies confirmed; soft-rotate (move toward mid) on partial info and stay ready to return.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "timing.rotate_speed",
+          "check": "Once a rotate is committed (especially after a spike plant), is the player running the fast path (large minimap displacement per frame), not shift-walking across the map?",
+          "common_mistake": "Shift-walking the rotation and arriving with 15 seconds left on the spike.",
+          "fix": "Cross-map rotations take 12-18 seconds at full speed; after a plant, run until you are one corner away from site, then slow down.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "timing.man_advantage_pace",
+          "check": "With a numbers advantage, is the player playing slower and grouped (no solo pushes), and with a disadvantage is the team making a decisive play (fast hit or isolate) instead of waiting?",
+          "common_mistake": "Up 4v2, a player pushes alone and dies, turning it into a 3v2 retake.",
+          "fix": "Numbers up: play together, take space slowly, let the clock work. Numbers down: pick one fight to isolate or one site to hit fast.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "timing.plant_clock",
+          "check": "Does the spike carrier reach the site and start the plant (4 seconds) with enough round time to finish and set up, typically starting the hit by about 0:30-0:35 on the round timer?",
+          "common_mistake": "Team still defaulting at 0:20, then rushing a site with no utility and planting at 0:05 or not at all.",
+          "fix": "Set a 'go' time and respect it; whoever has the spike calls it when the timer hits 0:40 if no plan is in motion.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "timing.lurk_timing",
+          "check": "When a player lurks, do they make contact or take space at the moment the team engages elsewhere (killfeed or utility on the other side), not early or after the round is decided?",
+          "common_mistake": "Lurker gets caught alone at 1:20, or stays hidden all round and does nothing while the team dies 4v5.",
+          "fix": "Lurk to be a timing: wait for the team's contact, then push the rotate path so defenders rotating into you get punished.",
+          "visible_in_frames": true
+        }
+      ]
+    },
+    {
+      "id": "postplant",
+      "name": "Post-plant (attacker)",
+      "principle": "After the plant, attackers spread across the retake paths with vision or denial on the spike, one player on flank, utility saved for the tap, and nobody peeks unless the clock forces it.",
+      "checks": [
+        {
+          "id": "postplant.spike_vision",
+          "check": "Does at least one attacker have a line of sight to the spike or a saved denial lineup covering it?",
+          "common_mistake": "All attackers pushed out past the site with nobody who can see or damage a defuser.",
+          "fix": "Before planting, decide who watches the spike and from where; if nobody can, the plant spot is wrong.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "postplant.plant_spot",
+          "check": "Is the spike planted where the team's held positions (behind cover, at distance) can see it, rather than in the open default when defenders still contest the site?",
+          "common_mistake": "Planting in the open with no cover, then having to stand on site to defend it.",
+          "fix": "Open plant when site is fully controlled; safe plant (behind a box, at the back) when pressure remains or defenders have Operators.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "postplant.spread_not_stacked",
+          "check": "Are surviving attackers spread to cover different retake entrances (crossfire on the main retake path) rather than all stacked in one corner of site?",
+          "common_mistake": "Three attackers hiding behind the same box, all killed by one flash and one swing.",
+          "fix": "Assign each survivor one entrance; set two of them as a crossfire on the most likely retake path.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "postplant.flank_watch",
+          "check": "Is one attacker watching the rear route defenders use to collapse from behind, or a trap placed on it?",
+          "common_mistake": "Whole team watches site, retakers come through the attackers' own entry lane.",
+          "fix": "Last player in holds the path the team came from, or the sentinel drops a trip on it before rotating attention to site.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "postplant.no_ego_peek",
+          "check": "With the spike planted and time on the attackers' side, is the player holding rather than peeking out to hunt kills?",
+          "common_mistake": "Swinging out to 'get one more' at 30 seconds, dying, and turning a won post-plant into a 3v3 retake.",
+          "fix": "Every second the defenders have to spend clearing is a win; peek only when the defuse is about to start and nobody else can stop it.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "postplant.denial_saved",
+          "check": "At plant time, does at least one attacker's HUD show a molly, wall, or ult usable for defuse denial, and is it used on a real tap (defuse in progress) rather than early?",
+          "common_mistake": "Molly thrown at 40 seconds on the spike with nobody near it; defenders tap at 6 seconds uncontested.",
+          "fix": "Hold the denial utility until you see or hear a defuse start; a molly forces a 3.5-second half-defuse reset and buys a re-peek.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "postplant.timer_priorities",
+          "check": "As the spike timer falls under ~10 seconds, does the player stop chasing kills and only deny the remaining defuse window (defuse takes 7 seconds, 3.5 after a half)?",
+          "common_mistake": "Pushing to trade a teammate at 8 seconds when simply holding the angle on the spike wins the round.",
+          "fix": "Under 10 seconds, the only job is stopping a full defuse; anything else is a coin flip on a won round.",
+          "visible_in_frames": true
+        }
+      ]
+    },
+    {
+      "id": "retake",
+      "name": "Retake (defender)",
+      "principle": "Defenders regroup, layer utility before swinging, clear the closest threats first, cover the defuser, and know when saving guns beats a hopeless retake.",
+      "checks": [
+        {
+          "id": "retake.regroup",
+          "check": "Do retaking defenders enter the site at the same time from one or two sides (minimap shows them arriving together), not one at a time?",
+          "common_mistake": "Each defender rotates and swings on arrival, feeding three separate 1v3s.",
+          "fix": "Regroup at the retake entrance when time allows (45 seconds is usually enough), then go on a count.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "retake.utility_first",
+          "check": "Before the first defender swings onto site, is utility used (smokes to cut post-plant angles, flash on the swing, recon on the site)?",
+          "common_mistake": "Dry-swinging into four held angles with all abilities still on the HUD.",
+          "fix": "Smoke the strongest post-plant angle, recon to locate holds, flash the swing, then move together.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "retake.clear_order",
+          "check": "Does the retake clear close angles (site corners, behind boxes) before moving to the spike and before hunting distant attackers?",
+          "common_mistake": "Running to the spike past an uncleared corner and dying to the attacker inside site.",
+          "fix": "Near threats first, then the lanes that see the spike, then the defuse.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "retake.defuser_covered",
+          "check": "When a defender taps the spike, is at least one teammate watching the angles onto the spike (crosshair on the post-plant lanes) rather than everyone tapping or everyone pushing?",
+          "common_mistake": "Two defenders both stand on the spike while the attacker holding the lineup angle kills both.",
+          "fix": "One taps, others cover; use a half-defuse (3.5 seconds) to bait utility, then finish once mollies are spent.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "retake.utility_saved",
+          "check": "Does at least one defender still have an ability available when the defuse starts (to smoke the tapper or stop the last attacker)?",
+          "common_mistake": "All utility dumped on the entry, defuser dies to the one attacker nobody could smoke off.",
+          "fix": "Assign one player to hold their smoke or wall specifically for the defuse.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "retake.time_math",
+          "check": "Does the defuser start the tap with at least 7 seconds on the spike (or 3.5 if already half-defused), and stop attempting when it is mathematically impossible?",
+          "common_mistake": "Sprinting to the spike and starting the defuse with 5 seconds left.",
+          "fix": "Know the spike audio cues: when the beeps go rapid, a full defuse is no longer possible; either half-defuse earlier or save.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "retake.save_decision",
+          "check": "When the retake is hopeless (e.g. 1v3 or 2v4 with attackers holding strong angles and denial utility, or under ~15 seconds), does the player disengage and save their weapon?",
+          "common_mistake": "Throwing a rifle and heavy armor into a 1v4 retake with 10 seconds left.",
+          "fix": "Call the save early; keeping guns for the next round is worth more than a 5% retake.",
+          "visible_in_frames": true
+        }
+      ]
+    },
+    {
+      "id": "mental",
+      "name": "Mental and consistency",
+      "principle": "The player's decisions stay the same quality after deaths, losses and teammate mistakes; tilt shows up as changed behaviour before it shows up as chat.",
+      "checks": [
+        {
+          "id": "mental.no_tilt_peeks",
+          "check": "After dying early in a round or losing a duel, does the player's next round look the same (utility used, trade distance kept) rather than a solo dry peek in the first 10 seconds?",
+          "common_mistake": "Death, then a revenge W-key into the same enemy next round, then another.",
+          "fix": "After a bad death, deliberately play the next round as the last player in: hold, trade, use utility. One clean round resets the loop.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "mental.no_solo_hero",
+          "check": "When the team is behind on the scoreboard, is the player still grouping and trading rather than solo pushing through smokes or flanking alone every round?",
+          "common_mistake": "At 3-9, giving up on team play and running for kills.",
+          "fix": "Ask each round: 'what is the one thing that maximises win probability?' and do only that; kills that do not win rounds are noise.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "mental.consistent_buys",
+          "check": "During a losing streak, do the player's buys still follow the economy rules (team sync, thresholds) instead of impulsive forces or refusal to buy?",
+          "common_mistake": "Rage-forcing an Operator at 4,700 after three losses, or saving out of spite while the team buys.",
+          "fix": "Economy decisions are made on the scoreboard numbers, not on the last round's result.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "mental.no_toxic_chat",
+          "check": "Is the text chat free of blame, flame or 'gg' before the match is over?",
+          "common_mistake": "Typing at teammates after a lost round, which reliably loses the next two.",
+          "fix": "Mute and keep the comms to callouts; if you need to say something, say the plan for the next round.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "mental.plays_full_round",
+          "check": "In disadvantaged situations (1v3, low HP, no utility), does the player still play the round (hide for a save, look for an isolated 1v1, play the clock) rather than running in to end it quickly?",
+          "common_mistake": "Sprinting into the enemy in a 1v3 because 'it's lost anyway'.",
+          "fix": "Every 1vX has one correct play: save, isolate, or stall. Pick it and play it out.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "mental.session_discipline",
+          "check": "Does the player stop queuing after two consecutive losses in a session rather than tilt-queuing?",
+          "common_mistake": "Losing five in a row at 1am chasing back RR.",
+          "fix": "Hard rule: two losses in a row ends the session or forces a 20-minute break away from the game.",
+          "visible_in_frames": false
+        }
       ]
     }
   ],
   "rank_expectations": {
-    "iron_bronze": "Crosshair placement, not running while shooting, buying with the team.",
-    "silver_gold": "Using utility before peeking, trading with a teammate, not over-peeking after a kill.",
-    "platinum_diamond": "Timing, info denial, economy discipline, post-plant positioning.",
-    "ascendant_plus": "Round-level decision making, tempo, map control trades."
+    "iron_bronze": "Coach mechanics and not giving free deaths: crosshair at head height on corners, counter-strafe before shooting, stop crouch-spraying, buy armor with the gun, stay near a teammate. Ignore advanced utility and lurk timings; one habit per session.",
+    "silver_gold": "Coach fewer coin-flip peeks and basic team play: trade distance (about 5 metres, one-second rule), utility before dry peeks, team-synced buys with the 3,900 full-buy threshold, not re-peeking after contact, holding one line instead of two. Two or three agents, know their lineups.",
+    "platinum_diamond": "Coach decision quality and round structure: default-then-execute timing, rotating on confirmed info not on the first smoke, post-plant spread with saved denial utility, regrouped retakes with utility layering, reading the enemy economy to pick fights. Trading and utility timing should be automatic; work on repeated positioning patterns and mid-round adaptation.",
+    "ascendant_plus": "Coach role specialisation and self-review: consistent off-angle variety across rounds, utility combos with teammates, lurk timings tied to team contact, clock management in post-plants and retakes, tilt-proof consistency across a session. Errors at this level are usually one habit repeated (same hold, same peek timing, over-rotating); find it in the VOD and fix that one thing."
   },
-  "sources": []
+  "sources": [
+    "https://www.switchbladegaming.com/valorant/economy-cheat-sheet/",
+    "https://www.goaching.gg/valorant-guides/economy-tracking",
+    "https://mobalytics.gg/blog/valorant/ultimate-economy-guide/",
+    "https://www.thespike.gg/valorant/beginner-guides/valorant-economy-guide",
+    "https://www.switchbladegaming.com/valorant/peeking-guide/",
+    "https://prosettings.net/blog/how-to-peek-in-valorant/",
+    "https://boosteria.org/guides/valorant-peeking-guide-2026-jiggle-wide-shoulder-peeks",
+    "https://theguide.gg/improve/lessons/valorant/ultimate-peeking-check-list-793",
+    "https://theguide.gg/improve/lessons/valorant/how-to-use-your-utility-as-efficiently-as-possible-623",
+    "https://theguide.gg/improve/lessons/valorant/what-spacing-is-and-how-it-allows-you-to-trade-efficiently-699",
+    "https://theguide.gg/improve/lessons/valorant/how-to-trade-your-teammates-efficiently-708",
+    "https://theguide.gg/improve/lessons/valorant/how-to-win-more-postplants-as-attacker-701",
+    "https://theguide.gg/improve/lessons/valorant/crucial-lower-rank-mistakes-811",
+    "https://theguide.gg/improve/lessons/valorant/how-to-fix-your-mindset-and-stop-tilting-625",
+    "https://mobalytics.gg/blog/valorant/valorant-how-to-trade/",
+    "https://alviran.net/blog/valorant-trading-guide-2026/",
+    "https://alviran.net/blog/valorant-angle-advantage-off-angles-guide-2026/",
+    "https://alviran.net/blog/valorant-post-plant-guide-2026/",
+    "https://alviran.net/blog/valorant-movement-guide-2026/",
+    "https://dignitas.gg/articles/youre-holding-the-wrong-angle-a-valorant-guide",
+    "https://dignitas.gg/articles/lining-yourself-up-to-win-an-aiming-and-positioning-guide-for-valorant",
+    "https://dignitas.gg/articles/playing-post-plant-in-valorant-strategies-and-tips",
+    "https://dignitas.gg/articles/how-to-properly-rotate-on-offense-and-defense-in-valorant",
+    "https://dignitas.gg/articles/mastering-counter-strafing-in-valorant",
+    "https://dignitas.gg/articles/a-radiant-mind-a-rundown-on-how-to-have-a-good-mindset-in-valorant",
+    "https://boosteria.org/guides/valorant-retake-guide-site-retake-strategies-basics",
+    "https://boosteria.org/guides/valorant-crosshair-placement-guide-head-level-angles-2026",
+    "https://www.hotspawn.com/valorant/guide/common-valorant-ranked-mistakes",
+    "https://prosettings.net/blog/valorant-tips-for-each-rank/",
+    "https://www.goaching.gg/valorant-guides/rank-guide",
+    "https://wecoach.gg/blog/article/how-to-improve-game-sense-in-valorant-10-tips-tricks",
+    "https://bo3.gg/valorant/articles/how-to-read-rotations-in-valorant-when-and-where-defenders-move",
+    "https://battlepooja.com/valorant-deadzoning-mechanics-guide/",
+    "https://pley.gg/valorant/movement-guide-2/",
+    "https://www.dexerto.com/valorant/valorant-spike-basics-where-to-plant-disarm-timer-radius-more-1356956/",
+    "https://www.switchbladegaming.com/valorant/spike-mechanics-guide/",
+    "https://www.switchbladegaming.com/valorant/ranked-mindset-guide/",
+    "https://pley.gg/valorant/mindset-guide/",
+    "https://upforge.gg/blog/valorant-utility-fundamentals-guide",
+    "https://upforge.gg/blog/valorant-post-plant-protocol"
+  ]
 }

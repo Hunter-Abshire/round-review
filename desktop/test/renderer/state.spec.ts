@@ -1,5 +1,6 @@
 import { initialState, reduce, type State } from '../../src/renderer/state';
 import { clip, job, report } from './fixtures';
+import { EMPTY_CONTEXT } from '../../src/shared/types';
 
 const withClips = (): State =>
   reduce(initialState, {
@@ -77,5 +78,26 @@ describe('reduce', () => {
     const s = reduce(withClips(), { type: 'error', message: 'boom' });
     expect(s.error).toBe('boom');
     expect(s.clips).toHaveLength(2);
+  });
+});
+
+describe('context and knowledge', () => {
+  it('starts empty and updates one field at a time, blank meaning null', () => {
+    let s = reduce(initialState, { type: 'context_changed', field: 'rank', value: 'Gold 2' });
+    expect(s.context).toEqual({ ...EMPTY_CONTEXT, rank: 'Gold 2' });
+    s = reduce(s, { type: 'context_changed', field: 'agent', value: 'Jett' });
+    s = reduce(s, { type: 'context_changed', field: 'rank', value: '' });
+    expect(s.context).toEqual({ ...EMPTY_CONTEXT, agent: 'Jett' });
+  });
+
+  it('stores knowledge', () => {
+    const knowledge = {
+      agents: [{ id: 'jett', name: 'Jett', role: 'duelist' }],
+      maps: [],
+      ranks: ['Gold'],
+      checklist: [],
+    };
+    const s = reduce(initialState, { type: 'knowledge_loaded', knowledge });
+    expect(s.knowledge).toBe(knowledge);
   });
 });

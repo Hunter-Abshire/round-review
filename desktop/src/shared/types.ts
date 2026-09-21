@@ -6,6 +6,7 @@ export const CLIP_STATUS = {
   queued: 'queued',
   running: 'running',
   done: 'done',
+  partial: 'partial',
   failed: 'failed',
   skipped: 'skipped',
 } as const;
@@ -17,6 +18,8 @@ export interface Clip {
   key: string;
   size_bytes: number;
   mtime: number;
+  duration_s: number | null;
+  estimated_windows: number | null;
   status: ClipStatus;
   job_id: string | null;
   error: string | null;
@@ -41,6 +44,37 @@ export interface Job {
   created_at: string;
   finished_at: string | null;
   context: PlayerContext;
+  options: JobOptions;
+}
+
+export interface JobOptions {
+  force: boolean;
+  coverage: string | null;
+  max_span_s: number | null;
+  max_windows: number | null;
+}
+
+export const COVERAGE = { full: 'full', sampled: 'sampled' } as const;
+export type CoverageMode = (typeof COVERAGE)[keyof typeof COVERAGE];
+
+/** What a review will do, chosen in the app and sent with each job. */
+export interface ReviewOptions {
+  coverage: CoverageMode;
+  max_span_s: number | null;
+  max_windows: number | null;
+}
+
+export interface Settings {
+  model: string;
+  coverage: CoverageMode;
+  coverage_modes: string[];
+  window_s: number;
+  windows_per_file: number;
+  max_span_s: number;
+  max_windows: number;
+  fps: number;
+  situation_pass: boolean;
+  daily_call_cap: number;
 }
 
 export interface PlayerContext {

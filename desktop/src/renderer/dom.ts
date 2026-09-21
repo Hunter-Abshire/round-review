@@ -1,17 +1,13 @@
-import type { Clip, Finding, Knowledge, PlayerContext, Report } from '../shared/types';
-import { formatClock, markerPercent, type Marker } from './timeline';
-
-export interface Progress {
-  windows_done: number;
-  windows_total: number;
-}
-
-export interface ClipHandlers {
-  onAnalyze: (key: string) => void;
-  onOpen: (key: string) => void;
-}
-
-const ANALYZABLE = new Set<string>(['new', 'failed', 'skipped']);
+import type {
+  Clip,
+  Knowledge,
+  PlayerContext,
+  Report,
+  ReviewOptions,
+  Settings,
+} from '../shared/types';
+import { formatBytes, formatDuration, formatRelativeTime, reviewSummary } from './format';
+import { formatClock, rulerTicks, type CoverageBand, type Marker } from './timeline';
 
 const el = <K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -24,71 +20,230 @@ const el = <K extends keyof HTMLElementTagNameMap>(
   return node;
 };
 
-const statusLabel = (clip: Clip, progress: Progress | undefined): string => {
-  if (clip.status === 'running' && progress && progress.windows_total > 0) {
-    return `analyzing ${progress.windows_done} / ${progress.windows_total}`;
-  }
-  return clip.status;
+const button = (
+  label: string,
+  action: string,
+  onClick: () => void,
+  className = 'btn',
+): HTMLButtonElement => {
+  const node = el('button', className, label);
+  node.dataset['action'] = action;
+  node.addEventListener('click', onClick);
+  return node;
 };
 
-export const renderClipList = (
-  root: HTMLElement,
-  clips: Clip[],
-  progressByJob: Record<string, Progress>,
-  handlers: ClipHandlers,
-): void => {
+// ---------------------------------------------------------------------------- clip library
+
+export interface Progress {
+  windows_done: number;
+  windows_total: number;
+}
+
+export interface ClipHandlers {
+  onAnalyze: (key: string) => void;
+  onReanalyze: (key: string) => void;
+  onOpen: (key: string) => void;
+}
+
+export interface ClipListProps {
+  clips: Clip[];
+  jobs: Record<string, Progress>;
+  options: ReviewOptions;
+  settings: Settings | null;
+  now: number;
+  handlers: ClipHandlers;
+}
+
+const NEVER_REVIEWED = new Set<string>(['new', 'skipped']);
+const OPENABLE = new Set<string>(['done', 'partial']);
+const BUSY = new Set<string>(['queued', 'running']);
+
+const statusPill = (clip: Clip, progress: Progress | undefined): HTMLElement => {
+  const pill = el('span', `pill pill-${clip.status}`);
+  if (clip.status === 'running' && progress && progress.windows_total > 0) {
+    pill.textContent = `analyzing ${progress.windows_done} / ${progress.windows_total}`;
+  } else if (clip.status === 'running') {
+    pill.textContent = 'starting';
+  } else {
+    pill.textContent = clip.status;
+  }
+  return pill;
+};
+
+const progressBar = (progress: Progress): HTMLElement => {
+  const track = el('div', 'progress');
+  const fill = el('div', 'progress-fill');
+  fill.dataset['progress'] = 'true';
+  const pct =
+    progress.windows_total > 0 ? (100 * progress.windows_done) / progress.windows_total : 0;
+  fill.style.width = `${pct}%`;
+  track.append(fill);
+  return track;
+};
+
+export const renderClipList = (root: HTMLElement, props: ClipListProps): void => {
   root.replaceChildren();
-  if (clips.length === 0) {
-    root.append(el('p', 'empty', 'No recordings found in the configured recordings folder.'));
+  if (props.clips.length === 0) {
+    root.append(
+      el(
+        'p',
+        'empty',
+        'No recordings in the configured folder. Record a match and it appears here.',
+      ),
+    );
     return;
   }
-  for (const clip of clips) {
-    const row = el('div', `clip status-${clip.status}`);
-    row.dataset['clip'] = clip.key;
-    row.append(el('span', 'name', clip.name));
-    const progress = clip.job_id ? progressByJob[clip.job_id] : undefined;
-    row.append(el('span', 'status', statusLabel(clip, progress)));
-    if (clip.error) row.append(el('span', 'error', clip.error));
-    if (ANALYZABLE.has(clip.status)) {
-      const button = el('button', undefined, clip.status === 'new' ? 'Analyze' : 'Retry');
-      button.dataset['action'] = 'analyze';
-      button.addEventListener('click', () => handlers.onAnalyze(clip.key));
-      row.append(button);
+  for (const clip of props.clips) {
+    const card = el('article', `card status-${clip.status}`);
+    card.dataset['clip'] = clip.key;
+
+    const head = el('div', 'card-head');
+    head.append(el('h3', 'card-title', clip.name));
+    const progress = clip.job_id ? props.jobs[clip.job_id] : undefined;
+    head.append(statusPill(clip, progress));
+    card.append(head);
+
+    const meta = [
+      formatDuration(clip.duration_s),
+      formatBytes(clip.size_bytes),
+      formatRelativeTime(clip.mtime, props.now),
+    ].join('  ·  ');
+    card.append(el('p', 'card-meta', meta));
+
+    if (NEVER_REVIEWED.has(clip.status) && props.settings) {
+      card.append(el('p', 'card-plan', reviewSummary(clip, props.options, props.settings)));
     }
-    if (clip.status === 'done') {
-      const button = el('button', undefined, 'Open review');
-      button.dataset['action'] = 'open';
-      button.addEventListener('click', () => handlers.onOpen(clip.key));
-      row.append(button);
+    if (progress && BUSY.has(clip.status)) card.append(progressBar(progress));
+    if (clip.error) card.append(el('p', 'card-error', clip.error));
+
+    const actions = el('div', 'card-actions');
+    if (NEVER_REVIEWED.has(clip.status)) {
+      actions.append(button('Analyze', 'analyze', () => props.handlers.onAnalyze(clip.key)));
     }
-    root.append(row);
+    if (OPENABLE.has(clip.status)) {
+      actions.append(button('Open review', 'open', () => props.handlers.onOpen(clip.key)));
+    }
+    if (OPENABLE.has(clip.status) || clip.status === 'failed') {
+      actions.append(
+        button('Re-analyze', 'reanalyze', () => props.handlers.onReanalyze(clip.key), 'btn ghost'),
+      );
+    }
+    if (actions.childElementCount > 0) card.append(actions);
+    root.append(card);
   }
 };
 
-export const renderMarkers = (
-  track: HTMLElement,
-  markers: Marker[],
-  durationS: number,
-  selectedId: string | null,
-  onSelect: (id: string) => void,
+// ------------------------------------------------------------------------- review presets
+
+const PRESET_LABELS: ReadonlyArray<[string, string, string]> = [
+  ['full', 'Whole clip', 'Review every part of the recording'],
+  ['first_minute', 'First minute', 'Review only the first minute of gameplay'],
+  ['sampled', 'Quick samples', 'A few spread-out windows, fastest'],
+];
+
+export const renderPresetPicker = (
+  root: HTMLElement,
+  active: string,
+  onChoose: (preset: string) => void,
 ): void => {
-  track.replaceChildren();
-  for (const marker of markers) {
-    const node = el('button', `marker cat-${marker.finding.category}`);
-    node.dataset['marker'] = marker.id;
-    node.title = `${formatClock(marker.timestamp_s)} ${marker.finding.category}`;
-    node.style.left = `${markerPercent(marker.timestamp_s, durationS)}%`;
-    if (marker.id === selectedId) node.classList.add('selected');
-    node.addEventListener('click', () => onSelect(marker.id));
+  root.replaceChildren();
+  for (const [preset, label, title] of PRESET_LABELS) {
+    const node = el('button', 'seg', label);
+    node.dataset['preset'] = preset;
+    node.title = title;
+    node.setAttribute('aria-pressed', String(preset === active));
+    node.addEventListener('click', () => onChoose(preset));
+    root.append(node);
+  }
+};
+
+// ------------------------------------------------------------------------------- timeline
+
+export interface TimelineProps {
+  markers: Marker[];
+  coverage: CoverageBand[];
+  durationS: number;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onSeek: (timestampS: number) => void;
+}
+
+/**
+ * The strip under the video: shaded bands for the stretches that were reviewed, a numbered
+ * pin per finding, and a time ruler. Clicking anywhere scrubs; clicking a pin opens it.
+ */
+export const renderTimeline = (root: HTMLElement, props: TimelineProps): void => {
+  root.replaceChildren();
+  const track = el('div', 'tl-track');
+
+  for (const band of props.coverage) {
+    const node = el('div', 'tl-band');
+    node.dataset['band'] = String(band.index);
+    node.style.left = `${band.leftPercent}%`;
+    node.style.width = `${band.widthPercent}%`;
+    node.title = `Reviewed ${formatClock((band.leftPercent / 100) * props.durationS)} onward, ${band.findings} finding(s)`;
     track.append(node);
   }
+
+  track.addEventListener('click', event => {
+    const bounds = track.getBoundingClientRect();
+    if (bounds.width > 0) {
+      const ratio = (event.clientX - bounds.left) / bounds.width;
+      props.onSeek(Math.min(1, Math.max(0, ratio)) * props.durationS);
+    }
+  });
+
+  for (const marker of props.markers) {
+    const pin = el('button', `tl-pin cat-${marker.finding.category}`, String(marker.ordinal));
+    pin.dataset['marker'] = marker.id;
+    pin.style.left = `${(marker.timestamp_s / Math.max(props.durationS, 1)) * 100}%`;
+    pin.title = `${formatClock(marker.timestamp_s)} · ${marker.finding.category}`;
+    if (marker.id === props.selectedId) pin.classList.add('selected');
+    pin.addEventListener('click', event => {
+      event.stopPropagation();
+      props.onSelect(marker.id);
+    });
+    track.append(pin);
+  }
+  root.append(track);
+
+  const ruler = el('div', 'tl-ruler');
+  for (const tick of rulerTicks(props.durationS)) {
+    const node = el('span', 'tl-tick', tick.label);
+    node.dataset['tick'] = String(tick.timestamp_s);
+    node.style.left = `${tick.leftPercent}%`;
+    ruler.append(node);
+  }
+  root.append(ruler);
 };
 
-const section = (label: string, body: string): HTMLElement => {
-  const wrap = el('div', 'section');
-  wrap.append(el('strong', undefined, `${label}: `), document.createTextNode(body));
-  return wrap;
+// ------------------------------------------------------------------------------- coverage
+
+export const renderCoverageSummary = (root: HTMLElement, report: Report): void => {
+  root.replaceChildren();
+  const reviewed = report.windows.reduce((total, w) => total + (w.end_s - w.start_s), 0);
+  const duration = report.recording.duration_s;
+  const percent = duration > 0 ? Math.round((100 * reviewed) / duration) : 0;
+  const windows = report.windows.length;
+  root.append(
+    el(
+      'p',
+      'coverage',
+      percent >= 99
+        ? `Whole clip reviewed · ${windows} windows · ${report.model}`
+        : `Reviewed ${formatDuration(reviewed)} of ${formatDuration(duration)} (${percent}%) · ${windows} windows · ${report.model}`,
+    ),
+  );
+  const notes = [...report.warnings, ...report.windows.flatMap(w => w.warnings)];
+  if (notes.length > 0) {
+    const details = el('details', 'notes');
+    details.append(el('summary', undefined, `Review notes (${notes.length})`));
+    for (const note of notes) details.append(el('p', 'note', note));
+    root.append(details);
+  }
 };
+
+// -------------------------------------------------------------------------- finding list
 
 export const renderFindingList = (
   root: HTMLElement,
@@ -97,75 +252,94 @@ export const renderFindingList = (
   onSelect: (id: string) => void,
 ): void => {
   root.replaceChildren();
-  for (const marker of markers) {
-    const button = el(
-      'button',
-      undefined,
-      `${formatClock(marker.timestamp_s)} — ${marker.finding.observation}`,
-    );
-    button.setAttribute('aria-pressed', String(marker.id === selectedId));
-    button.addEventListener('click', () => onSelect(marker.id));
-    root.append(button);
-  }
-};
-
-export const renderReviewCoverage = (root: HTMLElement, report: Report): void => {
-  root.replaceChildren();
-  const sampled = report.windows.reduce((total, w) => total + w.end_s - w.start_s, 0);
-  const duration = report.recording.duration_s;
-  const percent = duration > 0 ? (100 * sampled) / duration : 0;
-  root.append(
-    el(
-      'p',
-      undefined,
-      `Sampled ${Math.round(sampled)}s of ${Math.round(duration)}s (${Math.round(percent)}%) across ${report.windows.length} windows; not a full-video review.`,
-    ),
-  );
-  const warnings = [...report.warnings, ...report.windows.flatMap(w => w.warnings)];
-  if (warnings.length > 0) {
-    const details = el('details');
-    details.append(el('summary', undefined, `Review notes (${warnings.length})`));
-    for (const warning of warnings) details.append(el('p', undefined, warning));
-    root.append(details);
-  }
-};
-
-export const renderFindingCard = (
-  card: HTMLElement,
-  finding: Finding | null,
-  frameUrl: string | null,
-): void => {
-  card.replaceChildren();
-  if (finding === null) {
-    card.append(
-      el(
-        'p',
-        'placeholder',
-        'Click a marker under the video to see what could have gone differently.',
-      ),
+  if (markers.length === 0) {
+    root.append(
+      el('p', 'empty', 'No findings in the reviewed windows. Check the review notes for why.'),
     );
     return;
   }
-  card.append(el('h3', undefined, `${formatClock(finding.timestamp_s)} · ${finding.category}`));
+  for (const marker of markers) {
+    const row = el('button', 'finding-row');
+    row.dataset['finding'] = marker.id;
+    row.setAttribute('aria-pressed', String(marker.id === selectedId));
+    if (marker.id === selectedId) row.classList.add('selected');
+    row.append(el('span', 'finding-index', String(marker.ordinal)));
+    const body = el('span', 'finding-body');
+    const head = el('span', 'finding-head');
+    head.append(el('span', 'finding-time', formatClock(marker.timestamp_s)));
+    head.append(el('span', `finding-cat cat-${marker.finding.category}`, marker.finding.category));
+    body.append(head);
+    body.append(el('span', 'finding-text', marker.finding.observation));
+    row.append(body);
+    row.addEventListener('click', () => onSelect(marker.id));
+    root.append(row);
+  }
+};
+
+// -------------------------------------------------------------------------- finding card
+
+export interface FindingCardProps {
+  marker: Marker | null;
+  frameUrl: string | null;
+  situationSummary: string | null;
+}
+
+const section = (label: string, body: string, className = 'section'): HTMLElement => {
+  const wrap = el('div', className);
+  wrap.append(el('span', 'section-label', label));
+  wrap.append(el('p', 'section-body', body));
+  return wrap;
+};
+
+export const renderFindingCard = (card: HTMLElement, props: FindingCardProps): void => {
+  card.replaceChildren();
+  const marker = props.marker;
+  if (marker === null) {
+    card.append(
+      el('p', 'placeholder', 'Select a finding on the timeline to see what to do differently.'),
+    );
+    return;
+  }
+  const finding = marker.finding;
+
+  const head = el('div', 'finding-card-head');
+  head.append(el('span', 'badge', String(marker.ordinal)));
+  head.append(el('h3', undefined, `${formatClock(finding.timestamp_s)} · ${finding.category}`));
+  const confidence = el('span', 'confidence', `${Math.round(finding.confidence * 100)}%`);
+  confidence.title = 'How confident the model is in this finding';
+  head.append(confidence);
+  card.append(head);
+
   if (finding.check_label) card.append(el('p', 'check', finding.check_label));
   card.append(el('p', 'observation', finding.observation));
-  card.append(section('Try instead', finding.suggested_alternative));
-  if (frameUrl) {
-    const img = el('img', 'evidence');
-    img.src = frameUrl;
-    img.alt = `Evidence frame at ${formatClock(finding.timestamp_s)}`;
-    card.append(img);
+
+  // The fix is the point of the whole app, so it sits above the evidence and the reasoning.
+  card.append(section('Try instead', finding.suggested_alternative, 'section fix'));
+
+  if (props.frameUrl) {
+    const figure = el('figure', 'evidence');
+    const img = el('img');
+    img.src = props.frameUrl;
+    img.alt = `Frame at ${formatClock(finding.timestamp_s)}`;
+    figure.append(img);
+    figure.append(el('figcaption', undefined, `Frame at ${formatClock(finding.timestamp_s)}`));
+    card.append(figure);
   }
+
   card.append(section('What you could see', finding.visible_evidence));
   card.append(section('What you knew', finding.information_available_to_player));
   if (finding.information_revealed_later.trim()) {
-    card.append(section("What you couldn't have known", finding.information_revealed_later));
+    card.append(
+      section("What you couldn't have known", finding.information_revealed_later, 'section later'),
+    );
   }
   if (finding.assumption_flags.length > 0) {
     card.append(section('Assumptions', finding.assumption_flags.join(', ')));
   }
-  card.append(el('p', 'confidence', `Confidence: ${Math.round(finding.confidence * 100)}%`));
+  if (props.situationSummary) card.append(section('Situation', props.situationSummary));
 };
+
+// --------------------------------------------------------------------------- context bar
 
 const SIDES: ReadonlyArray<[string, string]> = [
   ['', 'Side: auto'],

@@ -4,6 +4,7 @@ import {
   type Finding,
   type Job,
   type Report,
+  type Settings,
 } from '../../src/shared/types';
 
 export const finding = (overrides: Partial<Finding> = {}): Finding => ({
@@ -31,7 +32,7 @@ export const report = (overrides: Partial<Report> = {}): Report => ({
     width: 1920,
     height: 1080,
   },
-  generated_at: '2026-09-20T15:30:00+00:00',
+  generated_at: '2026-09-21T15:30:00+00:00',
   model: 'qwen3-vl:8b',
   windows: [
     {
@@ -77,6 +78,8 @@ export const clip = (overrides: Partial<Clip> = {}): Clip => ({
   key: '0123456789abcdef',
   size_bytes: 1000,
   mtime: 0,
+  duration_s: 600,
+  estimated_windows: 47,
   status: 'new',
   job_id: null,
   error: null,
@@ -91,8 +94,23 @@ export const job = (overrides: Partial<Job> = {}): Job => ({
   windows_done: 0,
   windows_total: 0,
   error: null,
-  created_at: '2026-09-20T12:00:00+00:00',
+  created_at: '2026-09-21T12:00:00+00:00',
   finished_at: null,
   context: EMPTY_CONTEXT,
+  options: { force: false, coverage: null, max_span_s: null, max_windows: null },
+  ...overrides,
+});
+
+export const settings = (overrides: Partial<Settings> = {}): Settings => ({
+  model: 'qwen3-vl:8b',
+  coverage: 'full',
+  coverage_modes: ['full', 'sampled'],
+  window_s: 12,
+  windows_per_file: 3,
+  max_span_s: 0,
+  max_windows: 0,
+  fps: 1,
+  situation_pass: true,
+  daily_call_cap: 0,
   ...overrides,
 });

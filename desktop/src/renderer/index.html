@@ -10,29 +10,60 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header>
-      <h1>round-review</h1>
-      <button id="refresh">Refresh</button>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">round<span class="brand-accent">review</span></span>
+      </div>
+      <button id="refresh" class="btn ghost">Refresh</button>
     </header>
+
     <p id="banner" class="banner" hidden></p>
 
-    <section id="list-view">
-      <div id="context-bar" class="context-bar"></div>
-      <div id="clips" class="clips"></div>
-    </section>
+    <main>
+      <section id="list-view" class="view">
+        <div class="controls">
+          <div class="control-group">
+            <span class="control-label">Your details</span>
+            <div id="context-bar" class="context-bar"></div>
+          </div>
+          <div class="control-group">
+            <span class="control-label">How much to review</span>
+            <div id="preset-picker" class="segmented"></div>
+          </div>
+        </div>
+        <div id="clips" class="clips"></div>
+      </section>
 
-    <section id="review-view" hidden>
-      <div class="review-header">
-        <button id="back">← Clips</button>
-        <h2 id="review-title"></h2>
-      </div>
-      <video id="video" controls preload="metadata"></video>
-      <div id="track" class="track"></div>
-      <div id="coverage"></div>
-      <nav id="finding-list" class="finding-list" aria-label="Review findings"></nav>
-      <p id="situation" class="situation" hidden></p>
-      <div id="finding" class="finding"></div>
-    </section>
+      <section id="review-view" class="view" hidden>
+        <div class="review-bar">
+          <button id="back" class="btn ghost">← Clips</button>
+          <h2 id="review-title"></h2>
+          <div class="review-nav">
+            <button id="prev-finding" class="btn ghost" title="Previous finding (Shift+←)">
+              ‹ Prev
+            </button>
+            <button id="next-finding" class="btn ghost" title="Next finding (Shift+→)">
+              Next ›
+            </button>
+          </div>
+        </div>
+
+        <div class="review-grid">
+          <div class="stage">
+            <video id="video" controls preload="metadata"></video>
+            <div id="timeline" class="timeline"></div>
+            <div id="coverage" class="coverage-wrap"></div>
+          </div>
+          <aside class="side">
+            <h4 class="side-title">Findings</h4>
+            <div id="finding-list" class="finding-list"></div>
+          </aside>
+        </div>
+
+        <div id="finding" class="finding-card"></div>
+      </section>
+    </main>
 
     <script src="app.js"></script>
   </body>

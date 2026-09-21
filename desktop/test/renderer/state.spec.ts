@@ -1,6 +1,6 @@
 import { initialState, reduce, type State } from '../../src/renderer/state';
-import { clip, job, report } from './fixtures';
 import { EMPTY_CONTEXT } from '../../src/shared/types';
+import { clip, job, report, settings } from './fixtures';
 
 const withClips = (): State =>
   reduce(initialState, {
@@ -9,7 +9,7 @@ const withClips = (): State =>
     warning: null,
   });
 
-describe('reduce', () => {
+describe('clips and jobs', () => {
   it('loads clips and clears any previous error', () => {
     const s = reduce(
       { ...initialState, error: 'old' },
@@ -32,10 +32,10 @@ describe('reduce', () => {
     let s = reduce(withClips(), { type: 'job_submitted', job: job() });
     s = reduce(s, {
       type: 'job_updated',
-      job: job({ status: 'running', windows_done: 1, windows_total: 3 }),
+      job: job({ status: 'running', windows_done: 1, windows_total: 47 }),
     });
     expect(s.clips[0]?.status).toBe('running');
-    expect(s.jobs['job1']?.windows_done).toBe(1);
+    expect(s.jobs['job1']?.windows_total).toBe(47);
     s = reduce(s, {
       type: 'job_updated',
       job: job({ status: 'failed', error: 'OllamaError: refused' }),
@@ -54,7 +54,15 @@ describe('reduce', () => {
     expect(s.activeJobIds).toEqual(['job2']);
   });
 
-  it('opens a report and selects markers', () => {
+  it('records errors without losing clips', () => {
+    const s = reduce(withClips(), { type: 'error', message: 'boom' });
+    expect(s.error).toBe('boom');
+    expect(s.clips).toHaveLength(2);
+  });
+});
+
+describe('review view', () => {
+  it('opens a report with markers and coverage', () => {
     let s = reduce(withClips(), {
       type: 'report_loaded',
       key: '0123456789abcdef',
@@ -63,26 +71,39 @@ describe('reduce', () => {
     expect(s.view).toBe('review');
     expect(s.reviewKey).toBe('0123456789abcdef');
     expect(s.markers).toHaveLength(3);
-    expect(s.selectedMarkerId).toBeNull();
+    expect(s.coverage).toHaveLength(2);
+    expect(s.selectedMarkerId).toBe('w0-f0'); // first finding selected so the panel is never blank
     s = reduce(s, { type: 'marker_selected', id: 'w1-f0' });
     expect(s.selectedMarkerId).toBe('w1-f0');
     s = reduce(s, { type: 'marker_selected', id: 'nope' });
-    expect(s.selectedMarkerId).toBeNull();
+    expect(s.selectedMarkerId).toBe('w1-f0'); // unknown ids leave the selection alone
     s = reduce(s, { type: 'back_to_list' });
     expect(s.view).toBe('list');
     expect(s.report).toBeNull();
     expect(s.markers).toEqual([]);
   });
 
-  it('records errors without losing clips', () => {
-    const s = reduce(withClips(), { type: 'error', message: 'boom' });
-    expect(s.error).toBe('boom');
-    expect(s.clips).toHaveLength(2);
+  it('selects nothing when a review found nothing', () => {
+    const s = reduce(initialState, {
+      type: 'report_loaded',
+      key: 'k',
+      report: report({ windows: [] }),
+    });
+    expect(s.selectedMarkerId).toBeNull();
+    expect(s.markers).toEqual([]);
+  });
+
+  it('steps between findings', () => {
+    let s = reduce(initialState, { type: 'report_loaded', key: 'k', report: report() });
+    s = reduce(s, { type: 'marker_stepped', direction: 1 });
+    expect(s.selectedMarkerId).toBe('w1-f0');
+    s = reduce(s, { type: 'marker_stepped', direction: -1 });
+    expect(s.selectedMarkerId).toBe('w0-f0');
   });
 });
 
-describe('context and knowledge', () => {
-  it('starts empty and updates one field at a time, blank meaning null', () => {
+describe('context, settings and review options', () => {
+  it('updates context one field at a time, blank meaning null', () => {
     let s = reduce(initialState, { type: 'context_changed', field: 'rank', value: 'Gold 2' });
     expect(s.context).toEqual({ ...EMPTY_CONTEXT, rank: 'Gold 2' });
     s = reduce(s, { type: 'context_changed', field: 'agent', value: 'Jett' });
@@ -97,7 +118,39 @@ describe('context and knowledge', () => {
       ranks: ['Gold'],
       checklist: [],
     };
-    const s = reduce(initialState, { type: 'knowledge_loaded', knowledge });
-    expect(s.knowledge).toBe(knowledge);
+    expect(reduce(initialState, { type: 'knowledge_loaded', knowledge }).knowledge).toBe(knowledge);
+  });
+
+  it('adopts the review defaults from settings', () => {
+    const s = reduce(initialState, {
+      type: 'settings_loaded',
+      settings: settings({ coverage: 'sampled', max_span_s: 60, max_windows: 5 }),
+    });
+    expect(s.settings?.model).toBe('qwen3-vl:8b');
+    expect(s.reviewOptions).toEqual({ coverage: 'sampled', max_span_s: 60, max_windows: 5 });
+  });
+
+  it('defaults to reviewing the whole clip', () => {
+    expect(initialState.reviewOptions).toEqual({
+      coverage: 'full',
+      max_span_s: null,
+      max_windows: null,
+    });
+  });
+
+  it('switches between whole-clip and first-minute presets', () => {
+    let s = reduce(initialState, { type: 'review_preset_chosen', preset: 'first_minute' });
+    expect(s.reviewOptions).toEqual({ coverage: 'full', max_span_s: 60, max_windows: null });
+    s = reduce(s, { type: 'review_preset_chosen', preset: 'sampled' });
+    expect(s.reviewOptions.coverage).toBe('sampled');
+    s = reduce(s, { type: 'review_preset_chosen', preset: 'full' });
+    expect(s.reviewOptions).toEqual({ coverage: 'full', max_span_s: null, max_windows: null });
+  });
+
+  it('remembers which preset is active', () => {
+    expect(
+      reduce(initialState, { type: 'review_preset_chosen', preset: 'first_minute' }).preset,
+    ).toBe('first_minute');
+    expect(initialState.preset).toBe('full');
   });
 });

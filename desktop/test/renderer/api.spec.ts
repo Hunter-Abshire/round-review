@@ -28,20 +28,41 @@ describe('createApi', () => {
     expect(calls[0]?.[0]).toBe(`${base}/api/clips`);
   });
 
-  it('submitJob posts JSON with the player context', async () => {
+  it('submitJob posts the context, the review options and the force flag', async () => {
     const { fetch, calls } = fakeFetch(202, { id: 'j' });
-    await createApi(base, fetch).submitJob('/v/a.mp4', {
-      ...EMPTY_CONTEXT,
-      rank: 'Gold 2',
-      agent: 'Jett',
-    });
+    await createApi(base, fetch).submitJob(
+      '/v/a.mp4',
+      { ...EMPTY_CONTEXT, rank: 'Gold 2', agent: 'Jett' },
+      { coverage: 'full', max_span_s: 60, max_windows: null },
+      true,
+    );
     const [url, init] = calls[0]!;
     expect(url).toBe(`${base}/api/jobs`);
     expect(init?.method).toBe('POST');
     expect(JSON.parse(String(init?.body))).toEqual({
       path: '/v/a.mp4',
       context: { rank: 'Gold 2', agent: 'Jett', map: null, side: null, focus: null, notes: null },
+      force: true,
+      coverage: 'full',
+      max_span_s: 60,
+      max_windows: null,
     });
+  });
+
+  it('defaults force to false', async () => {
+    const { fetch, calls } = fakeFetch(202, { id: 'j' });
+    await createApi(base, fetch).submitJob('/v/a.mp4', EMPTY_CONTEXT, {
+      coverage: 'full',
+      max_span_s: null,
+      max_windows: null,
+    });
+    expect(JSON.parse(String(calls[0]![1]?.body)).force).toBe(false);
+  });
+
+  it('getSettings hits /api/settings', async () => {
+    const { fetch, calls } = fakeFetch(200, {});
+    await createApi(base, fetch).getSettings();
+    expect(calls[0]?.[0]).toBe(`${base}/api/settings`);
   });
 
   it('getKnowledge hits /api/knowledge', async () => {

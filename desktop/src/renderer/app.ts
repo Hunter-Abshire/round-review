@@ -3,12 +3,13 @@ import { createApi, type Api } from './api';
 import {
   renderClipList,
   renderContextBar,
+  renderCoverageSummary,
   renderFindingCard,
   renderFindingList,
-  renderReviewCoverage,
-  renderMarkers,
+  renderPresetPicker,
+  renderTimeline,
 } from './dom';
-import { initialState, reduce, type Action, type State } from './state';
+import { initialState, reduce, type Action, type Preset, type State } from './state';
 import { nearestMarker } from './timeline';
 
 declare global {
@@ -29,62 +30,89 @@ const byId = (id: string): HTMLElement => {
 
 const run = (api: Api): void => {
   let state: State = initialState;
+
   const listView = byId('list-view');
-  const contextBar = byId('context-bar');
   const reviewView = byId('review-view');
   const clipsRoot = byId('clips');
+  const contextBar = byId('context-bar');
+  const presetPicker = byId('preset-picker');
   const banner = byId('banner');
   const video = byId('video') as HTMLVideoElement;
-  const track = byId('track');
+  const timeline = byId('timeline');
+  const coverage = byId('coverage');
+  const findingList = byId('finding-list');
   const card = byId('finding');
   const title = byId('review-title');
-  const situationLine = byId('situation');
 
   const dispatch = (action: Action): void => {
     state = reduce(state, action);
     render();
   };
 
+  const fail = (err: unknown): void =>
+    dispatch({ type: 'error', message: err instanceof Error ? err.message : String(err) });
+
+  const renderList = (): void => {
+    if (state.knowledge) {
+      renderContextBar(contextBar, state.context, state.knowledge, (field, value) =>
+        dispatch({ type: 'context_changed', field, value }),
+      );
+    }
+    renderPresetPicker(presetPicker, state.preset, preset =>
+      dispatch({ type: 'review_preset_chosen', preset: preset as Preset }),
+    );
+    renderClipList(clipsRoot, {
+      clips: state.clips,
+      jobs: state.jobs,
+      options: state.reviewOptions,
+      settings: state.settings,
+      now: Date.now() / 1000,
+      handlers: {
+        onAnalyze: key => void analyze(key, false),
+        onReanalyze: key => void analyze(key, true),
+        onOpen: key => void open(key),
+      },
+    });
+  };
+
+  const renderReview = (): void => {
+    const report = state.report;
+    if (!report || !state.reviewKey) return;
+    const marker = state.markers.find(m => m.id === state.selectedMarkerId) ?? null;
+    const findingCount = state.markers.length;
+    title.textContent = `${report.recording.name} — ${findingCount} finding${findingCount === 1 ? '' : 's'}`;
+    renderCoverageSummary(coverage, report);
+    renderTimeline(timeline, {
+      markers: state.markers,
+      coverage: state.coverage,
+      durationS: report.recording.duration_s,
+      selectedId: state.selectedMarkerId,
+      onSelect: select,
+      onSeek: seconds => {
+        video.currentTime = seconds;
+      },
+    });
+    renderFindingList(findingList, state.markers, state.selectedMarkerId, select);
+    const window_ = marker ? report.windows.find(w => w.index === marker.windowIndex) : undefined;
+    renderFindingCard(card, {
+      marker,
+      frameUrl:
+        marker?.finding.evidence_frame && state.reviewKey
+          ? api.frameUrl(state.reviewKey, marker.finding.evidence_frame)
+          : null,
+      situationSummary: window_?.situation?.summary ?? null,
+    });
+  };
+
   const render = (): void => {
     banner.textContent = state.error ?? state.warning ?? '';
     banner.hidden = banner.textContent === '';
+    banner.classList.toggle('error', state.error !== null);
     listView.hidden = state.view !== 'list';
     reviewView.hidden = state.view !== 'review';
-    if (state.view === 'list') {
-      if (state.knowledge) {
-        renderContextBar(contextBar, state.context, state.knowledge, (field, value) =>
-          dispatch({ type: 'context_changed', field, value }),
-        );
-      }
-      renderClipList(clipsRoot, state.clips, state.jobs, { onAnalyze: analyze, onOpen: open });
-      return;
-    }
-    const report = state.report;
-    if (!report || !state.reviewKey) return;
-    renderReviewCoverage(byId('coverage'), report);
-    renderFindingList(byId('finding-list'), state.markers, state.selectedMarkerId, select);
-    title.textContent = `${report.recording.name} · ${state.markers.length} finding(s) · ${report.model}`;
-    renderMarkers(
-      track,
-      state.markers,
-      report.recording.duration_s,
-      state.selectedMarkerId,
-      select,
-    );
-    const marker = state.markers.find(m => m.id === state.selectedMarkerId) ?? null;
-    const windowInfo = marker
-      ? report.windows.find(w => w.index === marker.windowIndex)
-      : undefined;
-    situationLine.textContent = windowInfo?.situation?.summary ?? '';
-    situationLine.hidden = situationLine.textContent === '';
-    const frame = marker?.finding.evidence_frame
-      ? api.frameUrl(state.reviewKey, marker.finding.evidence_frame)
-      : null;
-    renderFindingCard(card, marker?.finding ?? null, frame);
+    if (state.view === 'list') renderList();
+    else renderReview();
   };
-
-  const fail = (err: unknown): void =>
-    dispatch({ type: 'error', message: err instanceof Error ? err.message : String(err) });
 
   const refreshClips = async (): Promise<void> => {
     try {
@@ -95,11 +123,12 @@ const run = (api: Api): void => {
     }
   };
 
-  const analyze = async (key: string): Promise<void> => {
+  const analyze = async (key: string, force: boolean): Promise<void> => {
     const clip = state.clips.find(c => c.key === key);
     if (!clip) return;
     try {
-      dispatch({ type: 'job_submitted', job: await api.submitJob(clip.path, state.context) });
+      const job = await api.submitJob(clip.path, state.context, state.reviewOptions, force);
+      dispatch({ type: 'job_submitted', job });
     } catch (err) {
       fail(err);
     }
@@ -111,6 +140,8 @@ const run = (api: Api): void => {
       dispatch({ type: 'report_loaded', key, report });
       video.src = api.videoUrl(key);
       video.load();
+      const first = state.markers[0];
+      if (first) video.currentTime = first.timestamp_s;
     } catch (err) {
       fail(err);
     }
@@ -122,14 +153,25 @@ const run = (api: Api): void => {
     if (marker) video.currentTime = marker.timestamp_s;
   };
 
+  const step = (direction: 1 | -1): void => {
+    dispatch({ type: 'marker_stepped', direction });
+    const marker = state.markers.find(m => m.id === state.selectedMarkerId);
+    if (marker) video.currentTime = marker.timestamp_s;
+  };
+
   const pollJobs = async (): Promise<void> => {
+    const finished: string[] = [];
     for (const id of state.activeJobIds) {
       try {
-        dispatch({ type: 'job_updated', job: await api.getJob(id) });
+        const job = await api.getJob(id);
+        if (job.status === 'done' || job.status === 'failed') finished.push(job.key);
+        dispatch({ type: 'job_updated', job });
       } catch (err) {
         fail(err);
       }
     }
+    // A finished job changes the ledger status, so refresh the list to pick up partial/done.
+    if (finished.length > 0) await refreshClips();
   };
 
   byId('back').addEventListener('click', () => {
@@ -140,6 +182,8 @@ const run = (api: Api): void => {
     void refreshClips();
   });
   byId('refresh').addEventListener('click', () => void refreshClips());
+  byId('prev-finding').addEventListener('click', () => step(-1));
+  byId('next-finding').addEventListener('click', () => step(1));
 
   // Highlight the marker we are passing while the video plays.
   video.addEventListener('timeupdate', () => {
@@ -154,13 +198,26 @@ const run = (api: Api): void => {
   });
   video.addEventListener('error', () => {
     fail(
-      'This clip cannot be played in the app (unsupported codec, likely HEVC). Findings are still listed below.',
+      'This clip cannot be played here (unsupported codec, likely HEVC). The findings below still apply.',
     );
   });
 
-  const loadKnowledge = async (): Promise<void> => {
+  document.addEventListener('keydown', event => {
+    if (state.view !== 'review') return;
+    if (event.key === 'ArrowRight' && event.shiftKey) step(1);
+    else if (event.key === 'ArrowLeft' && event.shiftKey) step(-1);
+    else if (event.key === ' ') {
+      event.preventDefault();
+      if (video.paused) void video.play();
+      else video.pause();
+    }
+  });
+
+  const loadReference = async (): Promise<void> => {
     try {
-      dispatch({ type: 'knowledge_loaded', knowledge: await api.getKnowledge() });
+      const [knowledge, settings] = await Promise.all([api.getKnowledge(), api.getSettings()]);
+      dispatch({ type: 'knowledge_loaded', knowledge });
+      dispatch({ type: 'settings_loaded', settings });
     } catch (err) {
       fail(err);
     }
@@ -170,7 +227,7 @@ const run = (api: Api): void => {
   window.setInterval(() => {
     if (state.view === 'list' && state.activeJobIds.length === 0) void refreshClips();
   }, CLIP_REFRESH_MS);
-  void loadKnowledge();
+  void loadReference();
   void refreshClips();
 };
 

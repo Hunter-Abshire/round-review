@@ -278,7 +278,9 @@ def test_render_checklist_filters_categories() -> None:
 def test_bundled_agent_roster_is_complete() -> None:
     agents = load_agents()
     assert len(agents) >= 28
-    assert {"jett", "sova", "omen", "killjoy", "kayo", "clove", "vyse", "tejo", "waylay"} <= set(agents)
+    assert {"jett", "sova", "omen", "killjoy", "kayo", "clove", "vyse", "tejo", "waylay"} <= set(
+        agents
+    )
     assert all(len(a.abilities) == 4 for a in agents.values())
     assert all(a.common_mistakes and a.ability_checks for a in agents.values())
     assert find_agent(agents, "KAY/O") is not None and find_agent(agents, "kay/o") is not None

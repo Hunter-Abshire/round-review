@@ -284,3 +284,26 @@ def test_bundled_agent_roster_is_complete() -> None:
     assert all(len(a.abilities) == 4 for a in agents.values())
     assert all(a.common_mistakes and a.ability_checks for a in agents.values())
     assert find_agent(agents, "KAY/O") is not None and find_agent(agents, "kay/o") is not None
+
+
+def test_bundled_map_pool_is_complete() -> None:
+    maps = load_maps()
+    assert len(maps) >= 12
+    assert {
+        "ascent",
+        "bind",
+        "haven",
+        "split",
+        "icebox",
+        "breeze",
+        "fracture",
+        "pearl",
+        "lotus",
+        "sunset",
+        "abyss",
+        "corrode",
+    } <= set(maps)
+    assert all(
+        len(m.key_callouts) >= 8 and m.common_mistakes and m.defense_setups for m in maps.values()
+    )
+    assert any(m.in_competitive_rotation for m in maps.values())

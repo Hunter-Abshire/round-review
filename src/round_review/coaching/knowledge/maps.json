@@ -1,13 +1,964 @@
 {
   "maps": [
-    {"id": "ascent", "name": "Ascent", "in_competitive_rotation": true, "sites": ["A", "B"],
-     "layout_summary": "Mid control decides both sites; doors on A and B can be closed.",
-     "key_callouts": ["A Main: attacker entry to A", "Catwalk: mid path into A", "Market: mid path into B"],
-     "attack_defaults": ["Take mid with smokes on Market and Pizza then split"],
-     "defense_setups": ["2 A, 1 mid, 2 B with a mid rotator"],
-     "power_positions": ["Heaven: overlooks A site"],
-     "common_mistakes": ["Pushing mid without smoking Market and Pizza"],
-     "utility_notes": ["Smoke Market and Pizza for mid control"]}
+    {
+      "id": "ascent",
+      "name": "Ascent",
+      "in_competitive_rotation": true,
+      "sites": [
+        "A",
+        "B"
+      ],
+      "layout_summary": "Venice. Three-lane map where mid is the whole game: Catwalk feeds A Link/Tree, Market feeds B. Both sites have closable blast doors (A Door, B Market door) defenders use to stall and attackers close post-plant. Defender-sided; in the Sept 2026 (13.04) ranked pool.",
+      "key_callouts": [
+        "A Main: primary attacker entry to A, tight choke pre-fired from Heaven/Tree",
+        "A Lobby: attacker staging area before A Main",
+        "Heaven (Rafters): elevated defender perch over A, sees Main and site",
+        "Hell: area under Heaven, retake/anchor spot with cover",
+        "Tree (A Link): connector between Catwalk and A site, key crossfire spot",
+        "Generator: default plant cover on A, sees Short/Hell/Main/Wine",
+        "Wine: far corner of A Main side, hides defenders and lurkers",
+        "A Door/Switch: closeable blast door between A site and Tree side",
+        "Mid Top: attacker mid entry, gateway to Catwalk and Pizza",
+        "Catwalk (Cat): elevated mid lane leading to A Link/Tree",
+        "Pizza: mid pocket below Catwalk facing Market and CT wall",
+        "Cubby: defender nook near Mid Top, common Operator/one-way spot",
+        "Arch: choke where Catwalk, Market and CT spawn meet",
+        "Market: mid-to-B connector with the closeable door, key rotation hub",
+        "B Main: primary attacker entry to B, long angles, Logs corner inside",
+        "Boathouse: B site rear cover, defender anchor and plant spot",
+        "Lane/Stairs: B site paths toward CT spawn and Market"
+      ],
+      "attack_defaults": [
+        "Mid default: smoke Cubby/Mid Top and CT wall, take Catwalk and Pizza, then split A via Tree or B via Market",
+        "A Main execute: smoke Heaven and Tree, flash Main, plant Generator; one lurker holds Catwalk/Link flank",
+        "B Main execute: smoke Market door and CT/Boathouse, clear Logs, plant behind default boxes",
+        "Fake A (util in Main) then rotate through Mid/Catwalk into B via Market",
+        "Post-plant B: close the Market door from Switch, hold from B Lobby/Main with mollies to force slow retakes"
+      ],
+      "defense_setups": [
+        "2A-1Mid-2B default: Heaven + Tree/Hell on A, one Mid Cubby/Market player, Killjoy/Cypher anchor + Boathouse on B",
+        "Mid-heavy: 1A-2Mid-2B with Operator on Mid Top/Cubby and a Market player, since losing Arch opens both A Link and B",
+        "Sentinel-solo B: Killjoy Alarmbot/Nanoswarm at Lane/Boathouse lets 3 players load A and Mid",
+        "Eco stack: three players behind the closed A door with shotguns/Spectres, door as bait",
+        "Rotate on the commit read (Arch/Market lost + numbers pushing one way), not on plant sound"
+      ],
+      "power_positions": [
+        "Arch: single defender watches both Catwalk and Market approaches",
+        "Heaven/Rafters: sees A Main and Tree together, must be smoked to enter A",
+        "Cubby/Mid Top: Operator angle that wins or loses Mid every round",
+        "Market with door closed: forces attackers to burn util and buys rotation time",
+        "Tree/A Link: attackers who own it pinch A from two sides; defenders who own it hold Cat flank",
+        "Boathouse: B anchor spot, covers B Main and default plant",
+        "Generator/Hell: A anchor and post-plant crossfire positions",
+        "Pizza: attacker foothold that threatens Market and CT wall"
+      ],
+      "common_mistakes": [
+        "Pushing Mid without smoking Cubby/Mid Top or Market; feeds Operator picks",
+        "Re-peeking Arch or Mid Top after losing it, no new info",
+        "Defenders leaving Market door open and undefended, giving free B access",
+        "Holding Market solo with no recon/suppress first",
+        "Rotating off the plant sound instead of the commit read, arriving into set post-plant crossfires",
+        "Entering A Main without smoking Heaven and Tree; fighting into a crossfire"
+      ],
+      "utility_notes": [
+        "A execute: smoke Heaven + Tree (+ A Door side), flash Main, Sova recon on Generator/Hell",
+        "B execute: smoke Market door and CT/Boathouse, clear Logs corner with util before swinging",
+        "Mid take: smoke Cubby and under Arch/CT wall, then Catwalk; Killjoy or Cypher covers the Market flank",
+        "Defense Mid: smoke Mid Top, slow/stun Catwalk, Killjoy Nanoswarm on Lane or Boathouse turns conceded Market into a trap",
+        "Sova recon at round start confirms Market/Cat commit before contesting; Omen/Clove global smokes fit best"
+      ]
+    },
+    {
+      "id": "bind",
+      "name": "Bind",
+      "in_competitive_rotation": false,
+      "sites": [
+        "A",
+        "B"
+      ],
+      "layout_summary": "Rabat. Two sites and no mid: two one-way teleporters (A Short to B Short, B Long to A Lobby) drive rotations and fakes, and every TP use is loud, so audio replaces mid info. Reworked in 6.08 (2023). Out of ranked since 12.08 (Apr 2026); Unrated only.",
+      "key_callouts": [
+        "A Short: attacker route to A, ends facing Heaven and Lamps",
+        "Showers (Bath): attacker route to A from A Lobby, close-quarters, holds an ult orb",
+        "Heaven (Tower): elevated defender perch on A seeing Short and Showers",
+        "Lamps (U-Hall): tight corner room off A Short with TP exit, aggressive duelist spot",
+        "Truck/Triple Boxes (Tetris): A site cover and default plant area",
+        "Vents: defender entry to A from spawn, fallback when site is smoked",
+        "A Teleporter/TP Exit: one-way exit from B Long into A Lobby side",
+        "Hookah (Window): elevated room over B entrance from B Short, many corners",
+        "B Short: route from A Short TP exit into Hookah/B site",
+        "B Long: long attacker lane to B with TP entrance and ult orb",
+        "Garden (Arches): B Long-to-site approach with Moorish arches",
+        "Elbow: defender-side corner near B Long with a shootable window",
+        "B Hall: defender rotation corridor onto B, main retake path",
+        "Cubby: B site alcove watching Hall and Garden",
+        "Market (Link): defender rotation hub between A and B",
+        "Cave: attacker spawn corridor, occasional defender flank route"
+      ],
+      "attack_defaults": [
+        "A split: smoke Heaven + U-Hall/Lamps, push Showers and Short together, plant by Truck/TP cubby",
+        "B execute: smoke Hookah and Elbow, clear Garden, push Long + Short, plant tunnel side; lurker watches TP",
+        "TP fake: sell A with util at Short, then send 4-5 through A-to-B teleporter to hit B Hall as a pack",
+        "Default: pressure A Short to pull smokes while one player watches TP or cuts the defender return via Market",
+        "Force buys: full TP push with Spectres/shotguns into B Hall or Showers where fights are close"
+      ],
+      "defense_setups": [
+        "2A-1Rotate-2B default: Heaven + site/Lamps on A, one Market/TP rotator, Hookah + Long/Elbow on B",
+        "Hookah aggression: hold B from Hookah since attackers must clear it; Cypher/Killjoy util on A Short delays",
+        "Sentinel anchor A: Cypher/Killjoy trips on Short and Showers so one player holds A and 3 load B/rotate",
+        "TP watch: one player near Lamps/Showers listens for TP audio to punish rotations and cut flanks",
+        "Retake plan: A retakes are strong via Heaven/Lamps/Showers crossfires; B retakes only through Hall/Elbow, so avoid giving up B cheaply"
+      ],
+      "power_positions": [
+        "Heaven/Tower: sees Short and Showers; Operator spot that must be smoked",
+        "Hookah: elevated multi-corner room controlling B Short and site entry",
+        "Lamps: aggressive spot on A Short, also the A-side TP exit",
+        "Elbow: defender angle onto B Long/Garden with a wallbang window",
+        "B Cubby: anchor spot with dual sightlines on Hall and Garden",
+        "Showers doorway: choke into A, wide since rework but still a crossfire zone",
+        "Market/Link: fastest rotation between sites for defenders"
+      ],
+      "common_mistakes": [
+        "Ignoring teleporter audio, so rotations and flanks go unpunished",
+        "Rotating off a single sound cue or one smoke with no spike confirmation",
+        "Pushing B without clearing Hookah corners or baiting its util",
+        "Predictable TP usage every round; defenders pre-hold the exit",
+        "Entering A Short/Showers without smoking Heaven against an Operator",
+        "No anchor left on the other site during fakes, giving free plants"
+      ],
+      "utility_notes": [
+        "A execute: Brimstone/Omen smoke Heaven (smoke on top of Truck also covers it), plus U-Hall; flashes over Showers door",
+        "B execute: smoke Hookah/Window and Garden together, smoke Elbow and tunnel gaps to protect the plant",
+        "Sage wall or Killjoy util on a TP exit shuts down rotations; Cypher trips Short/Showers",
+        "Raze Boom Bot clears A Short, Paint Shells clear Lamps corners",
+        "Post-plant: hold from Elbow/Hall/Hookah on B or CT/Heaven on A; Fade, Raze, Brimstone lead win rates"
+      ]
+    },
+    {
+      "id": "haven",
+      "name": "Haven",
+      "in_competitive_rotation": true,
+      "sites": [
+        "A",
+        "B",
+        "C"
+      ],
+      "layout_summary": "Bhutan. The three-site map; A and C have two entries each, B has Mid Window plus Garage. Garage (breakable doors) threatens B and C at once, so defenders live on rotations through CT. 12.00 added a breakable Mid Window panel to stop round-start wallbangs. In the 13.04 pool.",
+      "key_callouts": [
+        "A Long: main attacker corridor to A with Operator sightline; Bricks/Boxes/Cubby along it",
+        "A Short (Sewer): tight tunnel from A Lobby to A site, shotgun territory",
+        "A Heaven (Tower): elevated defender perch over A, seen from Long",
+        "A Link: connector from A site to CT/spawn and rotations",
+        "Mid Window: opening from A Short/Courtyard onto B, now with breakable panel",
+        "Mid Courtyard: attacker mid area between A Short and Garage",
+        "Mid Doors: breakable double doors from Courtyard into Garage",
+        "Garage (C Short): pivot room touching B and C; most contested zone",
+        "B Site: central site with box, planted from Window or Garage",
+        "B Back: defender-side rear of B toward CT",
+        "CT: defender spawn hub between all three sites",
+        "C Long: long straight corridor to C with mid-way cubby",
+        "C Lobby: attacker staging before C Long",
+        "C Link: connector from C site to CT/spawn",
+        "C Platform/Logs: cover on C site right/left sides"
+      ],
+      "attack_defaults": [
+        "Default 1-1-2-1: one A Long, one Mid/B, two C Long, one lurk; commit late (last 15-20s) on info",
+        "Garage split: three take Garage while two push C Long, pinch C or turn to B",
+        "A execute: two through A Long, one via A Short/Sewer, smoke Heaven + CT/Link, plant default",
+        "B fast hit: 4-5 through Window/Garage with two flashes and a CT smoke, plant behind box, hold from Garage and A Link",
+        "Fake A/C with util then swing through Garage to the third site"
+      ],
+      "defense_setups": [
+        "2A-1B-2C default: A Long + Heaven/Short on A, one sentinel anchor on B, C Long + Garage on C",
+        "1-2-2 variant: one A with trips, two Mid/Garage, two C; Garage never left empty",
+        "1-1-2 plus rotator: sentinel solo B, CT player floats between A Link and C Link on commit reads",
+        "Retake rule: CT player rotates to C when A falls, keeps B from CT; group up before retakes",
+        "Rotate only on spike, util commitment, or contact; never on one sound cue"
+      ],
+      "power_positions": [
+        "Garage: controls B and C access and every rotation; contest early with util",
+        "Mid Window: whoever owns it gets a ~10s A-to-C rotate lane",
+        "A Heaven/Tower: elevated hold over A site and Long, must be smoked",
+        "C Long / C cubby: Operator lane; attackers use the cubby to hide from it",
+        "CT: retake and rotation hub covering B Back and both links",
+        "A Long Cubby/Boxes: stall point against a Long push",
+        "Top Mid/Courtyard: attacker foothold that threatens Window and Garage"
+      ],
+      "common_mistakes": [
+        "Over-rotating off one ability sound and abandoning the far site",
+        "Even 1-1-1 defensive split; B only needs one anchor",
+        "Leaving Garage undefended or uncontested",
+        "Five-man rush with no fake or split; defenders stack on the noise",
+        "Solo peeking A Long or C Long into an Operator early round",
+        "Planting B without holding Garage/Window for post-plant; solo retakes"
+      ],
+      "utility_notes": [
+        "A execute: smoke Heaven and CT/A Link, flash into Long and Short, Sova recon A Long",
+        "C execute: smoke C Link and Platform, Breach stun or Sova recon down C Long, Omen smoke Garage entrance",
+        "B/Garage: smoke Mid Window and CT, stun through Garage doors; Cypher trips on Window/Garage stop mid control",
+        "Defense: Sage wall A Long or Garage doors buys rotation time; Killjoy/Cypher setups let one player hold B",
+        "Prioritize sentinel util on A and C (two routes each); B is the cheap site"
+      ]
+    },
+    {
+      "id": "split",
+      "name": "Split",
+      "in_competitive_rotation": true,
+      "sites": [
+        "A",
+        "B"
+      ],
+      "layout_summary": "Tokyo. Compact vertical map: mid (Vents, Mail, Ropes) links both sites, and defenders hold elevated Heaven/Rafters on each site plus Screens/Ramps on A. Ropes give silent vertical moves. Entries through A Main and B Garage are brutal without smokes. In the 13.04 pool.",
+      "key_callouts": [
+        "A Main: attacker entry to A, exposed to Screens, Ramps and Heaven",
+        "A Ramps: sloped lane from A Main/site up toward A Tower and Heaven",
+        "A Heaven/Tower: elevated defender perch over A site, rotates to B via Vents",
+        "A Rafters: high walkway beside Heaven, off-angle onto A Main",
+        "A Screens: back-site pocket behind blue screens, supports Heaven and retakes",
+        "A Elbow/Back: rear corner of A site behind the plant boxes",
+        "A Sewer: rope/ascender path from A Lobby into Mid Bottom",
+        "Mid Top: defender-side upper mid, controls access to Mail and B Heaven",
+        "Mid Bottom: attacker-side lower mid, connects to Vents and Sewer",
+        "Mid Vents: passage from mid into A Heaven and Ramps",
+        "Mid Mail: room linking mid to B Heaven/Stairs, key B split route",
+        "Ropes: ascenders at Mid Mail and B Tower used for vertical rotations",
+        "B Garage/B Main: single narrow attacker choke into B, easy to molly",
+        "B Heaven/Tower: elevated defender position over B site, ropes escape",
+        "B Alley/CT: defender spawn corridor into B back site",
+        "B Stairs/Link: connector from Mid Mail down into B Heaven/site"
+      ],
+      "attack_defaults": [
+        "Default: contest A Main, show presence at B Garage, use utility to own Mid Top/Mail before committing; treat mid as the engine",
+        "A execute: smoke Heaven, Screens and Ramps, flash A Main, clear Rafters/Elbow, plant near Screens; post-plant from Sewer and Ramps to catch retakers",
+        "B execute: smoke B Heaven and Alley/CT, flash the boxes, duelist entries Garage with trade support; plant behind the pillar for Garage post-plant",
+        "Mid split onto B: smoke Ropes, take Mail, hit B Heaven and Garage at the same time so the B anchor cannot hold both",
+        "Mid-to-A pinch: take Vents from mid and hit Heaven/Ramps while a group enters A Main"
+      ],
+      "defense_setups": [
+        "2A-2Mid-1B is the common default: two mid players crossfire Mid Top/Vents and rotate either way, solo B anchor on the Garage choke",
+        "2A-1Mid-2B: Heaven + Ramps/Screens on A, sentinel with trips/turret in Vents or Mail, Heaven + Garage/Back on B",
+        "1A-3Mid-1B (Dignitas): heavy mid stack when the enemy defaults mid; site anchors delay with utility until rotation",
+        "A anchor holds Heaven or Screens with an Op; B anchor on Tower with rope escape; Sage wall or molly on B Main buys 10+ seconds",
+        "Never leave mid empty; an aggressive Op from Mid Top or Vents denies mid control outright"
+      ],
+      "power_positions": [
+        "A Heaven/Tower: sees whole A site and Ramps, rotates to B fast through Vents; clear or smoke it every A hit",
+        "A Screens: covers plant and Ramps, hard to clear without a flash; common retake anchor",
+        "A Ramps: elevated line onto A Main, denies the orb and site walk-in",
+        "B Heaven/Tower: elevation over Garage rush and site; 'the key to B for both sides'",
+        "Mid Top: defender height advantage over Mid Bottom, gates Mail and B Heaven",
+        "Mid Mail: whoever holds Mail controls the B split and Ropes",
+        "Sewer: short-range flank pocket from A Lobby into mid, good for force-buy shotgun aggression",
+        "B Garage corner: post-plant/retake spot with cover on the B Main choke"
+      ],
+      "common_mistakes": [
+        "Rushing A Main or B Garage without smokes on Heaven/Screens; frames show a whole team dying to elevated angles",
+        "Attackers idling in spawn or defaulting with zero mid presence, letting defenders stack site utility unopposed",
+        "Taking Ropes/Mail with no follow-up, then walking away and giving mid back",
+        "Defenders rotating off mid or a site on the first contact before 3+ enemies are confirmed on the minimap",
+        "Post-plant clustering on site boxes, so a retaker gets multiple trades from Heaven",
+        "Ignoring Sewer/Vents flanks after plant, dying to a defender coming through mid"
+      ],
+      "utility_notes": [
+        "A hit needs three smokes: Heaven, Screens, Ramps (Brimstone can place all three in one round)",
+        "B hit needs B Heaven and Alley/CT smoked plus a flash over the boxes; molly B Back/Elbow to flush the anchor",
+        "Defender mollies and Sage wall on B Main/Garage choke stall rushes cheaply; Killjoy/Cypher trips in Vents or Mail lock mid",
+        "Sage wall across Mid Top or Ropes fully cuts mid; Breach/Fade utility through the thin mid walls clears Mail and Vents",
+        "Post-plant on A: molly lineups onto Screens plant from Sewer/Ramps; Viper wall dissecting A site is a strong alternative to smokes"
+      ]
+    },
+    {
+      "id": "icebox",
+      "name": "Icebox",
+      "in_competitive_rotation": false,
+      "sites": [
+        "A",
+        "B"
+      ],
+      "layout_summary": "Arctic Kingdom site. Defined by verticality: stacked plant zones, A ziplines between Nest and Rafters, and defenders above normal eye level (Rafters, Pipes, Yellow). A has one choke (Belt/Nest); B is wide open via Green, Yellow, Kitchen and Tube. Out of ranked (Unrated/Swiftplay only).",
+      "key_callouts": [
+        "A Belt: attacker entry lane from spawn toward A, long-range Op fights",
+        "A Nest: raised platform at A entrance, overlooks site, zipline to Rafters",
+        "A Rafters: high defender walkway above A site, watches Belt and Nest",
+        "A Screens: defender spawn/mid connector into A, sees Hell and Heaven",
+        "A Pipes: corner nook watching Generator, Hell and Screens",
+        "A Generator: raised box on site, common plant spot with cover",
+        "A Heaven/Hell: elevated ledge over back A and the area beneath it",
+        "A Maze: left-side site connector toward Generator and Screens",
+        "Mid Boiler: defender-side mid room watching the mid crossing and Tube",
+        "Mid Tube: sloped attacker corridor from mid up into B, window over mid since 8.0",
+        "Mid Blue: attacker spawn container area leading to mid, Tube and Boiler",
+        "B Kitchen: room off Tube/mid into B site, snow pile drop-in",
+        "B Green: attacker entry to B along the green container lane",
+        "B Yellow: yellow container at B entrance; controls the fight before site",
+        "B Snowman: back-site defender spot near the snowman, sees Yellow and Green",
+        "B Orange/Cubby: close corner positions inside B site",
+        "B Bridge/Top Site: upper plant level, fastest defender rotate via Halls"
+      ],
+      "attack_defaults": [
+        "A execute: push Belt, clear Nest with recon, smoke Rafters and Screens, plant behind Generator or on top site; Viper wall or Sage wall for post-plant",
+        "B execute: take Green toward Yellow, smoke Rafters/Snowman and Kitchen, flash site corners, plant default near Yellow; post-plant from Green and Snowman",
+        "Mid-Green split on B: 1-2 players through Tube/Kitchen while the rest push Green so the Yellow holder is pinched",
+        "Mid control default: fight for Boiler/Tube early, then rotate off info; B is ~75% of the map's approaches so default toward B pressure",
+        "Contest control points before planting (A high ground, B Yellow); plant only in space your team still holds"
+      ],
+      "defense_setups": [
+        "2A-1Mid-2B default with retake-heavy play: A holds Rafters/Nest and Pipes, mid player in Boiler, B holds Yellow and Snowman/Kitchen",
+        "A: one player high (Rafters or Heaven), one low (Pipes/Maze); Op from Nest or Belt for early picks, fall back to Screens",
+        "B: Op or Vandal on Yellow, second on Snowman/Top Site, sentinel utility on Kitchen/Tube; Killjoy turret watching Yellow",
+        "Mid: sentinel near Tube with trips/alarms; Boiler held for early info, rotate through Kitchen or Screens",
+        "Viper wall across Belt/Nest or across Green with Killjoy on B is the classic double-anchor setup"
+      ],
+      "power_positions": [
+        "A Rafters: aerial angle over Belt/Nest entry; attackers who ignore it die from above",
+        "A Nest: first-contact perch at the A choke, zipline escape to Rafters",
+        "A Belt: long Op lane; attackers must break it to reach A",
+        "A Pipes: protected angle onto Generator plant and Screens",
+        "B Yellow: decides the B fight before site; whoever owns it owns B",
+        "B Snowman: back-site anchor seeing Yellow, Green and Kitchen door",
+        "Mid Boiler: early info and picks on the mid crossing, quick rotate both ways",
+        "Tube (top): elevated view onto B site and defender spawn; 8.0 window adds mid pressure"
+      ],
+      "common_mistakes": [
+        "Entering A without clearing Rafters, Nest and Pipes above; deaths from elevated angles are visible in frames",
+        "Planting in space the team does not hold (open ground under Rafters/Yellow) so the retake is free",
+        "Neglecting mid: no one watching Tube/Kitchen lets defenders flank or attackers split unpunished",
+        "Overstaying a lost site instead of grouping for a retake; defenders die one by one",
+        "Stacking on B Green or Yellow without utility on Snowman/Kitchen",
+        "Rotating through Kitchen/Screens late; mid player dying early on Icebox usually loses the round"
+      ],
+      "utility_notes": [
+        "A hit: smoke Rafters and Screens, recon Nest/Pipes; Viper wall across Belt/Nest is the standard defensive counter",
+        "B hit: smoke Kitchen door and Rafters/Snowman, flash over Yellow; Sage wall or Viper wall on Green splits site from the entry",
+        "Killjoy turret and nanoswarms on Yellow/Snowman; Cypher struggles because sites are too open to trip fully",
+        "Sova recon on the pyramid-like Generator area and drone through Tube; shock darts for post-plant on Generator/default",
+        "Mobility agents (Jett, Raze, Omen) take Generator top, Rafters and container off-angles; expect them there on both sides"
+      ]
+    },
+    {
+      "id": "breeze",
+      "name": "Breeze",
+      "in_competitive_rotation": false,
+      "sites": [
+        "A",
+        "B"
+      ],
+      "layout_summary": "Tropical island. Biggest map with the longest sightlines; Riot's largest rework landed in 12.00 (Jan 2026): Halls closed to attackers, mid narrowed, Nest rope removed, Elbow enclosed, B back walls raised, taller Pyramids. Fewer angles, faster defender rotates. Out of ranked since 13.00.",
+      "key_callouts": [
+        "A Main/A Long: wide attacker approach into A, long Op lane from site",
+        "A Cave: covered attacker route beside A Main, opens onto Pyramids",
+        "A Halls: former attacker flank corridor to A; post-rework closed to attackers, defender-side corridor only",
+        "Pyramids: two pyramid structures on A site, main plant cover (taller since 12.00)",
+        "A Bridge/Stairs: raised back-site ledge and steps toward defender spawn",
+        "Mid Doors: mechanical double doors from mid onto A site, gate for A splits",
+        "Mid Nest: elevated defender perch over mid and toward A; rope removed in 12.00",
+        "Mid Pillar: central mid cover attackers use to push toward Nest/Tunnel",
+        "Mid Cubby/Peek: attacker-side corners in mid used to hold angles on Nest",
+        "Chute/Doors: attacker spawn link into mid; the chute drop became teleporter-style doors in 12.00",
+        "B Main: long attacker lane into B; heavy flash use required",
+        "B Tunnel: defender-side passage between mid and B, Viper wall spot",
+        "B Elbow: bend from mid into B; enclosed with info windows post-rework",
+        "B Window: defender window onto B Main; widened in 12.00, spawn path to it removed",
+        "B Arches/Planks: front-site entry and plant area from B Main",
+        "B Back/Pillar: rear site cover and defender anchor spot"
+      ],
+      "attack_defaults": [
+        "A execute: Viper wall across the site, recon the Pyramids, smoke Mid Doors and Bridge, push A Main and Cave together; post-plant from Main and Cave",
+        "B execute: push B Main with flashes down the lane while a group comes through mid/Elbow; smoke Window and Back Pillar, plant behind Arches/Planks",
+        "Mid control first: take Pillar and pressure Nest, then choose A via Doors or B via Elbow/Tunnel; mid is required for B, useful for A",
+        "Post-rework default: one path into B avoids mid, so fake A Main/Cave presence then collapse B through Main + Elbow",
+        "Op pressure from A Main/Cave and B Main lanes after reading the defense; Jett/Chamber picks still win rounds on the long lanes"
+      ],
+      "defense_setups": [
+        "2A-2Mid-1B classic: A Hall/Cave + Pyramids anchor, one at Mid Doors and one at Nest, one B anchor at Window/Back",
+        "2A-1Mid-2B post-rework: fewer mid angles, so one Nest/Tunnel player suffices while B gets an Op on Window plus a site anchor",
+        "A: Op or Vandal from Halls/Bridge for early picks on Main, second player at Pyramids for close fights, retake-heavy with sentinel utility on Cave",
+        "B: Op on Window covering B Main, sentinel utility on Tunnel/Elbow, third rotates from mid",
+        "Always keep someone on Nest/Tunnel; mid loss means both sites get split at once"
+      ],
+      "power_positions": [
+        "Mid Nest: sees mid and A; after 12.00 only mobility agents reach it, so it is less contestable",
+        "A Halls (defender side): long Op lane onto A Main entrants and rotators",
+        "B Window: dominant Op angle down B Main, widened in the rework",
+        "B Long/B Main lane: one of the best Op lanes in the game; must be smoked or flashed",
+        "Pyramids: plant cover and close-range fights once utility lands",
+        "Mid Doors: controls A/B split flow; opening them on retake is loud and slow",
+        "B Tunnel: defender rotate route and Viper wall anchor into mid",
+        "A Cave: covered attacker staging into A, hard to clear without recon"
+      ],
+      "common_mistakes": [
+        "Running across open ground (A Main, B Main, mid) without a Viper wall or smokes; long-lane Op deaths in frames",
+        "Giving up mid for free, then getting split through Doors and Elbow",
+        "Pre-rework habits: trying to lurk Halls to A or use the removed spawn path to B Window",
+        "Defenders over-rotating to B on first contact (B is now a single main path and easier to hold)",
+        "Aggressive peeks into wide corridors without recon info; B Main and A Main punish dry peeks",
+        "Post-plant with everyone on site instead of holding Cave/Main and Tunnel/Elbow retake paths"
+      ],
+      "utility_notes": [
+        "Viper is near-mandatory: A wall cutting site from back site, B wall blocking CT/Tunnel, Tunnel-to-mid wall on defense; Harbor/Omen/Brim now workable post-rework",
+        "A hit smokes: Mid Doors, Bridge/Stairs and the orange container; B hit smokes: Window and Back Pillar, flash down B Main",
+        "Sova recon/drone through the Elbow and Doors info windows added in 12.00; Fade eye serves the same job",
+        "Sentinel utility on Cave and Tunnel; Killjoy turret on Pyramids and nanoswarms on the plant boxes for retake stalls",
+        "Defense Sage wall at B choke or Doors buys rotation time; KAY/O suppression covers the wide site entries"
+      ]
+    },
+    {
+      "id": "fracture",
+      "name": "Fracture",
+      "in_competitive_rotation": false,
+      "sites": [
+        "A",
+        "B"
+      ],
+      "layout_summary": "H-shaped map: defenders spawn in the center, attackers spawn on both ends and cross via ziplines under the map, so every site can be pincered from two directions. Defenders rotate through their own spawn only. Back in ranked 12.05, out again 13.00 (Jun 2026).",
+      "key_callouts": [
+        "A Hall: long central A approach from attacker side, ult orb",
+        "A Door: door at end of A Hall opening onto A site",
+        "A Main: attacker-side entry beside A Door onto site",
+        "A Dish: lower satellite-dish entry from the other attacker side, ult orb",
+        "A Rope: rope ascender from Dish side up to A window",
+        "A Drop: elevated ledge dropping onto A site",
+        "A Link: corridor from A site to Defender Spawn",
+        "Sand: open A site floor and plant area",
+        "B Main: primary long approach into B, ult orb",
+        "B Arcade: attacker entry on the opposite side of B, ult orb",
+        "B Tower: elevated defender position overlooking Arcade and site",
+        "B Tree: side entry next to Arcade",
+        "B Tunnel: underground connector running under B side",
+        "B Canteen: defender-side entry into B from spawn",
+        "B Link: defender connector from spawn to B",
+        "B Generator: cover cluster on B site, common defender hide spot"
+      ],
+      "attack_defaults": [
+        "Pincer A: 2 through A Hall/A Door, 2 through A Main, 1 slow through A Dish/Rope; site take from both directions",
+        "Pincer B: take B Tower first, then hit Arcade and B Main simultaneously; use Tunnel for the second wave",
+        "Zipline fake: show presence on one attacker side, zip to the other and hit late",
+        "Orb default: contest A Hall/A Dish and B Main/B Arcade orbs early, then commit to whichever side gave info",
+        "Post-plant from Main: plant left-corner A Main-side so the whole team spams from Hall"
+      ],
+      "defense_setups": [
+        "2A-1Spawn-2B: one A player at Dish, one at Rope/Door listening for Hall; flex in spawn rotates on first contact",
+        "B: one in Tower, one in Arcade/Generator crossfire; sentinel util on B Main and Tree",
+        "Play for info, not holds: sentinel util on both sides, give the site, retake as five through Link/Canteen",
+        "Aggressive Dish/Arcade: one defender pushes an attacker lane early for a pick, then falls back off-site",
+        "Op on A Hall or Generator: long angles are the best sniper spots on the map"
+      ],
+      "power_positions": [
+        "B Tower: high ground over Arcade, Tree and site; rotates quickly to spawn",
+        "A Dish: defender-favored lower entry; lurk spot and rotation denial for attackers",
+        "A Rope/Door: controls A Hall access and hears footsteps early",
+        "B Generator/Canteen corners: default defender hide spots attackers must clear",
+        "A Hall: best Operator lane on the map for either side",
+        "B Tunnel: fast rotation and creative ult usage (Killjoy, Breach, Sova)"
+      ],
+      "common_mistakes": [
+        "Defenders rotating off site on the first noise; the map is built to bait rotations",
+        "Attackers zipping one at a time and dying alone on the far side",
+        "Holding on-site with no escape route instead of playing off-site and retaking",
+        "Attackers hitting from one direction only; single-entry takes into stacked crossfires",
+        "No smoke coverage on Link/Canteen or Drop/Sand, letting defenders retake for free",
+        "Using ziplines carelessly; you can't stop or turn mid-zip so timing is predictable"
+      ],
+      "utility_notes": [
+        "A take: smoke A Link, Sand and A Drop to cut spawn rotations and post-plant angles",
+        "B take: smoke B Link and B Canteen to kill the defender crossfire from spawn",
+        "Breach through-wall stuns/flashes clear Hall, Arcade and Tower; near-mandatory pick",
+        "Brimstone/Viper post-plant mollies from Main win more rounds than aim",
+        "Killjoy/Cypher util on Dish, Tree and Tunnel for early info; one-way smokes on entrances"
+      ]
+    },
+    {
+      "id": "pearl",
+      "name": "Pearl",
+      "in_competitive_rotation": false,
+      "sites": [
+        "A",
+        "B"
+      ],
+      "layout_summary": "Underwater city. Pure three-lane map with no doors, ropes or teleporters; mid control and rotations decide rounds. A is tight and cornery, B is a long open lane from Ramp to Screen. 11.08 (Oct 2025) added B site cover. Out of ranked since 13.00 (Jun 2026).",
+      "key_callouts": [
+        "A Main: primary long attacker approach into A",
+        "A Art: connector from mid into A, splits and defender rotations",
+        "A Link: defender-side connector from A to spawn/mid",
+        "A Restaurant: attacker staging room before A Main",
+        "A Secret: narrow back path behind A site",
+        "A Flowers: A site cover near Main entry",
+        "A Dugout: sunken A site position next to plant",
+        "Mid Top: contested upper mid lane, sets round pace",
+        "Mid Plaza: open mid area attackers must cross",
+        "Mid Shops: attacker-side mid entrance",
+        "Mid Doors: defender mid entrance toward spawn",
+        "Mid Connector: bridge from mid to both sites; owner controls rotations",
+        "B Main (B Long): long attacker lane into B, Operator lane",
+        "B Ramp: attacker end of the B lane",
+        "B Link: defender connector from mid/spawn into B",
+        "B Tower: elevated defender position on B",
+        "B Screen: cover at site edge facing B Main",
+        "B Hall: deep B-side room, post-plant and anchor space",
+        "B Club: attacker-side room feeding B Ramp"
+      ],
+      "attack_defaults": [
+        "Mid default: take Plaza/Top Mid first, smoke Art and Connector, then split to either site",
+        "A split: A Main plus Art from mid; smoke back site, flash Main, clear Dugout and Flowers",
+        "B split: smoke B Main long angle first (Op), push Main with flashes while mid players come through Connector/Hall",
+        "Fake and rotate: dump util on one site, rotate through mid; long rotations punish defenders who bite",
+        "Plant for space: main-side plants only if you own the long lane; otherwise plant behind cover for a retake fight"
+      ],
+      "defense_setups": [
+        "2A-1Mid-2B: one A anchor on site, one at Art/Link; mid player at Doors/Connector; B Op on Main, B Hall/Link watcher",
+        "2A-2Mid-1B (2-2-1): stack mid to deny splits and rotate off info; B anchor delays with util",
+        "B: Operator on B Main from Screen/Tower, second player Hall or Tower; fall back and retake through B Link",
+        "A: passive off-angles, sentinel util on A Main and Art so the anchor isn't pinched",
+        "Mid pressure rounds: two players push Plaza early with controller smokes for info, then reset"
+      ],
+      "power_positions": [
+        "Mid Connector: owner controls rotations and split options for both teams",
+        "B Main long angle (Screen/Tower): dominant Operator sightline on the map",
+        "A Art: ignoring it means splits appear behind the A anchor",
+        "B Hall: deep anchor and post-plant space that influences retakes",
+        "Mid Top/Plaza: early info spot; losing it means A and B hits are unreadable",
+        "A Dugout/Flowers: on-site cover that must be cleared before plant"
+      ],
+      "common_mistakes": [
+        "Attackers ignoring mid; pushing B Main with no mid presence walks into a Link/Hall crossfire",
+        "Defenders with zero mid presence reacting late to splits through Art or Connector",
+        "Solo retakes across long lanes (B Main, Connector) before util arrives",
+        "Over-rotating on first noise; long rotation distances mean you can't come back",
+        "Predictable main-only B plants and post-plants after the 11.08 cover changes",
+        "Sitting on-site as a full team; attackers overrun it with util and you have no retake"
+      ],
+      "utility_notes": [
+        "Controller smokes: A Art and Mid Connector on mid takes; B Long/Main, A Link and Mid Doors on executes",
+        "Viper/Omen mid walls and one-ways decide Plaza/Top fights",
+        "Sova/Fade recon on Mid, Art and B Main before committing; no dry pushes",
+        "Killjoy/Cypher on A Main and Art so anchors get flank timing",
+        "Flash through A Main and B Main entries after smokes; Connector fights are close-range"
+      ]
+    },
+    {
+      "id": "lotus",
+      "name": "Lotus",
+      "in_competitive_rotation": true,
+      "sites": [
+        "A",
+        "B",
+        "C"
+      ],
+      "layout_summary": "India. Three sites with two rotating doors (A Door: A Main to Tree; C Door: C Mound to B Main), a 400 HP breakable wall between A site and A Link, and a silent drop from A Top. Doors are loud and destroy deployables in their path. A side reworked in 12.05. In the 13.04 pool.",
+      "key_callouts": [
+        "A Lobby: attacker staging area feeding A Main and Root",
+        "A Main: primary A entry through the rotating A Door",
+        "A Root: root-lined side path from lobby toward A",
+        "A Rubble: chokepoint hub giving access to A, Tree, Stairs and B Door",
+        "A Tree: room off A Door, back-site anchor position",
+        "A Hut: small structure on A site, plant spot",
+        "A Top: elevated back of A with rope ascender; drops silently to site",
+        "A Drop: silent descent from A Top onto site",
+        "A Stairs: defender access from spawn into A; widened in 12.05",
+        "A Link: connector from A to B, behind the breakable wall",
+        "B Main: central attacker entry into B, C Door on its side",
+        "B Pillars: cover pillars on B site",
+        "B Upper: elevated defender entry into B from spawn",
+        "C Lobby: attacker staging area feeding C Mound and C Main",
+        "C Mound: raised hotspot with the rotating C Door into B Main",
+        "C Main: long attacker entry into C",
+        "C Bend: turn in C Main before site",
+        "C Waterfall: elevated defender angle on C",
+        "C Hall: defender-side room behind C, post-plant spot",
+        "C Link: connector from C to B/spawn"
+      ],
+      "attack_defaults": [
+        "A: split A Main (through Door) and Tree; smoke Stairs, Top and Drop; break the wall only when you plan to use the Link sightline",
+        "B: pinch through B Main and C Door/Mound; smoke B Upper, A Link and C Link; flash before the narrow entry",
+        "C: clear Mound then C Main/Bend; smoke Waterfall and Hall; plant Hall-side or Waterfall-side to reduce exposure",
+        "Rubble/Mound default: take both hotspots early for info and access to two sites each, then commit",
+        "Door fake: toggle C Door or A Door to pull defenders, then hit the opposite site"
+      ],
+      "defense_setups": [
+        "2A-1B-2C: A anchor at Tree/Stairs plus Rubble contester; B player on Upper/Pillars; C at Waterfall and Hall/Main",
+        "1A-2B-2C: sentinel anchors A with util on Main/Drop, B holds Pillars with Upper support, C Waterfall + Link",
+        "Rubble push: one defender takes Rubble early and denies B Door, Tree and Stairs single-handedly",
+        "Retake-heavy: play off-site, delay with sentinel util, rotate through B Upper/Links and retake with numbers",
+        "C: Sage wall or Killjoy util on C Main, trap the C Door, second player watches Waterfall flank from C Link"
+      ],
+      "power_positions": [
+        "A Rubble: controls access to A site, Tree, Stairs and B Door",
+        "C Mound: gives attackers access to both B Main and C Main",
+        "C Waterfall: elevated defender angle over C site and Main",
+        "A Tree: back-site anchor covering the Door and Main",
+        "B Pillars: central cover in a compact site, key for both sides",
+        "B Upper: defender high ground and fast rotation lane into B",
+        "A Top/Drop: silent flank onto A for either side",
+        "C Hall: deep post-plant and retake spot"
+      ],
+      "common_mistakes": [
+        "Defenders placing trips, Alarmbots or Slow Orbs in a door's swing path; either team's toggle deletes them",
+        "Rotating doors used as cover instead of for rotations; they're loud and telegraph you",
+        "Breaking the A wall with no plan, handing defenders a permanent Link sightline",
+        "Late rotate calls on a three-site map; players trickle into retakes one at a time",
+        "Sitting on-site (especially B) with many entries and tight angles instead of playing off-site",
+        "Attackers ignoring Rubble/Mound control and running dry into A Main or C Main"
+      ],
+      "utility_notes": [
+        "A execute: smoke A Stairs, A Top and A Drop; Breach/Fade clear Tree and Rubble",
+        "B execute: smoke B Upper, A Link and C Link; flash the B Main choke before entry",
+        "C execute: smoke Waterfall and Hall; Sova/Fade recon Waterfall and Link before pushing",
+        "Cypher/Killjoy trips on both doors and Drop for flank timing; never inside the door path",
+        "Sage wall C Main or B Main to hold a choke; Viper/Harbor walls split B and C Main"
+      ]
+    },
+    {
+      "id": "sunset",
+      "name": "Sunset",
+      "in_competitive_rotation": true,
+      "sites": [
+        "A",
+        "B"
+      ],
+      "layout_summary": "Los Angeles. Compact three-lane map; the only moving part is the 500 HP Market door between B Market and Mid Courtyard (any damage destroys it for the round). Horseshoe mid feeds A via Elbow/Link and B via Market, so the round hinges on Courtyard. Back in ranked 13.00; in the 13.04 pool.",
+      "key_callouts": [
+        "A Lobby: attacker staging area before A Main",
+        "A Main: primary attacker corridor into A site",
+        "A Elbow: tight corner connector from Mid to A, key crossfire spot",
+        "A Alley: defender-side cubby giving crossfire onto A Main entrants",
+        "A Link: Mid-to-A connector, attackers' split lane",
+        "A Site: plant zone; default toward Link, back plant against wall",
+        "B Lobby: attacker staging before B Main",
+        "B Main: primary attacker corridor into B, tight and defender-favored",
+        "B Market: side entrance to B behind the mechanical door from Mid",
+        "B Boba: B site sub-area next to Market; falls once Market is taken",
+        "B Site: plant zone with pillar and CT-side crossfires",
+        "Mid Courtyard: central open hub, main early duel space",
+        "Mid Top: upper mid passage toward defender spawn / A Link",
+        "Mid Bottom: lower mid passage toward B Market",
+        "Mid Tiles: choke between Courtyard and defender side, common passive hold"
+      ],
+      "attack_defaults": [
+        "Mid control first: 2-3 players take Courtyard early (smoke Tiles/Top, flash the duel), then convert within ~15-20s into an A Link or Market split; holding Courtyard without converting wastes tempo",
+        "A execute: 3 through A Main with smoke on far corner / Alley and flash into Elbow, 2 come through A Link after mid is won; clear Elbow before committing or you eat the Alley crossfire",
+        "B execute: 3-4 fast through B Main with smoke on far side and flashes; either commit utility to open/break the Market door for a Boba second entry or accept B Main as the sole lane with numbers",
+        "Default 1-3-1 / 2-2-1 for info then collapse; Sunset punishes half measures, a 2v3 entry on A Main is worse than a 4v2",
+        "Fake one site with utility, push mid, and split behind the rotation using the Market door as the pivot"
+      ],
+      "defense_setups": [
+        "1Mid-1B-3A: one contests Courtyard early, one anchors B with the Market door shut, three split A (Elbow/Alley/Site) with a rotator swinging on info (2026 pro-derived default)",
+        "2A-1Mid-2B: A anchor on site plus one on Elbow/Link; Mid player at Tiles/Top with util to slow; B anchor covering Main and Market plus one on Market watching mid flanks",
+        "Aggressive mid: Chamber/Jett Op at Mid Top early; if the first mid duel is lost, fall back and anchor rather than re-contest Courtyard",
+        "Sentinel split: Killjoy anchoring A (turret on box seeing A Main and Elbow, nanoswarm 'microwave') and Cypher trips on Market/Mid Link, freeing others for mid",
+        "Keep the Market door closed by default; it deletes an entire attack lane for free and any damage tells you where they're coming"
+      ],
+      "power_positions": [
+        "A Elbow: blocks A Main progression and gives crossfire with Alley; must be cleared with a flash/nearsight before any A commit",
+        "A Alley: defender cubby that crossfires attackers entering A Main; punishes dry pushes",
+        "B Market / Market door: whoever controls it controls the second entry to B; on B the fight is about the door before the site",
+        "Mid Courtyard / Mid Top: winning the first duel here opens both sites; Tiles is the passive fallback hold",
+        "B Site pillar and CT side: strong post-plant/retake crossfires; plant behind pillars near Market to cover B Main while shielded from the door",
+        "A Tree/Boxes near A Main entrance: most common early duel and first-blood spot"
+      ],
+      "common_mistakes": [
+        "Dry-peeking A Elbow or A Main without utility; the map's many 90-degree corners and deep cubbies demand systematic clears",
+        "Ignoring mid or re-contesting Courtyard after losing the first duel instead of anchoring a site",
+        "Breaking the Market door with no plan to use the lane, or treating it as scenery instead of a strategic asset",
+        "Committing 2-3 players to a site hit while the rest lurk; under-numbered executes lose to the natural crossfires",
+        "Not watching fast flanks through Market/Link after a site take; defenders rotate quickly on this map",
+        "Holding generic angles instead of site-specific post-plant spots (A Elbow for a Link-side plant, pillars for B)"
+      ],
+      "utility_notes": [
+        "Smokes: Mid Tiles/Top on attack to take Courtyard; A Main far corner + Alley for A hits; far side of B Main for B hits; a smoke on the Market/Courtyard connector makes the door a one-way choke",
+        "Flashes: needed into A Elbow and A Main corners, and into Market/Boba before any B commit; Skye/Fade excel at the tight angles",
+        "Recon: Sova dart or Fade Haunt on A Main and Mid at 1:40 tells defenders where the hit is coming from; Cypher cam covering A Main/Site/Elbow is standard",
+        "Sentinel anchors: Killjoy turret on B Main or A boxes, nanoswarms for post-plant in tight B; Cypher trips on Market and Mid Link catch the split",
+        "Walls: Sage wall on B Main or Viper screen across the Market doorway delays rushes 3-4s and covers rotates; Viper/Brim have strong A-site post-plant lineups"
+      ]
+    },
+    {
+      "id": "abyss",
+      "name": "Abyss",
+      "in_competitive_rotation": true,
+      "sites": [
+        "A",
+        "B"
+      ],
+      "layout_summary": "Floating base with no outer boundaries: every edge and the mid chasm is instant death, so knockback utility kills. Three lanes with heavy verticality (ascenders to A Tower, B Tower, Catwalk), 120 HP A Vents doors, and long Op lanes through Library and Catwalk. B cover reworked 11.08. Back in ranked 13.04.",
+      "key_callouts": [
+        "A Main: single frontal attacker entry into A site",
+        "A Tower: rope/ascender high ground overlooking A site",
+        "A Back Site: deep defender-side area behind A plant",
+        "A Bridge: narrow suspended walkway across the void into A, common plant spot",
+        "A Vents: A-to-mid shortcut with destructible doors (120 HP, blue to yellow to red)",
+        "A Security: defender spawn-side area behind A",
+        "Ascender: ropes/ziplines up to A Tower, B Tower and Catwalk",
+        "Mid Top: upper mid lane, long Op sightline",
+        "Mid Bottom: lower mid lane split from Top by the chasm",
+        "Mid Catwalk: elevated walkway reached by jumping the void, leads to A Vents",
+        "Mid Library: bookshelf-covered corridor linking mid to B, key lurk/flank choke",
+        "Mid Bend: connector from mid toward B Main via rope",
+        "B Main: primary attacker choke into B site",
+        "B Nest / Window: elevated B Main-side platform with drop to site and rope to mid",
+        "B Rafters: elevated pathway above B site",
+        "B Tower: high ground near defender spawn overlooking all of B",
+        "B Link: mid-to-B connector used for rotations",
+        "B Under: covered area beneath the B bridge",
+        "B Danger: exposed outer ledge shortcut into B, one slip is death"
+      ],
+      "attack_defaults": [
+        "Mid first: fight for Top/Bottom and Library early; mid gives access to roughly two-thirds of the map and both sites' flanks",
+        "A hit: smoke A Tower and Back Site, utility-clear Tower before entering A Main, optionally break Vents doors early for a Vents/Catwalk pincer; plant on Bridge for hard-to-dodge post-plant lineups",
+        "B hit: smoke Nest and the narrow lane end, flash into Main, pair B Main with a B Danger ledge entry to hit from two angles; since 11.08, plant on site rather than in Main",
+        "Mid-split: part of the team through Vents/Catwalk to flank while the rest pressure a main entry to force a crossfire on defenders",
+        "Post-mid-control lurk: one duelist or controller sits Library/Bend and punishes rotations"
+      ],
+      "defense_setups": [
+        "2A-1Mid-2B: Op/Chamber or Jett on Mid Top/Library for the tunnel sightline; A holds Tower + Back Site; B holds Tower + behind the boxes/Nest",
+        "3A-1Mid-1B (single-entry A punish): stack A Tower/Back Site/Bridge, B anchor on Tower with sentinel on B Danger and Main",
+        "High-low stack: one on Tower/Rafters, one directly below, splitting attacker crosshairs on the same entry",
+        "Sentinel edge setups: Cypher trips diagonally across jump gaps and ledges to drop jumpers; Killjoy on B chokes; Sage one-way barrier on ledges",
+        "Watch Vents doors: their destruction is a free tell of an A-side flank; Library is the high-risk flank-watch spot"
+      ],
+      "power_positions": [
+        "A Tower: dominates A site entry and contests plants without ground exposure; must be smoked or cleared on every A hit",
+        "B Tower: overlooks the whole site from CT side, strong Op angle onto B Main",
+        "Mid Catwalk / Mid Top: high-ground control of rotations and the Op lane; reaching Catwalk needs a void jump",
+        "Mid Library: hard-cover chokepoint for lurks and mid rushes toward B",
+        "B Nest/Window and Rafters: elevated B Main-side positions attackers must clear; defenders hold them for elevation",
+        "A Bridge: plant spot and crossfire point; anyone on it is exposed to falls from displacement",
+        "B Danger ledge: shortcut that punishes careless movement but gives a second angle onto B"
+      ],
+      "common_mistakes": [
+        "Positioning with the void at your back; Breach Aftershock/Fault Line, Raze nades, Astra pull, or a teammate's Sage wall push you off",
+        "Falling during risky shortcuts (Jett dashing bridges, crouch-jumping drops) without practice",
+        "Playing scared and refusing the long angles; the map rewards Op holds and micro-adjust aim",
+        "Ceding mid early, which lets attackers rotate freely and forces defenders into reactive retakes",
+        "Planting in the B cubby corner or A corners with no defensive sightlines instead of site-edge or Bridge plants",
+        "Overextending on aggression; the map baits duels and punishes lack of trades"
+      ],
+      "utility_notes": [
+        "Smokes: Omen/Viper are premium; Tower and Back Site on A hits, B Nest plus the narrow lane end on B hits, long-range smokes for the mid Op lanes; Viper wall covers the open sightlines",
+        "Displacement is lethal: Breach, Raze, Astra pull, and Sage walls near edges are kill tools; call ability usage to avoid teamkills",
+        "Wallbangs: many surfaces are paper-thin; Sova/Fade recon plus rifle spam through plastic is standard",
+        "Sentinels: Cypher trips across gaps/ledges and on B Danger; Killjoy locks chokes; walls (Sage/Deadlock) are weaker except as edge one-ways",
+        "Recon: Fade prowlers and Sova darts over the void to clear Towers before entries"
+      ]
+    },
+    {
+      "id": "corrode",
+      "name": "Corrode",
+      "in_competitive_rotation": false,
+      "sites": [
+        "A",
+        "B"
+      ],
+      "layout_summary": "Mont-Saint-Michel, released 11.00 (June 2025). Traditional three-lane map with sunken sites that give defenders elevated angles, flooded walkways that splash loudly, and many penetrable walls (key surfaces hardened in 12.00). Mid Stairs pivots to A, Mid Top to B. Out of ranked since 12.05.",
+      "key_callouts": [
+        "A Lobby: attacker staging area before A Main",
+        "A Main: primary attacker doorway into A",
+        "A Yard: open space in front of A reached from Main and Link",
+        "A Link: Mid-to-A connector and contested pivot position",
+        "A Pocket: tight corner cubby on the A extremity",
+        "A Elbow: defender fallback corner, critical for post-plant control",
+        "A Crane: defender-side entry into A, retake path",
+        "A Site: sunken plant zone with default box",
+        "Mid Bottom: attacker-side low mid",
+        "Mid Stairs: central mid step-up that pivots toward A",
+        "Mid Top: defender-side high mid feeding B Link",
+        "Mid Window: connector between the sites for fast rotations",
+        "B Lobby: attacker staging before B Main",
+        "B Main: narrow attacker choke into B, exposed to elevated angles",
+        "B Link: Mid-to-B connector and pivot power position",
+        "B Elbow: post-plant anchor corner with two flood-back routes",
+        "B Arch: defender-side entry and elevated anchor spot",
+        "B Tower: elevated defender position overlooking B Main",
+        "B Site: sunken plant zone with elevated defender angles"
+      ],
+      "attack_defaults": [
+        "1-3-1 default: one at each lobby, three probing mid; gather info before committing (map is defender-sided, play for picks and post-plant)",
+        "Mid control: smoke Top Mid and Mid Stairs, take Bottom/Stairs with flashes, then pivot Stairs into A or Top into B Link",
+        "A split: take Yard from both Main and Link, then either pincer via Pocket and Elbow or go through one entrance; safer route is Pocket then Elbow to keep a fallback",
+        "B hit: never rush B Main dry; split Mid Top into B Link plus B Main with smokes on Tower/Haven and Link and mollies on backline spots",
+        "Post-plant: plant where the team can hold from Elbow/Link with lineups; deny A Elbow to defenders after the plant"
+      ],
+      "defense_setups": [
+        "2A-1Mid-2B with a dedicated mid rotator: one hard anchor per site, one forward player per site, mid player swings to the threatened site (rotation time is the map's biggest problem)",
+        "A: sentinel anchors (Cypher/Killjoy on Main and Link), second player controls A Link early and falls back to Elbow; never give up Elbow",
+        "B: hold Tower and Arch for elevation and off-angles on B Main; B Elbow held to keep both flood-back routes; sentinel on B can act as last rotate",
+        "Controller opposite the sentinel as a second stall agent so three players can play dynamically",
+        "Aggressive early contact then retreat: layered holds (early util disruption, fallback, crossfire trades, multi-lane retake) rather than solo overcommits"
+      ],
+      "power_positions": [
+        "Mid Stairs / Mid Top: the control point between sites; whoever holds it pivots fastest",
+        "A Link: contested pivot; controlling it removes the immediate A threat and enables splits",
+        "A Elbow: defender fallback and post-plant anchor; losing it hands attackers post-plant dominance",
+        "B Tower and B Arch: elevated anchors punishing anything funneling through B Main",
+        "B Link: pivot power point for both mid-to-B rotates and attacker splits",
+        "A Pocket / A Elbow corners: tight cubbies that favor whoever cleared them last",
+        "A Crane: defender entry for retakes; attackers must watch it after taking A",
+        "A Lobby / B Lobby: become flank hazards mid-round as map control expands"
+      ],
+      "common_mistakes": [
+        "Rushing B Main straight into elevated crossfires from Tower/Arch without smokes and flashes",
+        "Skipping mid and defaulting to A Main rushes, which lets defenders rotate through A Link with ease",
+        "Dying at first contact instead of trading space; entries must go in as pairs",
+        "Planting out of the team's post-plant range, or defenders abandoning A Elbow after the plant",
+        "Crossing flooded walkways at full speed, giving free audio to the other side",
+        "Over-relying on wallbangs after Patch 12.00 hardened key A/B surfaces; hold spots with position, not spam"
+      ],
+      "utility_notes": [
+        "Mid smokes are mandatory on attack: Top Mid (deny defender wall) and Mid Stairs (stop early pushes); Omen is the standard controller, Viper/Astra viable",
+        "A hits: smoke A Link to cut rotates, one-way on A default box, flashes into Yard/Pocket/Elbow; Breach through-wall stuns fit the tight corners",
+        "B hits: smoke B Tower/Haven angle and B Link, molly backline spots; flashes at B Elbow chokepoints",
+        "Defense smokes: A Main and Link/Elbow to force 50/50s, B Main choke smoke, counter-smoke Bottom Mid when attackers smoke Top; often better to hold angles than smoke early",
+        "Sentinels: Cypher trips in the long lanes, Vyse walls/flashes at chokes, double sentinel is strong; Sova/Fade recon needed for the many angles and cubbies"
+      ]
+    },
+    {
+      "id": "summit",
+      "name": "Summit",
+      "in_competitive_rotation": true,
+      "sites": [
+        "A",
+        "B"
+      ],
+      "layout_summary": "Released 13.00 (June 24, 2026). Two-site three-lane map with a Haven-like mid feeding A Link and B Link. Three droppable walls (A, Mid, B) fall permanently for the round when their 125 HP switch is shot; anyone under a falling wall dies. Vents are for bouncing utility, not peeking. In the 13.04 pool.",
+      "key_callouts": [
+        "A Main: primary attacker entry from A Lobby onto A site",
+        "A Garden: open close-angle area before A site, must be cleared",
+        "A Art: A-side area attackers hold; A Wall drops between Art and Garden",
+        "A Link: connector from Mid Bend to A site, split and rotate route",
+        "A CT: defender-side angle onto A, usually smoked on execute",
+        "A Boxes: close cover spot on A site for retake/anchor",
+        "Mid Fountain: central junction, most important control area on the map",
+        "Mid Bend: mid pressure toward A Link",
+        "Mid Bottom: mid pressure toward B Link; Mid Wall sits between Window and Bottom",
+        "Mid Window: lurk and info position on B-side mid",
+        "Double Box: central mid cover, clear carefully",
+        "B Main: primary attacker entry from B Lobby onto B site",
+        "B Link: Mid-to-B route for splits and retakes, leads to Trophy/Gym/Tower",
+        "B Tower: strong defender-side elevated angle; B Wall drops between Tower and site",
+        "B Close Box / Triples: on-site cover, Close Box must be cleared before plant"
+      ],
+      "attack_defaults": [
+        "Default: bodies toward A Main, B Main and Mid; take Mid Fountain with smokes/recon before committing, never dry-peek it solo",
+        "Mid-first split: win Fountain, then hit the weaker site through A Link or B Link plus main",
+        "Wall-timed execute: take site or plant first, then drop the site wall (A or B) to cut retake paths; never drop before the execute starts",
+        "Mid Wall play: after committing to a site, drop Mid Wall to block defender rotation through mid",
+        "Post-plant: one on site, one watching mid/flank, one saving utility for the retake fight"
+      ],
+      "defense_setups": [
+        "2A-1Mid-2B with the mid player on Fountain/Bend for early info, falling back rather than dying deep",
+        "Sentinel-heavy: Sage wall on A (compact site shuts one entry), Cypher/KJ on B; sentinel utility near wall switches to delay",
+        "Deep B hold: anchors in Trophy/Gym/Tower using B Wall to isolate attackers already on site",
+        "Hold wall triggers until you have clear info on where the hit is coming from; a reactive early drop wastes the round's biggest tool",
+        "Retake: keep at least one smoke/flash/molly saved and retake through the routes still open after walls"
+      ],
+      "power_positions": [
+        "Mid Fountain: whoever owns it rotates faster than the other team can respond",
+        "A Garden: must-clear close angle; also where defenders reach the A switch",
+        "A CT: defender-side long angle onto site, needs a smoke on attack",
+        "B Tower: elevated defender angle covering B site and plant",
+        "B Close Box: blocks the default plant, clear before planting",
+        "A Link / B Link: rotation and split arteries, hold them to deny late splits",
+        "Mid Window: lurk position for info toward B-side mid",
+        "Wall switches (A Garden, B site, Mid): controlling them decides who shapes the round"
+      ],
+      "common_mistakes": [
+        "Rushing a site without any Mid Fountain control, then eating a rotation through the open link",
+        "Dropping a wall early with no plan, cutting your own team's rotation or split path",
+        "Standing under or next to a wall while the switch is contested (instant death when it drops)",
+        "Playing Summit as a generic three-lane map and holding the same angles every round despite dropped walls",
+        "Peeking through vents instead of using them to bounce flashes and grenades",
+        "Over-rotating off a site early and leaving it empty to a mid split; planting before deep angles (CT, Tower) are cleared"
+      ],
+      "utility_notes": [
+        "Smokes: A execute smokes CT and A Link; B execute smokes Tower and B Link; mid take smokes Fountain long angles",
+        "Sova shock darts can trigger wall switches from range without exposing the player",
+        "Cypher cam placed through a wall before it drops survives and keeps intel; KJ/Yoru utility under a wall is destroyed",
+        "Sage wall on defense is near-mandatory on A; slow orbs near switches delay pushes into wall kill zones",
+        "Vents everywhere: bounce Skye/Breach/flash utility through them rather than peeking"
+      ]
+    }
   ],
-  "sources": []
+  "sources": [
+    "https://www.thespike.gg/valorant/maps/map-pool",
+    "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-13-04/",
+    "https://playvalorant.com/en-us/maps/",
+    "https://tracker.gg/valorant/articles/valorant-v26-act-4-competitive-map-pool-all-you-need-to-know",
+    "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-12-00/",
+    "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-12-05/",
+    "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-11-08/",
+    "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-11-00/",
+    "https://www.dexerto.com/valorant/valorant-ascent-map-guide-1507352/",
+    "https://www.esports.net/wiki/guides/valorant-ascent-map/",
+    "https://www.redbull.com/int-en/valorant-ascent-map-guide",
+    "https://www.switchbladegaming.com/valorant/ascent-map-guide/",
+    "https://valohub.co/maps/ascent",
+    "https://www.thespike.gg/valorant/tips/valorant-callouts-guide",
+    "https://www.dexerto.com/valorant/complete-valorant-map-guide-for-bind-callouts-strategies-more-1379187/",
+    "https://www.thespike.gg/valorant/maps/bind",
+    "https://dignitas.gg/articles/blogs/Unknown/14804/executing-on-bind-valorant-map-guide",
+    "https://valohub.co/maps/bind",
+    "https://upforge.gg/blog/haven-map-guide-valorant",
+    "https://www.switchbladegaming.com/valorant/haven-map-guide/",
+    "https://www.exitlag.com/blog/haven-valorant/",
+    "https://alviran.net/blog/valorant-haven-guide-callouts-2026/",
+    "https://valohub.co/maps/haven",
+    "https://www.dexerto.com/valorant/complete-valorant-map-guide-for-split-callouts-strategies-more-1387359/",
+    "https://dignitas.gg/articles/blogs/Unknown/14734/how-to-attack-and-defend-on-split-valorant-map-guide",
+    "https://theglobalgaming.com/valorant/map-guide-split-callouts",
+    "https://valohub.co/maps/split",
+    "https://upforge.gg/blog/split-map-guide-valorant",
+    "https://www.thespike.gg/valorant/maps/split",
+    "https://www.hotspawn.com/valorant/news/valorant-map-pool",
+    "https://www.dexerto.com/valorant/complete-valorant-map-guide-for-icebox-callouts-strategies-more-1456200/",
+    "https://dignitas.gg/articles/blogs/valorant/14903/a-full-breakdown-of-icebox-map-layout-angles-and-best-agent-picks",
+    "https://immortalboost.com/blog/valorant/icebox-valorant-map-guide/",
+    "https://alviran.net/blog/valorant-icebox-guide-callouts-2026/",
+    "https://www.thespike.gg/valorant/maps/icebox",
+    "https://www.esports.net/news/valorant/icebox-changes-valorant/",
+    "https://www.thespike.gg/valorant/news/all-breeze-changes-with-valorant-patch-12-00/7457",
+    "https://www.hotspawn.com/valorant/news/all-breeze-rework-changes",
+    "https://pley.gg/valorant/biggest-breeze-rework-simplifies-the-minimap/",
+    "https://www.dexerto.com/valorant/valorant-breeze-map-guide-callouts-strategies-layout-1566433/",
+    "https://beebom.com/valorant-breeze-map-guide/",
+    "https://www.thespike.gg/valorant/maps/breeze",
+    "https://esportsdriven.com/valorant/guides/134/the-best-viper-walls-and-smokes-on-breeze",
+    "https://www.dexerto.com/valorant/valorant-fracture-map-guide-layout-callouts-strategies-more-1645939/",
+    "https://theglobalgaming.com/valorant/map-guide-fracture-callouts",
+    "https://www.thespike.gg/valorant/maps/fracture",
+    "https://www.oneesports.gg/valorant/fracture-map-guide-attackers-defenders/",
+    "https://valoranthub.com/maps/fracture",
+    "https://www.redbull.com/us-en/valorant-pearl-map-guide",
+    "https://www.oneesports.gg/valorant/valorant-pearl-map-callouts-locations/",
+    "https://upforge.gg/blog/pearl-map-guide-valorant",
+    "https://alviran.net/blog/valorant-pearl-guide-callouts-2026/",
+    "https://www.dexerto.com/valorant/abyss-pearl-map-changes-revealed-for-valorant-patch-11-08-3265988/",
+    "https://www.dexerto.com/valorant/valorant-lotus-map-guide-layout-callouts-strategies-more-2026533/",
+    "https://www.switchbladegaming.com/valorant/lotus-map-guide/",
+    "https://valoranthub.com/maps/lotus",
+    "https://www.strafe.com/news/read/valorant-patch-12-05-map-pool-and-lotus-rework-explained/",
+    "https://mobalytics.gg/blog/valorant/lotus-map-guide-layout-tip-tricks/",
+    "https://www.switchbladegaming.com/valorant/sunset-map-guide/",
+    "https://www.esports.net/news/valorant/sunset-map/",
+    "https://upforge.gg/blog/sunset-map-guide-valorant-strategy",
+    "https://valoranthub.com/maps/sunset",
+    "https://www.thespike.gg/valorant/maps/sunset",
+    "https://prosettings.net/blog/valorant-sunset-guide/",
+    "https://www.thespike.gg/valorant/maps/abyss",
+    "https://beebom.com/valorant-abyss-map-guide/",
+    "https://juked.gg/valorant/game-guide/valorant-abyss-map-guide-layout-callouts-tactics/",
+    "https://immortalboost.com/blog/valorant/abyss-map-complete-guide/",
+    "https://www.strafe.com/news/read/how-to-play-valorant-map-corrode/",
+    "https://www.esports.net/wiki/guides/valorant-corrode-map/",
+    "https://valohub.co/maps/corrode",
+    "https://alviran.net/blog/valorant-corrode-map-guide-2026/",
+    "https://www.thespike.gg/valorant/maps/corrode",
+    "https://valoranthub.com/maps/corrode",
+    "https://www.redbull.com/int-en/valorant-corrode-map-guide",
+    "https://www.thespike.gg/valorant/maps/summit",
+    "https://beebom.com/valorant-summit-map-guide/",
+    "https://games.gg/valorant/guides/valorant-summit-map-guide/",
+    "https://www.keengamer.com/articles/guides/valorant-summit-map-guide-best-agents-callouts-and-strategies/",
+    "https://valoranthub.com/maps/summit",
+    "https://wiki.playvalorant.com/en-us/Summit",
+    "https://www.thespike.gg/valorant/news/valorant-new-map-summit-release-details/8274"
+  ]
 }

@@ -2,7 +2,7 @@
 
 Local, offline coaching for recorded Valorant gameplay. Watches your Outplayed (Overwolf) recordings folder, samples frames from finished clips with ffmpeg, asks a local Ollama vision model for timestamped findings, and writes a Markdown report with evidence screenshots. Nothing leaves your machine.
 
-Status: pipeline, CLI, local API and Electron desktop app all run end to end against a fake model in tests and boot on macOS. Coaching quality with a real model is unvalidated. Try `review` on a few clips before trusting anything.
+Status: pipeline, CLI, local API and Electron desktop app all run end to end against a fake model in tests and boot on macOS. **Scene recognition with a small local model is not yet validated** and coaching quality depends on it, so start with `round-review scenes validate` before trusting any findings. See `docs/coaching-quality.md`.
 
 ## Overview
 
@@ -13,10 +13,10 @@ Outplayed writes match.mp4
 round-review watch  -- polls the folder, waits until the file stops changing
         |
         v
-ffprobe -> pick 3 x 12 s windows -> ffmpeg extracts 1 fps JPEGs
+ffprobe -> tile the whole clip into 12 s windows -> ffmpeg extracts 1 fps JPEGs
         |
         v
-Ollama /api/chat (qwen3-vl:8b) with the frames -> JSON findings
+Ollama /api/chat (qwen3-vl:8b): pass 1 reads the scene, pass 2 coaches -> JSON findings
         |
         v
 reports/<clip>_<key>/report.md + frames/   and a line in ledger.jsonl
@@ -67,7 +67,21 @@ round-review watch
 round-review ledger list
 ```
 
-`review` exits non-zero with the error class name (`OllamaError: ...`, `VideoError: ...`) on failure. A file already in the ledger is refused unless you pass `--force`.
+`review` exits non-zero with the error class name (`OllamaError: ...`, `VideoError: ...`) on failure. A file already in the ledger is refused unless you pass `--force`. Add `--coverage sampled`, `--first 60` or `--max-windows 10` to bound a review.
+
+## Check the model can read the screen
+
+A vision model that misreads the scene produces useless coaching, so measure that first:
+
+```
+round-review scenes scaffold path/to/clip.mp4 --every 30
+# open the frames it saved, write the phase you actually see into scene-labels.json
+round-review scenes validate scene-labels.json --json-out run1.json
+round-review scenes validate scene-labels.json --model qwen3-vl:4b --frames 3 --json-out run2.json
+```
+
+This spends no coaching calls. It prints accuracy per phase, the most common confusions,
+and every failing case with the frame that produced it.
 
 ## Desktop app
 
@@ -99,7 +113,7 @@ Standard `logging`, root logger `round_review`, INFO by default and DEBUG with `
 ## Tests
 
 ```
-.venv/bin/pytest                 # 128 tests, generates its own 5 s MP4 with ffmpeg
+.venv/bin/pytest                 # generates its own 5 s MP4 with ffmpeg; no Ollama needed
 .venv/bin/pytest -m "not integration"
 .venv/bin/ruff check . && .venv/bin/mypy
 ```

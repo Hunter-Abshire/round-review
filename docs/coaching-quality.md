@@ -32,12 +32,43 @@ The desktop shows sampled coverage, review notes, a separate list for overlappin
 findings, and the suggested alternative above the evidence image. `player_notes`
 provides persistent beginner preferences for both automatic and requested reviews.
 
+## Scene-recognition validation (implemented 2026-09-21)
+
+Scene recognition can now be measured instead of guessed at:
+
+```
+round-review scenes scaffold <clip> --every 30 --out scene-labels.json
+# look at the frames it saved, write the phase you actually see into each case
+round-review scenes validate scene-labels.json --json-out run-8b-1frame.json
+round-review scenes validate scene-labels.json --model qwen3-vl:4b --frames 3 --json-out run-4b-3frame.json
+```
+
+`validate` runs only the situation pass, so no coach calls are spent, and prints
+accuracy per expected phase, the most common confusions, and every failing case with
+the path to the frame that produced it. It warns explicitly when the model answers the
+same phase for every case, which scores well on a skewed label set while recognising
+nothing. `--min-accuracy` exits non-zero so a run can gate a change. `scenes describe`
+prints the raw situation JSON at chosen timestamps for quick spot checks.
+
+The labelled set is the missing input: build it from real clips covering buy phase,
+safe travel, live preparation, active fight, death and spectating, then compare models
+and frame counts on it before trusting any coaching output.
+
+## Full-video coverage (implemented 2026-09-21)
+
+Reviews now tile the whole recording by default instead of sampling three windows.
+`max_span_s` reviews only the first N seconds, `max_windows` keeps a capped budget
+spread evenly across the clip rather than stopping early, and `daily_call_cap = 0`
+(the new default) means unlimited because local inference has no per-call cost. A cap
+or a transport failure part-way through keeps the windows already reviewed and records
+the review as `partial`, so an hour of work is never lost to one failure.
+
 ## Next implementation priorities
 
-1. Build a small, manually labelled validation set: buy phase, safe travel, live
-   preparation, active fight, death and spectating. Test scene recognition before
-   judging generated coaching. Compare fewer frames and a larger local model using
-   those same examples; do not assume either change improves accuracy.
+1. Build the labelled validation set with `scenes scaffold` and run `scenes validate`
+   against `qwen3-vl:8b` and `qwen3-vl:4b`, at one and three frames per case. Treat the
+   accuracy numbers as the gate for everything below; do not assume either change
+   improves accuracy.
 2. Replace evenly spaced selection with encounter timestamps. Prefer recorded
    player kill/death/damage events where accessible; otherwise use a validated local
    detector or player-selected timestamps. The MP4 folder currently has no event

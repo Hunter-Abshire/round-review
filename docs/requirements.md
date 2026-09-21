@@ -1,6 +1,6 @@
 # round-review requirements
 
-Version 0.3 (coaching knowledge). Last updated 2026-09-20.
+Version 0.4 (full coverage, scene validation). Last updated 2026-09-21.
 
 ## Purpose
 
@@ -40,6 +40,10 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | FR-17 | Player context (rank, agent, map, side, focus, notes) can be supplied by the player via CLI options or the desktop context bar. Values the player supplies win; the situation pass fills in the rest. Blank means auto-detect. |
 | FR-18 | Every finding's evidence frame is re-cut from the recording at the finding's exact timestamp, not the nearest sampled frame. If that cut fails the sampled frame is kept and a warning is recorded. |
 | FR-19 | The checklist sent to the coach pass is filtered by the detected round phase (no post-plant checks pre-round, and so on) so the prompt fits next to the images. Unknown phase sends everything. |
+| FR-20 | A review covers the whole recording by default: contiguous windows tile the usable span. `coverage = "sampled"` takes a few evenly spread windows instead, `max_span_s` reviews only the first N seconds of gameplay, and `max_windows` caps the budget while keeping the windows spread across the whole clip. |
+| FR-21 | A cap or a failure part-way through a review keeps the windows already reviewed, writes the report, and records the ledger status as `partial`. A failure before any window completes still fails the file. |
+| FR-22 | `round-review scenes scaffold/validate/describe` score the situation pass against hand-labelled moments without spending coach calls, reporting accuracy per phase, a confusion matrix, failing cases with their frames, and a warning when the model answers the same phase every time. |
+| FR-23 | The desktop app can re-review a finished, partial or failed clip (`force`), choose how much of a clip to review per job, and shows which stretches of the recording were reviewed as bands on the timeline with one numbered pin per finding. |
 | FR-20 | With the situation pass enabled, a detected pre-round, spectating or unreadable phase skips coaching with an explicit note. A parsed finding whose checklist category conflicts with the detected phase is dropped. Crosshair criticism requires a known equipped weapon other than knife, melee, spike or ability. These conservative window-level gates depend on the situation model and do not replace encounter detection. |
 | FR-21 | Coaching prioritizes supported decisions immediately before or during encounters, explaining the practical risk and one action in plain language for beginners. Buy phase, safe travel, and absent context must not become a quota of mistakes. An empty, filtered review is a valid result; only actual parse failures count toward all-windows-unparseable failure. |
 | FR-22 | Desktop shows sampled duration versus recording duration, review notes, and a selectable list of all findings. Findings at the same timestamp remain individually accessible and selection survives a playback update at that timestamp. The suggested alternative appears before the evidence image. |
@@ -95,8 +99,11 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | `windows_per_file` | 3 | |
 | `fps` | 1.0 | Frames per second sampled inside a window |
 | `frame_width` | 1280 | |
-| `daily_call_cap` | 60 | Two calls per window with the situation pass on |
+| `daily_call_cap` | 0 | 0 means unlimited; a full review is dozens of calls |
 | `situation_pass` | true | Run the describe-first pass before coaching |
+| `coverage` | full | `full` tiles the whole recording; `sampled` takes `windows_per_file` windows |
+| `max_span_s` | 0 | 0 = whole recording; otherwise the first N seconds of gameplay |
+| `max_windows` | 0 | 0 = unlimited; otherwise a capped budget spread across the clip |
 | `player_notes` | empty | Default notes for every review, including the watcher; explicit per-review notes override them. |
 | `num_ctx` | 16384 | Ollama context window; the coach prompt is ~2-5k tokens plus images |
 | `poll_s` | 20 | Watcher poll interval |

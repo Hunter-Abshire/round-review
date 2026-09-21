@@ -214,6 +214,36 @@ classDiagram
         +tuple~str~ common_mistakes
     }
 
+    class SceneCase {
+        +Path clip
+        +float timestamp_s
+        +str expected_phase
+        +str expected_agent
+        +str expected_map
+    }
+    class SceneOutcome {
+        +SceneCase case
+        +Situation situation
+        +str error
+        +Path frame
+        +detected_phase() str
+        +phase_ok() bool
+    }
+    class SceneReport {
+        +str model
+        +int frames_per_case
+        +accuracy() float
+        +confusion() dict
+        +collapsed_to() str
+    }
+
+    class JobOptions {
+        +bool force
+        +str coverage
+        +float max_span_s
+        +int max_windows
+    }
+
     class Deps {
         +Config config
         +FfprobeRunner probe_runner
@@ -231,6 +261,7 @@ classDiagram
     class LedgerError
     class AlreadyProcessed
     class KnowledgeError
+    class LabelsError
 
     Transport <|.. UrllibTransport
     FfprobeRunner <|.. SubprocessRunner
@@ -240,6 +271,11 @@ classDiagram
     Deps o-- FfmpegRunner
     Deps o-- Transport
     JobQueue o-- Job
+    Job o-- JobOptions
+    SceneReport o-- SceneOutcome
+    SceneOutcome o-- SceneCase
+    SceneOutcome ..> Situation
+    RoundReviewError <|-- LabelsError
     JobQueue ..> Deps : run callable
     Report o-- Recording
     Report o-- WindowResult
@@ -275,7 +311,7 @@ classDiagram
 | `config` | `Config` | `load_config(path, env)`, `default_config_path()` |
 | `ledger` | `LedgerEntry` | `read_ledger`, `append_entry`, `is_processed`, `calls_today`, `recording_key` |
 | `video.probe` | `Recording`, `FfprobeRunner` | `probe(path, runner)`, `parse_probe_json` |
-| `video.windows` | `Window` | `select_windows(duration_s, window_s, count, edge_skip_s)` |
+| `video.windows` | `Window` | `plan_windows(coverage=...)`, `tile_windows` (full coverage), `select_windows` (evenly spread), `estimate_window_count` |
 | `video.frames` | `FrameSample`, `FfmpegRunner` | `build_extract_args`, `extract_frames`, `extract_single_frame`, `encode_frame_b64` |
 | `llm.transport` | `ChatRequest`, `ChatResponse`, `Transport`, `UrllibTransport` | `UrllibTransport.chat` |
 | `llm.client` | | `build_chat_request`, `send_review(request, transport, calls_today, cap)` |
@@ -288,8 +324,9 @@ classDiagram
 | `report.markdown` | `Report` | `render_report`, `write_report` |
 | `pipeline` | `Deps` | `review_file(path, deps, on_progress)`, `make_default_deps(config)`, `key_for(path)`, `report_dir_for(config, path)` |
 | `report.json_report` | | `report_to_dict`, `write_report_json`, `load_report_json` |
-| `server.jobs` | `Job`, `JobQueue` | single worker thread; `submit` dedups queued/running paths |
-| `server.app` | | `create_app(config, deps, jobs)`: `/api/clips`, `/api/jobs`, `/api/reports/{key}`, `/api/media/{key}/video`, `/api/media/{key}/frames/{name}` |
+| `server.jobs` | `Job`, `JobOptions`, `JobQueue` | single worker thread; `submit` dedups queued/running paths and carries per-job force/coverage |
+| `server.app` | | `create_app(config, jobs, probe_runner)`: `/api/clips` (with durations and window estimates), `/api/jobs` (force + coverage), `/api/settings`, `/api/knowledge`, `/api/reports/{key}`, `/api/media/...` |
+| `validation.scenes` | `SceneCase`, `SceneOutcome`, `SceneReport` | `scaffold_cases`, `load_cases`, `run_cases`, `render_scene_report`: scene recognition scored on its own |
 | `watcher` | `FileSnapshot`, `WatchState` | `poll_once`, `is_stable`, `watch_loop` |
 | `cli` | | `main` (click group) |
 | `errors` | exception hierarchy | |

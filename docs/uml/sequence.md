@@ -142,7 +142,43 @@ sequenceDiagram
     end
 ```
 
-## 4. Desktop: Analyze a clip and view markers
+## 4. Scene-recognition validation
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Player
+    participant CLI as cli scenes
+    participant V as validation.scenes
+    participant Fr as video.frames
+    participant T as Transport (Ollama)
+    participant S as coaching.situation
+
+    Player->>CLI: scenes scaffold clip.mp4 --every 30
+    CLI->>V: scaffold_cases(recording, every_s)
+    loop every 30s
+        V->>Fr: extract_single_frame -> scene_NNN.jpg
+    end
+    V-->>CLI: unlabelled cases
+    CLI-->>Player: labels file + frames to look at
+    Player->>Player: writes the phase they actually see into each case
+    Player->>CLI: scenes validate scene-labels.json
+    CLI->>V: load_cases (skips placeholders, errors if none labelled)
+    loop each labelled case
+        V->>Fr: frames at the labelled instant
+        V->>T: chat(situation prompt + frames, SITUATION_SCHEMA)
+        alt replies with parseable JSON
+            T-->>V: situation
+            V->>S: parse_situation
+        else unparseable or transport error
+            V->>V: record the case as unreadable, keep going
+        end
+    end
+    V-->>CLI: SceneReport (accuracy, confusion, failing cases)
+    CLI-->>Player: table + warning if the model always said one phase
+```
+
+## 5. Desktop: Analyze a clip and view markers
 
 ```mermaid
 sequenceDiagram
@@ -159,8 +195,8 @@ sequenceDiagram
     R->>API: GET /api/clips
     API-->>R: [{name, key, status: new|queued|running|done|failed|skipped}]
     Player->>R: click Analyze on clip
-    R->>API: POST /api/jobs {path, context: {rank, agent, map, side, focus}}
-    API->>Q: submit(path, key, context)
+    R->>API: POST /api/jobs {path, context, force, coverage, max_span_s, max_windows}
+    API->>Q: submit(path, key, context, options)
     API-->>R: 202 {id, status: queued}
     Q->>P: review_file(path, deps, on_progress)
     loop every 2 s until done/failed
@@ -189,5 +225,7 @@ sequenceDiagram
 | `CapExceeded` | client | skipped | non-zero | log, stop calling the model until the day changes |
 | `ParseError` (after retry) | review | ok, with warning | 0 | report written with the window marked as unparseable |
 | `LedgerError` | ledger | n/a | non-zero | loop aborts; a corrupt ledger must be fixed by hand |
+| `CapExceeded` / `OllamaError` / `VideoError` after >=1 window | pipeline | partial, report written | 0 | the review stops, keeps its findings, and the clip can be re-analyzed |
+| `LabelsError` | validation.scenes | n/a | non-zero | scene validation only |
 | `ConfigError` | config | n/a | non-zero | never starts |
 | `AlreadyProcessed` | pipeline | n/a (existing entry) | non-zero unless `--force` | never raised; the watcher filters known files first |

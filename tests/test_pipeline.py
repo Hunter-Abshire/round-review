@@ -418,3 +418,37 @@ def test_progress_reports_the_tiled_window_count(video: Path, tmp_path: Path) ->
     review_file(video, deps, on_progress=lambda done, total: seen.append((done, total)))
     assert seen[0] == (0, 5)
     assert seen[-1] == (5, 5)
+
+
+def test_a_review_that_abstains_everywhere_says_why(video: Path, tmp_path: Path) -> None:
+    from tests.coaching.test_review import SITUATION
+
+    buy = json.loads(SITUATION)
+    buy["phase"] = "pre_round"
+    deps = make_deps(tmp_path, FakeTransport(*[json.dumps(buy)] * 6), situation_pass=True)
+    report = review_file(video, deps)
+    assert any("misreading the screen" in w for w in report.warnings)
+    assert any("scenes validate" in w for w in report.warnings)
+    assert any("3 of 3" in w for w in report.warnings)
+
+
+def test_a_normal_review_carries_no_diagnosis(video: Path, tmp_path: Path) -> None:
+    transport = FakeTransport(good(35.0), good(65.0), good(85.0))
+    report = review_file(video, make_deps(tmp_path, transport))
+    assert not any("misreading" in w for w in report.warnings)
+
+
+def test_partial_reports_expose_why_they_stopped(video: Path, tmp_path: Path) -> None:
+    transport = FakeTransport(good(35.0), good(45.0))
+    deps = make_deps(tmp_path, transport, coverage="full", cap=2)
+    report = review_file(video, deps)
+    assert report.stopped_reason is not None
+    assert "cap" in report.stopped_reason.lower()
+    assert report.partial is True
+
+
+def test_a_complete_review_is_not_partial(video: Path, tmp_path: Path) -> None:
+    transport = FakeTransport(good(35.0), good(65.0), good(85.0))
+    report = review_file(video, make_deps(tmp_path, transport))
+    assert report.partial is False
+    assert report.stopped_reason is None

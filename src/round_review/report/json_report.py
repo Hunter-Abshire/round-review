@@ -27,6 +27,8 @@ def report_to_dict(report: Report, base_dir: Path) -> dict[str, Any]:
         },
         "generated_at": report.generated_at.isoformat(),
         "model": report.model,
+        "partial": report.partial,
+        "stopped_reason": report.stopped_reason,
         "windows": [
             {
                 "index": r.window.index,
@@ -34,6 +36,7 @@ def report_to_dict(report: Report, base_dir: Path) -> dict[str, Any]:
                 "end_s": r.window.end_s,
                 "model_calls": r.model_calls,
                 "context": _asdict(r.context),
+                "abstained_reason": r.abstained_reason,
                 "situation": r.situation.to_dict() if r.situation else None,
                 "findings": [
                     {

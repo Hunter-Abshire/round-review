@@ -208,3 +208,24 @@ def test_unparseable_coach_output_sets_parse_failed_on_the_raised_error(
 def test_successful_review_is_not_marked_parse_failed(samples: list[FrameSample]) -> None:
     result = review(FakeTransport(SITUATION, GOOD), samples)
     assert result.parse_failed is False
+
+
+def test_abstention_records_a_machine_readable_reason(samples: list[FrameSample]) -> None:
+    buy_phase = json.loads(SITUATION)
+    buy_phase["phase"] = "pre_round"
+    result = review(FakeTransport(json.dumps(buy_phase)), samples)
+    assert result.abstained_reason == "buy phase"
+    assert result.abstained is True
+
+
+def test_unreadable_phase_abstains_with_its_own_reason(samples: list[FrameSample]) -> None:
+    unreadable = json.loads(SITUATION)
+    unreadable["phase"] = "unknown"
+    result = review(FakeTransport(json.dumps(unreadable)), samples)
+    assert result.abstained_reason == "round phase unreadable"
+
+
+def test_a_coached_window_is_not_marked_abstained(samples: list[FrameSample]) -> None:
+    result = review(FakeTransport(SITUATION, GOOD), samples)
+    assert result.abstained is False
+    assert result.abstained_reason is None

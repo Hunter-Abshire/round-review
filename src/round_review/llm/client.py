@@ -27,5 +27,8 @@ def send_review(
     so a capped day never touches the network. A cap of 0 means unlimited: local inference
     has no per-call cost, and a full-video review needs dozens of calls."""
     if cap > 0 and calls_today >= cap:
-        raise CapExceeded(f"daily model-call cap reached ({calls_today}/{cap})")
+        raise CapExceeded(
+            f"daily model-call cap reached ({calls_today}/{cap}); "
+            "set daily_call_cap = 0 in config.toml to remove it, local inference is free"
+        )
     return transport.chat(request)

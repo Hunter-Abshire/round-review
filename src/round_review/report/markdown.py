@@ -21,6 +21,12 @@ class Report:
     model: str
     results: tuple[WindowResult, ...]
     warnings: tuple[str, ...]
+    # Set when the review stopped early; the report covers less than it planned to.
+    stopped_reason: str | None = None
+
+    @property
+    def partial(self) -> bool:
+        return self.stopped_reason is not None
 
 
 def _clock(seconds: float) -> str:
@@ -114,6 +120,8 @@ def render_report(report: Report, base_dir: Path, checklist: Checklist | None = 
         f"- Windows reviewed: {len(report.results)}",
         "",
     ]
+    if report.stopped_reason:
+        lines += [f"> **Partial review.** {report.stopped_reason}", ""]
     for result in report.results:
         lines += _render_window(result, base_dir, checklist)
     if report.warnings:

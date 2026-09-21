@@ -63,6 +63,13 @@ class WindowResult:
     # True only when the coach reply could not be parsed. An abstained window (buy phase,
     # spectating) has no findings and a warning, but is a successful review of that window.
     parse_failed: bool = False
+    # Why coaching was skipped for this window, if it was. Kept separate from the warning
+    # text so the report can count reasons and diagnose a model that misreads the screen.
+    abstained_reason: str | None = None
+
+    @property
+    def abstained(self) -> bool:
+        return self.abstained_reason is not None
 
 
 def review_window(
@@ -112,7 +119,14 @@ def review_window(
             )
             warnings.append(f"coaching skipped: {reason}; no supported combat decision to judge")
             return WindowResult(
-                window, tuple(samples), (), calls, tuple(warnings), situation, context
+                window,
+                tuple(samples),
+                (),
+                calls,
+                tuple(warnings),
+                situation,
+                context,
+                abstained_reason=reason,
             )
 
     system = build_system_prompt(knowledge, situation.phase if situation else None)

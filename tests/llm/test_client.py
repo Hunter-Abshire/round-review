@@ -49,3 +49,9 @@ def test_zero_cap_means_unlimited() -> None:
     transport = FakeTransport("{}")
     req = build_chat_request("m", "s", "p", [], None, 1.0)
     assert send_review(req, transport, calls_today=9999, cap=0).content == "{}"
+
+
+def test_cap_message_says_how_to_remove_the_cap() -> None:
+    req = build_chat_request("m", "s", "p", [], None, 1.0)
+    with pytest.raises(CapExceeded, match="daily_call_cap = 0"):
+        send_review(req, FakeTransport(), calls_today=30, cap=30)

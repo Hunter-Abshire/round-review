@@ -41,3 +41,15 @@ def test_write_and_load_round_trip(tmp_path: Path) -> None:
     path = write_report_json(build_report(out), out)
     assert path == out / "report.json"
     assert load_report_json(path) == report_to_dict(build_report(out), base_dir=out)
+
+
+def test_partial_and_abstention_reach_the_json(tmp_path: Path) -> None:
+    from dataclasses import replace
+
+    base = build_report(tmp_path)
+    partial = replace(base, stopped_reason="CapExceeded: daily model-call cap reached (30/30)")
+    data = report_to_dict(partial, base_dir=tmp_path)
+    assert data["partial"] is True
+    assert "cap" in data["stopped_reason"]
+    assert data["windows"][0]["abstained_reason"] is None
+    assert report_to_dict(base, base_dir=tmp_path)["partial"] is False

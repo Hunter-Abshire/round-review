@@ -12,6 +12,7 @@ from round_review.coaching.context import PlayerContext, merge_context
 from round_review.coaching.knowledge import load_knowledge
 from round_review.coaching.parse import Finding
 from round_review.coaching.review import WindowResult, review_window
+from round_review.diagnosis import abstention_warning
 from round_review.config import Config
 from round_review.errors import (
     AlreadyProcessed,
@@ -221,6 +222,10 @@ def review_file(
         if on_progress:
             on_progress(len(results), len(windows))
 
+    diagnosis = abstention_warning(results)
+    if diagnosis:
+        warnings.append(diagnosis)
+
     if stopped is not None:
         if not results:
             status: Status = "skipped" if isinstance(stopped, CapExceeded) else "failed"
@@ -235,7 +240,14 @@ def review_file(
         _record(deps, key, path, "failed", calls, None, unreadable)
         raise unreadable
 
-    report = Report(recording, deps.clock(), cfg.model, tuple(results), tuple(warnings))
+    report = Report(
+        recording,
+        deps.clock(),
+        cfg.model,
+        tuple(results),
+        tuple(warnings),
+        stopped_reason=f"{type(stopped).__name__}: {stopped}" if stopped else None,
+    )
     report_path = write_report(report, out_dir)
     write_report_json(report, out_dir)
     _record(deps, key, path, "partial" if stopped else "ok", calls, report_path, None)

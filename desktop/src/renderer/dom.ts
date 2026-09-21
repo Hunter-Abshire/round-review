@@ -1,4 +1,4 @@
-import type { Clip, Finding, Knowledge, PlayerContext } from '../shared/types';
+import type { Clip, Finding, Knowledge, PlayerContext, Report } from '../shared/types';
 import { formatClock, markerPercent, type Marker } from './timeline';
 
 export interface Progress {
@@ -90,6 +90,46 @@ const section = (label: string, body: string): HTMLElement => {
   return wrap;
 };
 
+export const renderFindingList = (
+  root: HTMLElement,
+  markers: Marker[],
+  selectedId: string | null,
+  onSelect: (id: string) => void,
+): void => {
+  root.replaceChildren();
+  for (const marker of markers) {
+    const button = el(
+      'button',
+      undefined,
+      `${formatClock(marker.timestamp_s)} — ${marker.finding.observation}`,
+    );
+    button.setAttribute('aria-pressed', String(marker.id === selectedId));
+    button.addEventListener('click', () => onSelect(marker.id));
+    root.append(button);
+  }
+};
+
+export const renderReviewCoverage = (root: HTMLElement, report: Report): void => {
+  root.replaceChildren();
+  const sampled = report.windows.reduce((total, w) => total + w.end_s - w.start_s, 0);
+  const duration = report.recording.duration_s;
+  const percent = duration > 0 ? (100 * sampled) / duration : 0;
+  root.append(
+    el(
+      'p',
+      undefined,
+      `Sampled ${Math.round(sampled)}s of ${Math.round(duration)}s (${Math.round(percent)}%) across ${report.windows.length} windows; not a full-video review.`,
+    ),
+  );
+  const warnings = [...report.warnings, ...report.windows.flatMap(w => w.warnings)];
+  if (warnings.length > 0) {
+    const details = el('details');
+    details.append(el('summary', undefined, `Review notes (${warnings.length})`));
+    for (const warning of warnings) details.append(el('p', undefined, warning));
+    root.append(details);
+  }
+};
+
 export const renderFindingCard = (
   card: HTMLElement,
   finding: Finding | null,
@@ -109,6 +149,7 @@ export const renderFindingCard = (
   card.append(el('h3', undefined, `${formatClock(finding.timestamp_s)} · ${finding.category}`));
   if (finding.check_label) card.append(el('p', 'check', finding.check_label));
   card.append(el('p', 'observation', finding.observation));
+  card.append(section('Try instead', finding.suggested_alternative));
   if (frameUrl) {
     const img = el('img', 'evidence');
     img.src = frameUrl;
@@ -123,7 +164,6 @@ export const renderFindingCard = (
   if (finding.assumption_flags.length > 0) {
     card.append(section('Assumptions', finding.assumption_flags.join(', ')));
   }
-  card.append(section('Try instead', finding.suggested_alternative));
   card.append(el('p', 'confidence', `Confidence: ${Math.round(finding.confidence * 100)}%`));
 };
 

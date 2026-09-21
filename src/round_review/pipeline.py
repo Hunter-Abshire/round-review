@@ -8,7 +8,7 @@ from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 
-from round_review.coaching.context import PlayerContext
+from round_review.coaching.context import PlayerContext, merge_context
 from round_review.coaching.knowledge import load_knowledge
 from round_review.coaching.parse import Finding
 from round_review.coaching.review import WindowResult, review_window
@@ -137,6 +137,9 @@ def review_file(
     and every failure class is recorded before being re-raised. `on_progress(done, total)`
     is called once windows are known and after each window."""
     cfg = deps.config
+    context = merge_context(
+        context or PlayerContext(), PlayerContext(notes=cfg.player_notes or None)
+    )
     key = key_for(path)
     entries = read_ledger(cfg.ledger_path)
     if not force and is_processed(entries, key):
@@ -147,6 +150,7 @@ def review_file(
     frames_dir = out_dir / "frames"
     calls = 0
     results: list[WindowResult] = []
+    unparseable_windows = 0
     warnings: list[str] = []
     knowledge = load_knowledge()
 
@@ -176,6 +180,7 @@ def review_file(
                     cfg.situation_pass,
                 )
             except ParseError as exc:
+                unparseable_windows += 1
                 calls += exc.model_calls
                 warnings.append(str(exc))
                 results.append(
@@ -191,7 +196,7 @@ def review_file(
             if on_progress:
                 on_progress(len(results), len(windows))
 
-        if windows and all(not r.findings and r.warnings for r in results):
+        if windows and unparseable_windows == len(windows):
             raise ParseError(f"{path.name}: all {len(windows)} windows unparseable", model_calls=0)
     except CapExceeded as exc:
         # One failed attempt still costs nothing at the transport, but calls so far do count.

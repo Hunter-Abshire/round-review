@@ -83,6 +83,12 @@ def _validate(
     except (TypeError, ValueError) as exc:
         raise ParseError(f"finding has a malformed numeric or list field: {exc}") from exc
 
+    # Captions use tenths of a second. Restore a caption to its exact sampled time
+    # before enforcing bounds; never give arbitrary out-of-window times a tolerance.
+    for sample in samples:
+        if timestamp == round(sample.timestamp_s, 1):
+            timestamp = sample.timestamp_s
+            break
     if not (window.start_s <= timestamp <= window.end_s):
         warnings.append(
             f"dropped finding at t={timestamp:.1f}s: outside window "

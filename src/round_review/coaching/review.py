@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from round_review.coaching.context import PlayerContext, merge_context
-from round_review.coaching.knowledge import CoachingKnowledge
+from round_review.coaching.knowledge import CoachingKnowledge, relevant_categories
 from round_review.coaching.parse import Finding, parse_findings
 from round_review.coaching.prompt import (
     FINDING_SCHEMA,
@@ -26,6 +26,29 @@ from round_review.video.frames import FrameSample, encode_frame_b64
 from round_review.video.windows import Window
 
 log = logging.getLogger(__name__)
+
+
+def _relevant_findings(
+    findings: list[Finding], situation: Situation | None
+) -> tuple[list[Finding], list[str]]:
+    allowed = relevant_categories(situation.phase if situation else None)
+    kept: list[Finding] = []
+    warnings: list[str] = []
+    for finding in findings:
+        # Check ids carry the authoritative category; model labels can disagree.
+        category = finding.check_id.partition(".")[0]
+        reason = None
+        if allowed is not None and category != "other" and category not in allowed:
+            reason = "check does not apply to the detected round phase"
+        elif category == "crosshair" or finding.category == "crosshair":
+            weapon = (situation.weapon or "").lower() if situation else ""
+            if not weapon or any(w in weapon for w in ("knife", "melee", "spike", "ability")):
+                reason = "crosshair criticism requires a visible firearm"
+        if reason:
+            warnings.append(f"dropped finding at t={finding.timestamp_s:.1f}s: {reason}")
+        else:
+            kept.append(finding)
+    return kept, warnings
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,6 +103,15 @@ def review_window(
         else:
             context = merge_context(context, situation.to_context())
 
+        if situation is not None and situation.phase in (None, "pre_round", "spectating"):
+            reason = {"pre_round": "buy phase", "spectating": "spectating another player"}.get(
+                situation.phase or "", "round phase unreadable"
+            )
+            warnings.append(f"coaching skipped: {reason}; no supported combat decision to judge")
+            return WindowResult(
+                window, tuple(samples), (), calls, tuple(warnings), situation, context
+            )
+
     system = build_system_prompt(knowledge, situation.phase if situation else None)
     prompt = build_coach_prompt(window, samples, context, situation, knowledge)
     check_ids = knowledge.checklist.check_ids()
@@ -98,6 +130,9 @@ def review_window(
             )
             warnings.append(f"coach attempt {attempt + 1} unparseable, retry issued: {exc}")
             continue
+        if situation_pass:
+            findings, relevance_warnings = _relevant_findings(findings, situation)
+            parse_warnings.extend(relevance_warnings)
         return WindowResult(
             window,
             tuple(samples),

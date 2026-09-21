@@ -5,6 +5,8 @@ import {
   renderClipList,
   renderContextBar,
   renderFindingCard,
+  renderFindingList,
+  renderReviewCoverage,
   renderMarkers,
 } from '../../src/renderer/dom';
 import { EMPTY_CONTEXT } from '../../src/shared/types';
@@ -81,6 +83,28 @@ describe('renderFindingCard', () => {
     const card = document.createElement('div');
     renderFindingCard(card, null, null);
     expect(card.textContent).toContain('Click a marker');
+  });
+});
+
+describe('review navigation', () => {
+  it('makes findings at the same timestamp individually selectable', () => {
+    const root = document.createElement('div');
+    const markers = collectMarkers(report()).map(m => ({ ...m, timestamp_s: 30 }));
+    const selected: string[] = [];
+    renderFindingList(root, markers, markers[1]?.id ?? null, id => selected.push(id));
+    const buttons = root.querySelectorAll('button');
+    expect(buttons).toHaveLength(3);
+    expect(buttons[1]?.getAttribute('aria-pressed')).toBe('true');
+    buttons[2]?.click();
+    expect(selected).toEqual([markers[2]?.id]);
+  });
+
+  it('shows actual sampled coverage and validation warnings', () => {
+    const root = document.createElement('div');
+    renderReviewCoverage(root, report());
+    expect(root.textContent).toContain('24s of 600s (4%)');
+    expect(root.textContent).toContain('not a full-video review');
+    expect(root.textContent).toContain('window warning');
   });
 });
 

@@ -146,3 +146,40 @@ def test_cap_is_enforced_across_passes(samples: list[FrameSample]) -> None:
     with pytest.raises(CapExceeded):
         review(transport, samples, calls_today=9, cap=10)
     assert len(transport.calls) == 1
+
+
+@pytest.mark.parametrize("phase", ["pre_round", "spectating", "unknown"])
+def test_noncombat_or_unreadable_phase_abstains_without_coach_call(samples, phase) -> None:
+    situation = {**json.loads(SITUATION), "phase": phase, "weapon": "Knife"}
+    transport = FakeTransport(json.dumps(situation))
+    result = review(transport, samples)
+    assert result.findings == ()
+    assert result.model_calls == 1
+    assert result.warnings and "coaching skipped" in result.warnings[0]
+    if phase != "unknown":
+        assert result.situation is not None and result.situation.phase == phase
+
+
+@pytest.mark.parametrize("weapon", ["Knife", "Melee", "unknown"])
+def test_crosshair_findings_require_a_known_firearm(samples, weapon) -> None:
+    situation = {**json.loads(SITUATION), "weapon": weapon}
+    aim = {
+        **json.loads(GOOD)["findings"][0],
+        "check_id": "crosshair.head_level",
+        "category": "crosshair",
+    }
+    transport = FakeTransport(json.dumps(situation), json.dumps({"findings": [aim]}))
+    result = review(transport, samples)
+    assert result.findings == ()
+    assert any("crosshair" in w for w in result.warnings)
+
+
+def test_phase_inappropriate_check_is_rejected_even_if_category_is_mislabeled(samples) -> None:
+    finding = {
+        **json.loads(GOOD)["findings"][0],
+        "check_id": "postplant.spike_vision",
+        "category": "utility",
+    }
+    result = review(FakeTransport(SITUATION, json.dumps({"findings": [finding]})), samples)
+    assert result.findings == ()
+    assert any("phase" in w for w in result.warnings)

@@ -40,6 +40,7 @@ class Config:
     api_port: int = 8765
     # Two model calls per window (situation read, then coaching). Off = coaching only.
     situation_pass: bool = True
+    player_notes: str = ""
 
 
 # Keys whose values must be strictly positive. Everything else is a path or string.

@@ -255,6 +255,27 @@ def test_all_windows_unparseable_is_failed(video: Path, tmp_path: Path) -> None:
     assert entry.model_calls == 6
 
 
+def test_all_windows_filtered_is_a_successful_empty_review(video: Path, tmp_path: Path) -> None:
+    transport = FakeTransport(good(0.0), good(0.0), good(0.0))
+    deps = make_deps(tmp_path, transport)
+    report = review_file(video, deps)
+    assert all(not r.findings and r.warnings for r in report.results)
+    assert read_ledger(deps.config.ledger_path)[0].status == "ok"
+
+
+@pytest.mark.parametrize("notes", [None, "Focus on this specific round."])
+def test_default_player_notes_apply_to_automatic_reviews_but_user_notes_win(
+    video: Path, tmp_path: Path, notes: str | None
+) -> None:
+    transport = FakeTransport(*(['{"findings": []}'] * 3))
+    deps = make_deps(tmp_path, transport)
+    deps = replace(
+        deps, config=replace(deps.config, player_notes="New player, explain every skill.")
+    )
+    review_file(video, deps, context=PlayerContext(notes=notes))
+    assert f"Notes: {notes or deps.config.player_notes}." in transport.calls[0].prompt
+
+
 @pytest.mark.integration
 def test_end_to_end_real_ffmpeg_fake_model(sample_video: Path, tmp_path: Path) -> None:
     from round_review.video.probe import SubprocessRunner

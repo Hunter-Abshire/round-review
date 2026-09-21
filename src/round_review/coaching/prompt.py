@@ -63,6 +63,19 @@ frames do not support any.
 6. Each finding needs one concrete, practical alternative the player can try next match, \
 phrased for their rank.
 
+7. Judge decisions immediately before or during a live encounter. BUY PHASE, barriers,
+menus, spectating, and safe travel alone are not evidence of a combat mistake. Do not
+criticize crosshair placement while holding a knife or an ability. Knife-out travel
+is only a weapon-readiness issue if a specific visible threat makes it unsafe.
+8. In the observation, explain the practical risk to this fight or objective, tied to
+a visible enemy, exposed angle, teammate, clock, or ability opportunity. If you cannot
+establish why it matters here, omit it. Never turn a checklist into a quota of mistakes
+or repeat several versions of the same aim criticism at one moment.
+9. Prioritize avoidable deaths, exposure to multiple angles, support and trade opportunities,
+purposeful utility, and objective timing when the frames support them. Do not invent
+sound cues, comms, enemy locations, or actions between sampled frames. For a new or
+unranked player explain the reason and the next action in plain language.
+
 Respond with JSON only, matching the schema you are given. No prose outside the JSON."""
 
 RETRY_NUDGE = (
@@ -116,7 +129,7 @@ SITUATION_SCHEMA: dict[str, Any] = {
         "side": {"type": "string", "enum": ["attack", "defense", "unknown"]},
         "phase": {
             "type": "string",
-            "enum": ["pre_round", "early", "mid", "post_plant", "retake", "unknown"],
+            "enum": ["pre_round", "early", "mid", "post_plant", "retake", "spectating", "unknown"],
         },
         "weapon": {"type": "string"},
         "abilities_available": {"type": "array", "items": {"type": "string"}},
@@ -153,6 +166,15 @@ SITUATION_SYSTEM_PROMPT = (
     "visible. Use the HUD: the agent portrait and ability icons bottom-centre, the minimap "
     "top-left, credits and weapon bottom-right, the round timer and score top-centre, "
     "teammate portraits at the top. Write 'unknown' when something is not visible. "
+    "Classify phase from visible HUD evidence. pre_round requires visible BUY PHASE text; "
+    "no visible enemies, green crates, walls, or preparing a move do not establish pre_round. "
+    "A running round timer and recent kills without BUY PHASE indicate live play. A death "
+    "combat report plus SWITCH PLAYER indicates spectating; "
+    "do not attribute that POV to the player. "
+    "Use pre_round or spectating only if all frames remain in that state; if "
+    "live play starts, use its phase and mark the transition in the timeline. Name a weapon "
+    "only from what is equipped; a knife is not a firearm. An area label or player name is "
+    "not the map or agent name. Never fill unreadable HUD fields with invented values. "
     "Respond with JSON only, matching the schema you are given."
 )
 
@@ -216,13 +238,16 @@ def build_coach_prompt(
         sections.append(situation.describe())
     sections.append(_window_line(window, samples))
     sections.append(
-        "Go through the checklist. For every item you can judge from these frames and the "
-        "situation read, decide whether the player passes. Report only failures, each as a "
+        "Identify the most consequential supported decision just before or during combat. "
+        "Use the checklist to explain that decision, not to enumerate cosmetic imperfections. "
+        "Report only meaningful mistakes, each as a "
         "finding with the checklist id in check_id, the timestamp (within this window), the "
         "category, what you observed, the visible evidence with the frame timestamp it comes "
         "from, what information the player had at that moment, what only became known later "
         "(empty string if nothing), the assumptions you are making, one suggested alternative "
         f"specific to this agent and map, and your confidence from 0 to 1. At most "
-        f"{MAX_FINDINGS_PER_WINDOW} findings; pick the ones that would change the round."
+        f"{MAX_FINDINGS_PER_WINDOW} findings; pick the ones that would change the round. "
+        "Return an empty findings list when this is only preparation, safe travel, or the "
+        "evidence is insufficient. Copy the relevant frame timestamp exactly."
     )
     return "\n\n".join(sections)

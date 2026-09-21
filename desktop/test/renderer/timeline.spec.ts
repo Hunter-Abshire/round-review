@@ -41,6 +41,10 @@ describe('nearestMarker', () => {
     expect(nearestMarker(markers, 200, 2)).toBeNull();
     expect(nearestMarker([], 0, 2)).toBeNull();
   });
+  it('keeps the selected finding when multiple findings have the same timestamp', () => {
+    const overlapping = markers.map(m => ({ ...m, timestamp_s: 30 }));
+    expect(nearestMarker(overlapping, 30, 2, 'w1-f1')?.id).toBe('w1-f1');
+  });
   it('prefers the closer marker when two are in tolerance', () => {
     const m = collectMarkers(
       report({

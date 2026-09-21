@@ -1,6 +1,13 @@
 // Renderer entry point. Bundled by esbuild into dist/renderer/app.js; no Node access here.
 import { createApi, type Api } from './api';
-import { renderClipList, renderContextBar, renderFindingCard, renderMarkers } from './dom';
+import {
+  renderClipList,
+  renderContextBar,
+  renderFindingCard,
+  renderFindingList,
+  renderReviewCoverage,
+  renderMarkers,
+} from './dom';
 import { initialState, reduce, type Action, type State } from './state';
 import { nearestMarker } from './timeline';
 
@@ -54,6 +61,8 @@ const run = (api: Api): void => {
     }
     const report = state.report;
     if (!report || !state.reviewKey) return;
+    renderReviewCoverage(byId('coverage'), report);
+    renderFindingList(byId('finding-list'), state.markers, state.selectedMarkerId, select);
     title.textContent = `${report.recording.name} · ${state.markers.length} finding(s) · ${report.model}`;
     renderMarkers(
       track,
@@ -134,7 +143,12 @@ const run = (api: Api): void => {
 
   // Highlight the marker we are passing while the video plays.
   video.addEventListener('timeupdate', () => {
-    const near = nearestMarker(state.markers, video.currentTime, MARKER_TOLERANCE_S);
+    const near = nearestMarker(
+      state.markers,
+      video.currentTime,
+      MARKER_TOLERANCE_S,
+      state.selectedMarkerId,
+    );
     if (near && near.id !== state.selectedMarkerId)
       dispatch({ type: 'marker_selected', id: near.id });
   });

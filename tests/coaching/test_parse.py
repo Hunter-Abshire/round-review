@@ -140,3 +140,17 @@ def test_more_than_max_findings_truncated() -> None:
 
 def test_empty_findings_is_valid() -> None:
     assert parse_findings(wrap(), WINDOW, SAMPLES) == ([], [])
+
+
+@pytest.mark.parametrize("timestamp, expected", [(368.5, 368.517), (380.5, 380.5)])
+def test_rounded_frame_caption_is_mapped_back_to_exact_sample(timestamp, expected) -> None:
+    window = Window(0, 368.517, 380.517, "evenly_spaced")
+    samples = [FrameSample(0, 368.517, Path("frame.jpg"))]
+    findings, _ = parse_findings(wrap(raw_finding(timestamp_s=timestamp)), window, samples)
+    assert findings[0].timestamp_s == expected
+
+
+def test_rounding_does_not_admit_unsampled_out_of_window_timestamps() -> None:
+    window = Window(0, 368.517, 380.517, "evenly_spaced")
+    findings, warnings = parse_findings(wrap(raw_finding(timestamp_s=368.4)), window, [])
+    assert findings == [] and any("outside window" in w for w in warnings)

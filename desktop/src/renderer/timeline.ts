@@ -31,12 +31,16 @@ export const nearestMarker = (
   markers: Marker[],
   currentTime: number,
   toleranceS: number,
+  selectedId: string | null = null,
 ): Marker | null => {
   let best: Marker | null = null;
   let bestDistance = Infinity;
   for (const marker of markers) {
     const distance = Math.abs(marker.timestamp_s - currentTime);
-    if (distance <= toleranceS && distance < bestDistance) {
+    if (
+      distance <= toleranceS &&
+      (distance < bestDistance || (distance === bestDistance && marker.id === selectedId))
+    ) {
       best = marker;
       bestDistance = distance;
     }

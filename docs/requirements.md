@@ -40,6 +40,9 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | FR-17 | Player context (rank, agent, map, side, focus, notes) can be supplied by the player via CLI options or the desktop context bar. Values the player supplies win; the situation pass fills in the rest. Blank means auto-detect. |
 | FR-18 | Every finding's evidence frame is re-cut from the recording at the finding's exact timestamp, not the nearest sampled frame. If that cut fails the sampled frame is kept and a warning is recorded. |
 | FR-19 | The checklist sent to the coach pass is filtered by the detected round phase (no post-plant checks pre-round, and so on) so the prompt fits next to the images. Unknown phase sends everything. |
+| FR-20 | With the situation pass enabled, a detected pre-round, spectating or unreadable phase skips coaching with an explicit note. A parsed finding whose checklist category conflicts with the detected phase is dropped. Crosshair criticism requires a known equipped weapon other than knife, melee, spike or ability. These conservative window-level gates depend on the situation model and do not replace encounter detection. |
+| FR-21 | Coaching prioritizes supported decisions immediately before or during encounters, explaining the practical risk and one action in plain language for beginners. Buy phase, safe travel, and absent context must not become a quota of mistakes. An empty, filtered review is a valid result; only actual parse failures count toward all-windows-unparseable failure. |
+| FR-22 | Desktop shows sampled duration versus recording duration, review notes, and a selectable list of all findings. Findings at the same timestamp remain individually accessible and selection survives a playback update at that timestamp. The suggested alternative appears before the evidence image. |
 | FR-15 | Structured requests send `think: false`. If a completed response (`done=true`, `done_reason=stop`) has empty content and a whole JSON object with the schema's required root keys in `message.thinking`, log a compatibility warning and pass it through normal finding validation. Never substitute prose, incomplete output, or thinking when content is present. |
 
 ## Anti-hindsight requirements
@@ -50,7 +53,7 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | AH-2 | Every finding must separately state `visible_evidence`, `information_available_to_player`, and `information_revealed_later`. |
 | AH-3 | Every finding lists `assumption_flags`: anything the model guessed rather than saw (enemy positions, cooldowns, economy). |
 | AH-4 | If a finding's alternative depends on later-revealed information, the parser downgrades confidence and the report shows a warning. |
-| AH-5 | Findings whose timestamp lies outside their window are rejected. At most 4 findings per window. |
+| AH-5 | Findings whose timestamp lies outside their window are rejected. A timestamp exactly matching a frame's one-decimal caption is first mapped back to that frame's precise time; other out-of-window times are still rejected. At most 4 findings per window. |
 | AH-6 | A finding that cites an unknown checklist id is kept but relabelled `other` with a warning, so invented principles are visible in the report. |
 
 ## Non-functional requirements
@@ -94,6 +97,7 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | `frame_width` | 1280 | |
 | `daily_call_cap` | 60 | Two calls per window with the situation pass on |
 | `situation_pass` | true | Run the describe-first pass before coaching |
+| `player_notes` | empty | Default notes for every review, including the watcher; explicit per-review notes override them. |
 | `num_ctx` | 16384 | Ollama context window; the coach prompt is ~2-5k tokens plus images |
 | `poll_s` | 20 | Watcher poll interval |
 | `quiet_polls` | 3 | Consecutive unchanged polls before a file is stable |

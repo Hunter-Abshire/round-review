@@ -147,6 +147,15 @@ video {
   background: var(--panel);
   border-radius: 8px;
 }
+.finding-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.finding-list button[aria-pressed='true'] {
+  outline: 2px solid var(--accent);
+}
 .finding .section {
   margin: 6px 0;
 }

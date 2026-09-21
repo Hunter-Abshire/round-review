@@ -14,7 +14,9 @@ from typing import Any
 from round_review.coaching.context import SIDES, PlayerContext
 from round_review.errors import ParseError
 
-PHASES: frozenset[str] = frozenset({"pre_round", "early", "mid", "post_plant", "retake", "unknown"})
+PHASES: frozenset[str] = frozenset(
+    {"pre_round", "early", "mid", "post_plant", "retake", "spectating", "unknown"}
+)
 UNKNOWN_VALUES: frozenset[str] = frozenset({"", "unknown", "n/a", "none", "null", "?"})
 
 

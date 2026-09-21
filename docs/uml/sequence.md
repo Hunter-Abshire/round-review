@@ -128,10 +128,13 @@ sequenceDiagram
         end
     end
     R->>K: relevant_categories(phase), find_agent, find_map, render_rank_focus
+    Note over R: Detected buy phase, spectating or unreadable phase returns no findings with a note; no coach call
     R->>T: chat(system = persona + rules + filtered checklist; user = context + briefs + situation + captions, FINDING_SCHEMA)
     T-->>R: JSON findings with check_id
     R->>Pa: parse_findings(text, window, samples, known check ids)
     Pa-->>R: findings (unknown check_id -> "other" + warning)
+    Note over Pa: Restore rounded frame captions to exact sample times before bounds validation
+    R->>R: reject phase-inappropriate checks and crosshair criticism without an equipped firearm
     R-->>P: WindowResult(findings, situation, context, model_calls)
     loop each finding
         P->>Fr: extract_single_frame(recording, timestamp_s) -> frames/eWW_NN.jpg
@@ -171,6 +174,7 @@ sequenceDiagram
     R->>API: GET /api/media/{key}/video (Range)
     API-->>R: 206 partial MP4
     R->>R: draw one marker per finding at timestamp_s / duration_s
+    R->>R: show sampled coverage, review notes and separately selectable findings
     Player->>R: click marker
     R->>R: video.currentTime = timestamp_s; show finding card
     R->>API: GET /api/media/{key}/frames/w01_004.jpg

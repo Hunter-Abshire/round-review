@@ -4,7 +4,7 @@ from pathlib import Path
 
 from round_review.coaching.context import PlayerContext
 from round_review.errors import OllamaError
-from round_review.server.jobs import Job, JobQueue, ProgressFn
+from round_review.server.jobs import Job, JobOptions, JobQueue, ProgressFn
 
 NOW = datetime(2026, 9, 20, 12, 0, tzinfo=UTC)
 
@@ -13,13 +13,17 @@ class FakeRun:
     def __init__(self, fail: Exception | None = None) -> None:
         self.calls: list[Path] = []
         self.contexts: list[PlayerContext] = []
+        self.options: list[JobOptions] = []
         self.fail = fail
         self.release = threading.Event()
         self.started = threading.Event()
 
-    def __call__(self, path: Path, context: PlayerContext, on_progress: ProgressFn) -> None:
+    def __call__(
+        self, path: Path, context: PlayerContext, options: JobOptions, on_progress: ProgressFn
+    ) -> None:
         self.calls.append(path)
         self.contexts.append(context)
+        self.options.append(options)
         self.started.set()
         on_progress(0, 2)
         self.release.wait(timeout=5)
@@ -102,3 +106,46 @@ def test_active_job_for_key() -> None:
     job = q.submit(Path("/v/a.mp4"), key="k1")
     assert q.active_for_key("k1") == job
     assert q.active_for_key("zz") is None
+
+
+def test_submit_carries_force_and_coverage_overrides() -> None:
+    run = FakeRun()
+    q = JobQueue(run, clock=lambda: NOW)
+    job = q.submit(
+        Path("/v/a.mp4"),
+        key="k1",
+        options=JobOptions(force=True, coverage="sampled", max_span_s=60.0, max_windows=8),
+    )
+    assert job.options.force is True
+    assert job.options.coverage == "sampled"
+    assert job.options.max_span_s == 60.0
+    assert job.options.max_windows == 8
+
+
+def test_worker_passes_options_to_the_runner(tmp_path: Path) -> None:
+    run = FakeRun()
+    q = JobQueue(run, clock=lambda: NOW)
+    q.start()
+    try:
+        q.submit(tmp_path / "a.mp4", key="ka", options=JobOptions(force=True))
+        run.release.set()
+        assert q.wait_idle(timeout=5)
+        assert run.options[0].force is True
+    finally:
+        q.stop()
+
+
+def test_force_resubmit_of_a_finished_clip_is_a_new_job(tmp_path: Path) -> None:
+    run = FakeRun()
+    q = JobQueue(run, clock=lambda: NOW)
+    q.start()
+    try:
+        first = q.submit(tmp_path / "a.mp4", key="ka")
+        run.release.set()
+        assert q.wait_idle(timeout=5)
+        again = q.submit(tmp_path / "a.mp4", key="ka", options=JobOptions(force=True))
+        assert again.id != first.id
+        assert q.wait_idle(timeout=5)
+        assert len(run.calls) == 2
+    finally:
+        q.stop()

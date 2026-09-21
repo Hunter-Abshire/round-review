@@ -21,7 +21,7 @@ from round_review.errors import RoundReviewError
 from round_review.ledger import is_processed, read_ledger, recording_key
 from round_review.pipeline import Deps, make_default_deps, review_file
 from round_review.server.app import create_app
-from round_review.server.jobs import JobQueue
+from round_review.server.jobs import JobOptions, JobQueue, ProgressFn
 from round_review.validation.scenes import (
     SceneCase,
     SceneReport,
@@ -353,12 +353,20 @@ def scenes_describe(
 def serve(config: Config, port: int | None) -> None:
     """Run the local API used by the desktop app. Binds to 127.0.0.1 only."""
     deps: Deps = make_default_deps(config)
-    jobs = JobQueue(
-        lambda path, ctx, on_progress: review_file(
-            path, deps, context=ctx, on_progress=on_progress
-        ),
-        clock=deps.clock,
-    )
+
+    def run_review(
+        path: Path, ctx: PlayerContext, options: JobOptions, on_progress: ProgressFn
+    ) -> None:
+        """One queued review. Per-job coverage overrides apply to this review only."""
+        job_deps = replace(
+            deps,
+            config=_with_coverage(
+                config, options.coverage, options.max_span_s, options.max_windows
+            ),
+        )
+        review_file(path, job_deps, context=ctx, force=options.force, on_progress=on_progress)
+
+    jobs = JobQueue(run_review, clock=deps.clock)
     app = create_app(config, jobs)
     uvicorn_run(app, host="127.0.0.1", port=port or config.api_port, log_level="info")
 

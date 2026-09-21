@@ -7,10 +7,22 @@ from fastapi.testclient import TestClient
 
 from round_review.coaching.context import PlayerContext
 from round_review.config import Config
+from round_review.errors import VideoError
 from round_review.ledger import LedgerEntry, append_entry
 from round_review.pipeline import key_for, report_dir_for
 from round_review.server.app import create_app
-from round_review.server.jobs import JobQueue, ProgressFn
+from round_review.server.jobs import JobOptions, JobQueue, ProgressFn
+from tests.video.test_probe import PROBE_JSON
+
+
+class FakeProbe:
+    """ffprobe stand-in: readable for everything except a file named like a broken one."""
+
+    def run(self, args: list[str]) -> str:
+        if "broken" in args[-1]:
+            raise VideoError("moov atom not found")
+        return PROBE_JSON
+
 
 NOW = datetime(2026, 9, 20, 12, 0, tzinfo=UTC)
 
@@ -40,10 +52,14 @@ class FakeRun:
         self.cfg = cfg
         self.calls: list[Path] = []
         self.contexts: list[PlayerContext] = []
+        self.options: list[JobOptions] = []
 
-    def __call__(self, path: Path, context: PlayerContext, on_progress: ProgressFn) -> None:
+    def __call__(
+        self, path: Path, context: PlayerContext, options: JobOptions, on_progress: ProgressFn
+    ) -> None:
         self.calls.append(path)
         self.contexts.append(context)
+        self.options.append(options)
         out = report_dir_for(self.cfg, path)
         (out / "frames").mkdir(parents=True, exist_ok=True)
         (out / "frames" / "w00_002.jpg").write_bytes(b"\xff\xd8jpeg")
@@ -71,7 +87,7 @@ def client(cfg: Config) -> TestClient:
     run = FakeRun(cfg)
     jobs = JobQueue(run, clock=lambda: NOW)
     jobs.start()
-    app = create_app(cfg, jobs)
+    app = create_app(cfg, jobs, probe_runner=FakeProbe())
     app.state.fake_run = run
     with TestClient(app) as c:
         yield c  # type: ignore[misc]
@@ -109,7 +125,8 @@ def test_clips_status_from_ledger(client: TestClient, cfg: Config, clip: Path) -
 
 def test_clips_without_recordings_dir(tmp_path: Path) -> None:
     cfg = Config(reports_dir=tmp_path, ledger_path=tmp_path / "l.jsonl")
-    with TestClient(create_app(cfg, JobQueue(lambda p, c, f: None, clock=lambda: NOW))) as c:
+    jobs = JobQueue(lambda p, c, o, f: None, clock=lambda: NOW)
+    with TestClient(create_app(cfg, jobs, probe_runner=FakeProbe())) as c:
         r = c.get("/api/clips")
     assert r.status_code == 200
     assert r.json()["clips"] == []
@@ -218,3 +235,76 @@ def test_knowledge_endpoint_lists_agents_maps_ranks_and_checklist(client: TestCl
     assert any(
         c["id"] == "crosshair.head_level" for cat in body["checklist"] for c in cat["checks"]
     )
+
+
+def test_clips_include_duration_and_estimated_windows(client: TestClient, clip: Path) -> None:
+    (item,) = client.get("/api/clips").json()["clips"]
+    assert item["duration_s"] == pytest.approx(123.456)
+    assert item["estimated_windows"] == 5  # full coverage of 123s at 12s windows
+
+
+def test_clips_survive_an_unreadable_file(client: TestClient, cfg: Config, clip: Path) -> None:
+    assert cfg.recordings_dir is not None
+    (cfg.recordings_dir / "broken.mp4").write_bytes(b"not a video")
+    items = client.get("/api/clips").json()["clips"]
+    names = {i["name"] for i in items}
+    assert {"match.mp4", "broken.mp4"} <= names
+    broken = next(i for i in items if i["name"] == "broken.mp4")
+    assert broken["duration_s"] is None
+    assert broken["estimated_windows"] is None
+
+
+def test_submit_with_force_re_reviews_a_done_clip(client: TestClient, clip: Path) -> None:
+    first = client.post("/api/jobs", json={"path": str(clip)})
+    assert first.status_code == 202
+    assert client.app.state.jobs.wait_idle(timeout=5)  # type: ignore[attr-defined]
+    again = client.post("/api/jobs", json={"path": str(clip), "force": True})
+    assert again.status_code == 202
+    assert again.json()["id"] != first.json()["id"]
+    assert again.json()["options"]["force"] is True
+    assert client.app.state.jobs.wait_idle(timeout=5)  # type: ignore[attr-defined]
+    run = client.app.state.fake_run  # type: ignore[attr-defined]
+    assert len(run.calls) == 2
+    assert run.options[1].force is True
+
+
+def test_submit_passes_coverage_overrides(client: TestClient, clip: Path) -> None:
+    r = client.post(
+        "/api/jobs",
+        json={"path": str(clip), "coverage": "sampled", "max_span_s": 60, "max_windows": 8},
+    )
+    assert r.status_code == 202, r.text
+    assert r.json()["options"] == {
+        "force": False,
+        "coverage": "sampled",
+        "max_span_s": 60.0,
+        "max_windows": 8,
+    }
+    assert client.app.state.jobs.wait_idle(timeout=5)  # type: ignore[attr-defined]
+    options = client.app.state.fake_run.options[0]  # type: ignore[attr-defined]
+    assert (options.coverage, options.max_span_s, options.max_windows) == ("sampled", 60.0, 8)
+
+
+def test_submit_rejects_an_unknown_coverage_mode(client: TestClient, clip: Path) -> None:
+    r = client.post("/api/jobs", json={"path": str(clip), "coverage": "everything"})
+    assert r.status_code == 422
+
+
+def test_settings_describes_the_review_defaults(client: TestClient) -> None:
+    body = client.get("/api/settings").json()
+    assert body["coverage"] == "full"
+    assert body["window_s"] == 12.0
+    assert body["model"] == "qwen3-vl:8b"
+    assert body["situation_pass"] is True
+    assert body["coverage_modes"] == ["full", "sampled"]
+
+
+def test_partial_ledger_status_is_reported_as_partial(
+    client: TestClient, cfg: Config, clip: Path
+) -> None:
+    append_entry(
+        cfg.ledger_path,
+        LedgerEntry(key_for(clip), str(clip), NOW, 4, "/r/report.md", "partial", None),
+    )
+    (item,) = client.get("/api/clips").json()["clips"]
+    assert item["status"] == "partial"

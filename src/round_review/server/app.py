@@ -4,23 +4,25 @@ from __future__ import annotations
 
 import dataclasses
 import re
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from round_review.coaching.context import context_from_mapping
 from round_review.coaching.knowledge import load_knowledge
-from round_review.config import Config
-from round_review.errors import LedgerError, VideoError
+from round_review.config import COVERAGE_MODES, Config
+from round_review.errors import LedgerError, RoundReviewError, VideoError
 from round_review.ledger import LedgerEntry, read_ledger
 from round_review.pipeline import key_for, report_dir_for
 from round_review.report.json_report import JSON_REPORT_FILENAME, load_report_json
-from round_review.server.jobs import Job, JobQueue
+from round_review.server.jobs import Job, JobOptions, JobQueue
+from round_review.video.probe import CommandRunner, SubprocessRunner, probe
+from round_review.video.windows import estimate_window_count
 from round_review.watcher import list_candidates
 
 KEY_RE = re.compile(r"^[0-9a-f]{16}$")
@@ -38,18 +40,28 @@ RANKS: tuple[str, ...] = (
     "Radiant",
 )
 
-LEDGER_STATUS_TO_CLIP: dict[str, str] = {"ok": "done", "failed": "failed", "skipped": "skipped"}
+LEDGER_STATUS_TO_CLIP: dict[str, str] = {
+    "ok": "done",
+    "partial": "partial",
+    "failed": "failed",
+    "skipped": "skipped",
+}
 
 
 class SubmitJob(BaseModel):
     path: str
     context: dict[str, Any] | None = None
+    force: bool = False
+    coverage: Literal["full", "sampled"] | None = None
+    max_span_s: float | None = Field(default=None, ge=0)
+    max_windows: int | None = Field(default=None, ge=0)
 
 
 def _job_json(job: Job) -> dict[str, Any]:
     data = dataclasses.asdict(job)
     data["path"] = str(job.path)
     data["context"] = dataclasses.asdict(job.context)
+    data["options"] = dataclasses.asdict(job.options)
     data["created_at"] = job.created_at.isoformat()
     data["finished_at"] = job.finished_at.isoformat() if job.finished_at else None
     return data
@@ -93,7 +105,27 @@ def _valid_key(key: str) -> str:
     return key
 
 
-def create_app(config: Config, jobs: JobQueue) -> FastAPI:
+def _duration_reader(runner: CommandRunner) -> Callable[[Path, str], float | None]:
+    """Probe durations for the clip list, cached by recording key so repeated listings do
+    not re-run ffprobe. An unreadable file reports no duration rather than failing the list."""
+    cache: dict[str, float | None] = {}
+
+    def duration_of(path: Path, key: str) -> float | None:
+        if key not in cache:
+            try:
+                cache[key] = probe(path, runner).duration_s
+            except RoundReviewError:
+                cache[key] = None
+        return cache[key]
+
+    return duration_of
+
+
+def create_app(
+    config: Config, jobs: JobQueue, probe_runner: CommandRunner | None = None
+) -> FastAPI:
+    duration_of = _duration_reader(probe_runner or SubprocessRunner(config.ffprobe_path))
+
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         jobs.start()
@@ -124,6 +156,7 @@ def create_app(config: Config, jobs: JobQueue) -> FastAPI:
             except (OSError, VideoError):
                 continue
             status, job_id, error = _clip_status(jobs, entries, key)
+            duration_s = duration_of(path, key)
             items.append(
                 {
                     "name": path.name,
@@ -131,6 +164,20 @@ def create_app(config: Config, jobs: JobQueue) -> FastAPI:
                     "key": key,
                     "size_bytes": st.st_size,
                     "mtime": st.st_mtime,
+                    "duration_s": duration_s,
+                    "estimated_windows": (
+                        estimate_window_count(
+                            duration_s,
+                            window_s=config.window_s,
+                            coverage=config.coverage,  # type: ignore[arg-type]
+                            windows_per_file=config.windows_per_file,
+                            edge_skip_s=config.edge_skip_s,
+                            max_windows=config.max_windows,
+                            max_span_s=config.max_span_s,
+                        )
+                        if duration_s
+                        else None
+                    ),
                     "status": status,
                     "job_id": job_id,
                     "error": error,
@@ -147,7 +194,31 @@ def create_app(config: Config, jobs: JobQueue) -> FastAPI:
             raise HTTPException(status_code=400, detail="path is outside recordings_dir")
         if not path.is_file():
             raise HTTPException(status_code=404, detail="clip not found")
-        return _job_json(jobs.submit(path, key_for(path), context_from_mapping(body.context)))
+        options = JobOptions(
+            force=body.force,
+            coverage=body.coverage,
+            max_span_s=body.max_span_s,
+            max_windows=body.max_windows,
+        )
+        return _job_json(
+            jobs.submit(path, key_for(path), context_from_mapping(body.context), options)
+        )
+
+    @app.get("/api/settings")
+    def settings() -> dict[str, Any]:
+        """Review defaults, so the app can show what a review will do before starting one."""
+        return {
+            "model": config.model,
+            "coverage": config.coverage,
+            "coverage_modes": sorted(COVERAGE_MODES),
+            "window_s": config.window_s,
+            "windows_per_file": config.windows_per_file,
+            "max_span_s": config.max_span_s,
+            "max_windows": config.max_windows,
+            "fps": config.fps,
+            "situation_pass": config.situation_pass,
+            "daily_call_cap": config.daily_call_cap,
+        }
 
     @app.get("/api/knowledge")
     def knowledge() -> dict[str, Any]:

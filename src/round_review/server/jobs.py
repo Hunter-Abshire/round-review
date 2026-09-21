@@ -20,7 +20,20 @@ log = logging.getLogger(__name__)
 JobStatus = Literal["queued", "running", "done", "failed"]
 ACTIVE: frozenset[str] = frozenset({"queued", "running"})
 ProgressFn = Callable[[int, int], None]
-RunFn = Callable[[Path, PlayerContext, ProgressFn], object]
+
+
+@dataclass(frozen=True, slots=True)
+class JobOptions:
+    """Per-job overrides. `force` re-reviews a clip already in the ledger; the coverage
+    fields override the configured review span for this job only."""
+
+    force: bool = False
+    coverage: str | None = None
+    max_span_s: float | None = None
+    max_windows: int | None = None
+
+
+RunFn = Callable[[Path, PlayerContext, JobOptions, ProgressFn], object]
 
 
 @dataclass(slots=True)
@@ -35,6 +48,7 @@ class Job:
     created_at: datetime
     finished_at: datetime | None
     context: PlayerContext = field(default_factory=PlayerContext)
+    options: JobOptions = field(default_factory=JobOptions)
 
 
 class JobQueue:
@@ -103,7 +117,13 @@ class JobQueue:
 
     # -- commands --------------------------------------------------------------------------
 
-    def submit(self, path: Path, key: str, context: PlayerContext | None = None) -> Job:
+    def submit(
+        self,
+        path: Path,
+        key: str,
+        context: PlayerContext | None = None,
+        options: JobOptions | None = None,
+    ) -> Job:
         with self._lock:
             existing = next(
                 (j for j in self._jobs.values() if j.key == key and j.status in ACTIVE), None
@@ -121,6 +141,7 @@ class JobQueue:
                 created_at=self._clock(),
                 finished_at=None,
                 context=context or PlayerContext(),
+                options=options or JobOptions(),
             )
             self._jobs[job.id] = job
             self._order.append(job.id)
@@ -158,7 +179,7 @@ class JobQueue:
                 self._set(job_id, windows_done=done, windows_total=total)
 
             try:
-                self._run(job.path, job.context, on_progress)
+                self._run(job.path, job.context, job.options, on_progress)
             except Exception as exc:  # the worker must survive any job failure
                 log.error(
                     "job %s (%s) failed: %s: %s", job_id, job.path.name, type(exc).__name__, exc

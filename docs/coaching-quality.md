@@ -63,6 +63,23 @@ spread evenly across the clip rather than stopping early, and `daily_call_cap = 
 or a transport failure part-way through keeps the windows already reviewed and records
 the review as `partial`, so an hour of work is never lost to one failure.
 
+## Confirmed again on the Windows PC (2026-09-21, second run)
+
+A 12:29 recording reviewed with `qwen3-vl:4b`: 8 of 57 windows completed before a
+configured `daily_call_cap = 30` stopped it, and every completed window abstained (6 buy
+phase, 2 unreadable). Zero findings. A frame from the middle of the reviewed span shows a
+running round timer at 1:39, an equipped Classic and the spike pickup prompt: unambiguous
+live play that the model called buy phase. This is the same failure as the first run, now
+with visual proof, and it is the reason to fix scene recognition before anything else.
+
+Two safeguards were added in response, neither of which fixes the underlying misread:
+
+- The review now diagnoses itself. When abstentions dominate, the report says so in plain
+  words, counts the reasons, and points at `scenes validate` instead of silently looking
+  like a review of flawless play. The desktop shows it above the fold.
+- Reports carry `partial` and `stopped_reason`, so a review truncated by a cap or a
+  failure is obvious rather than indistinguishable from a complete one.
+
 ## Next implementation priorities
 
 1. Build the labelled validation set with `scenes scaffold` and run `scenes validate`

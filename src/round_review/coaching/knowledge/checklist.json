@@ -1,0 +1,28 @@
+{
+  "categories": [
+    {
+      "id": "crosshair",
+      "name": "Crosshair placement",
+      "principle": "The crosshair sits at head height on the next corner an enemy could appear from.",
+      "checks": [
+        {"id": "crosshair.head_level", "check": "Crosshair is at head height of the nearest corner, not on the floor or sky.", "common_mistake": "Aiming at the ground while moving.", "fix": "Pre-aim the corner you are about to clear before you reach it.", "visible_in_frames": true},
+        {"id": "crosshair.next_angle", "check": "Crosshair is on the next uncleared angle, not on a cleared or empty area.", "common_mistake": "Looking at the wall or teammate while walking.", "fix": "Move the crosshair to the next danger point as you move.", "visible_in_frames": true}
+      ]
+    },
+    {
+      "id": "utility",
+      "name": "Utility usage",
+      "principle": "Utility is used before contact to create the fight you want, and saved when it has no purpose.",
+      "checks": [
+        {"id": "utility.unused_at_death", "check": "Ability icons are still lit at the moment of death.", "common_mistake": "Dying with flash, dash or smoke unused.", "fix": "Use utility before peeking, not after taking damage.", "visible_in_frames": true}
+      ]
+    }
+  ],
+  "rank_expectations": {
+    "iron_bronze": "Crosshair placement, not running while shooting, buying with the team.",
+    "silver_gold": "Using utility before peeking, trading with a teammate, not over-peeking after a kill.",
+    "platinum_diamond": "Timing, info denial, economy discipline, post-plant positioning.",
+    "ascendant_plus": "Round-level decision making, tempo, map control trades."
+  },
+  "sources": []
+}

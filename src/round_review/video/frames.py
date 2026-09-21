@@ -62,3 +62,36 @@ def extract_frames(
 
 def encode_frame_b64(path: Path) -> str:
     return base64.b64encode(path.read_bytes()).decode("ascii")
+
+
+def build_single_frame_args(
+    path: Path, timestamp_s: float, width: int, out_path: Path
+) -> list[str]:
+    """One frame at an exact timestamp. `-ss` before `-i` is accurate for output since ffmpeg 2.1
+    (it decodes from the previous keyframe and discards), so the picture matches the finding."""
+    return [
+        "-loglevel",
+        "error",
+        "-y",
+        "-ss",
+        f"{timestamp_s:.3f}",
+        "-i",
+        str(path),
+        "-frames:v",
+        "1",
+        "-vf",
+        f"scale={width}:-2",
+        "-q:v",
+        "3",
+        str(out_path),
+    ]
+
+
+def extract_single_frame(
+    recording: Recording, timestamp_s: float, runner: CommandRunner, width: int, out_path: Path
+) -> Path:
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    runner.run(build_single_frame_args(recording.path, timestamp_s, width, out_path))
+    if not out_path.exists():
+        raise VideoError(f"{recording.path}: ffmpeg produced no frame at t={timestamp_s:.1f}s")
+    return out_path

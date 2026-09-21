@@ -5,6 +5,7 @@ import pytest
 from click.testing import CliRunner
 
 from round_review import cli
+from round_review.coaching.context import PlayerContext
 from round_review.config import Config
 from round_review.errors import OllamaError
 from round_review.ledger import LedgerEntry, append_entry
@@ -44,9 +45,34 @@ def patched(monkeypatch: pytest.MonkeyPatch, cfg: Config) -> dict[str, object]:
 def test_review_happy_path(patched: dict[str, object], tmp_path: Path) -> None:
     video = tmp_path / "clip.mp4"
     video.write_bytes(b"x")
-    result = CliRunner().invoke(cli.main, ["review", str(video), "--context", "Gold 2", "--force"])
+    result = CliRunner().invoke(
+        cli.main,
+        [
+            "review",
+            str(video),
+            "--rank",
+            "Gold 2",
+            "--agent",
+            "Jett",
+            "--map",
+            "Ascent",
+            "--side",
+            "attack",
+            "--focus",
+            "entries",
+            "--context",
+            "notes",
+            "--force",
+        ],
+    )
     assert result.exit_code == 0, result.output
-    assert patched["review"] == (video, "Gold 2", True)
+    assert patched["review"] == (
+        video,
+        PlayerContext(
+            rank="Gold 2", agent="Jett", map="Ascent", side="attack", focus="entries", notes="notes"
+        ),
+        True,
+    )
     assert "clip.mp4" in result.output
 
 
@@ -58,7 +84,9 @@ def test_review_missing_file_exits_2(patched: dict[str, object], tmp_path: Path)
 def test_review_error_exits_1_with_class_name(
     monkeypatch: pytest.MonkeyPatch, patched: dict[str, object], tmp_path: Path
 ) -> None:
-    def boom(path: Path, deps: Deps, context: str | None = None, force: bool = False) -> Report:
+    def boom(
+        path: Path, deps: Deps, context: PlayerContext | None = None, force: bool = False
+    ) -> Report:
         raise OllamaError("connection refused")
 
     monkeypatch.setattr(cli, "review_file", boom)

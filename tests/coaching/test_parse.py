@@ -16,6 +16,7 @@ SAMPLES = [FrameSample(0, 60.0 + i, Path(f"/f/w00_{i:03d}.jpg")) for i in range(
 def raw_finding(**overrides: Any) -> dict[str, Any]:
     base: dict[str, Any] = {
         "timestamp_s": 64.4,
+        "check_id": "crosshair.head_level",
         "category": "positioning",
         "observation": "You held a wide angle with two entrances uncleared.",
         "visible_evidence": "At t=64.0s the minimap shows no teammate on your right.",
@@ -42,12 +43,16 @@ def test_extract_json_no_object_is_parse_error() -> None:
         extract_json("nothing here")
 
 
+KNOWN = frozenset({"crosshair.head_level", "utility.unused_at_death"})
+
+
 def test_happy_path() -> None:
-    findings, warnings = parse_findings(wrap(raw_finding()), WINDOW, SAMPLES)
+    findings, warnings = parse_findings(wrap(raw_finding()), WINDOW, SAMPLES, KNOWN)
     assert warnings == []
     assert len(findings) == 1
     f = findings[0]
     assert isinstance(f, Finding)
+    assert f.check_id == "crosshair.head_level"
     assert f.timestamp_s == 64.4
     assert f.category == "positioning"
     assert f.assumption_flags == ("enemy position",)
@@ -70,6 +75,26 @@ def test_missing_required_field_is_parse_error() -> None:
     del bad["visible_evidence"]
     with pytest.raises(ParseError, match="visible_evidence"):
         parse_findings(wrap(bad), WINDOW, SAMPLES)
+
+
+def test_unknown_check_id_maps_to_other_with_warning() -> None:
+    findings, warnings = parse_findings(
+        wrap(raw_finding(check_id="made.up")), WINDOW, SAMPLES, KNOWN
+    )
+    assert findings[0].check_id == "other"
+    assert any("made.up" in w for w in warnings)
+
+
+def test_missing_check_id_is_parse_error() -> None:
+    bad = raw_finding()
+    del bad["check_id"]
+    with pytest.raises(ParseError, match="check_id"):
+        parse_findings(wrap(bad), WINDOW, SAMPLES, KNOWN)
+
+
+def test_no_known_ids_accepts_anything() -> None:
+    findings, warnings = parse_findings(wrap(raw_finding(check_id="whatever")), WINDOW, SAMPLES)
+    assert findings[0].check_id == "whatever" and warnings == []
 
 
 def test_unknown_category_maps_to_other() -> None:
@@ -107,9 +132,9 @@ def test_placeholder_later_info_does_not_downgrade(value: str) -> None:
     assert warnings == []
 
 
-def test_more_than_three_findings_truncated() -> None:
-    findings, warnings = parse_findings(wrap(*[raw_finding()] * 5), WINDOW, SAMPLES)
-    assert len(findings) == 3
+def test_more_than_max_findings_truncated() -> None:
+    findings, warnings = parse_findings(wrap(*[raw_finding()] * 7), WINDOW, SAMPLES)
+    assert len(findings) == 4
     assert any("truncated" in w for w in warnings)
 
 

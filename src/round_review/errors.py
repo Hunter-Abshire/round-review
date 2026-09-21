@@ -39,3 +39,7 @@ class LedgerError(RoundReviewError):
 
 class AlreadyProcessed(RoundReviewError):
     """The recording is already in the ledger; pass force=True to review it again."""
+
+
+class KnowledgeError(RoundReviewError):
+    """A bundled knowledge file (checklist, agents, maps) is malformed."""

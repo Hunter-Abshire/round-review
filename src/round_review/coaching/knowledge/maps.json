@@ -1,0 +1,13 @@
+{
+  "maps": [
+    {"id": "ascent", "name": "Ascent", "in_competitive_rotation": true, "sites": ["A", "B"],
+     "layout_summary": "Mid control decides both sites; doors on A and B can be closed.",
+     "key_callouts": ["A Main: attacker entry to A", "Catwalk: mid path into A", "Market: mid path into B"],
+     "attack_defaults": ["Take mid with smokes on Market and Pizza then split"],
+     "defense_setups": ["2 A, 1 mid, 2 B with a mid rotator"],
+     "power_positions": ["Heaven: overlooks A site"],
+     "common_mistakes": ["Pushing mid without smoking Market and Pizza"],
+     "utility_notes": ["Smoke Market and Pizza for mid control"]}
+  ],
+  "sources": []
+}

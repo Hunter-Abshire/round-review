@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 
+from round_review.coaching.context import PlayerContext
+from round_review.coaching.knowledge import load_knowledge
+from round_review.coaching.parse import Finding
 from round_review.coaching.review import WindowResult, review_window
 from round_review.config import Config
 from round_review.errors import (
@@ -30,8 +33,8 @@ from round_review.ledger import (
 from round_review.llm.transport import Transport, UrllibTransport
 from round_review.report.json_report import write_report_json
 from round_review.report.markdown import Report, write_report
-from round_review.video.frames import extract_frames
-from round_review.video.probe import CommandRunner, SubprocessRunner, probe
+from round_review.video.frames import extract_frames, extract_single_frame
+from round_review.video.probe import CommandRunner, Recording, SubprocessRunner, probe
 from round_review.video.windows import select_windows
 
 log = logging.getLogger(__name__)
@@ -99,10 +102,34 @@ def _record(
     )
 
 
+def _attach_exact_evidence(
+    result: WindowResult, recording: Recording, deps: Deps, frames_dir: Path
+) -> tuple[WindowResult, list[str]]:
+    """Re-cut each finding's evidence frame at its exact timestamp. The sampled frame can be
+    up to half a sampling interval early, which reads as 'the picture is from just before'."""
+    warnings: list[str] = []
+    findings: list[Finding] = []
+    for n, finding in enumerate(result.findings, start=1):
+        out = frames_dir / f"e{result.window.index:02d}_{n:02d}.jpg"
+        try:
+            exact = extract_single_frame(
+                recording, finding.timestamp_s, deps.ffmpeg_runner, deps.config.frame_width, out
+            )
+        except VideoError as exc:
+            warnings.append(
+                f"evidence frame at t={finding.timestamp_s:.1f}s could not be cut ({exc}); "
+                "using the nearest sampled frame"
+            )
+            findings.append(finding)
+            continue
+        findings.append(replace(finding, evidence_frame=exact))
+    return replace(result, findings=tuple(findings)), warnings
+
+
 def review_file(
     path: Path,
     deps: Deps,
-    context: str | None = None,
+    context: PlayerContext | None = None,
     force: bool = False,
     on_progress: ProgressFn | None = None,
 ) -> Report:
@@ -121,6 +148,7 @@ def review_file(
     calls = 0
     results: list[WindowResult] = []
     warnings: list[str] = []
+    knowledge = load_knowledge()
 
     try:
         recording = probe(path, deps.probe_runner)
@@ -144,6 +172,8 @@ def review_file(
                     cfg.daily_call_cap,
                     cfg.request_timeout_s,
                     context,
+                    knowledge,
+                    cfg.situation_pass,
                 )
             except ParseError as exc:
                 calls += exc.model_calls
@@ -155,6 +185,8 @@ def review_file(
                     on_progress(len(results), len(windows))
                 continue
             calls += result.model_calls
+            result, evidence_warnings = _attach_exact_evidence(result, recording, deps, frames_dir)
+            warnings.extend(evidence_warnings)
             results.append(result)
             if on_progress:
                 on_progress(len(results), len(windows))

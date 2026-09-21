@@ -4,6 +4,8 @@ from pathlib import Path
 
 import pytest
 
+from round_review.coaching.context import PlayerContext
+from round_review.coaching.knowledge import load_knowledge
 from round_review.coaching.review import WindowResult, review_window
 from round_review.errors import CapExceeded, ParseError
 from round_review.llm.transport import ChatRequest, ChatResponse
@@ -23,11 +25,46 @@ class FakeTransport:
         return ChatResponse(content=self.responses.popleft(), prompt_eval_count=0, eval_count=0)
 
 
+SITUATION = json.dumps(
+    {
+        "agent": "Jett",
+        "map": "Ascent",
+        "side": "attack",
+        "phase": "early",
+        "weapon": "Vandal",
+        "abilities_available": ["Tailwind"],
+        "credits": 3900,
+        "teammates_alive": 4,
+        "enemies_visible": 0,
+        "timeline": [{"t": 60.0, "event": "walking A main"}],
+        "summary": "Entering A main with dash up.",
+    }
+)
+KNOWLEDGE = load_knowledge()
+
+
+def review(
+    transport: FakeTransport, samples: list[FrameSample], **overrides: object
+) -> WindowResult:
+    kwargs: dict[str, object] = {
+        "model": "m",
+        "calls_today": 0,
+        "cap": 10,
+        "timeout_s": 1.0,
+        "context": PlayerContext(rank="Gold 2"),
+        "knowledge": KNOWLEDGE,
+        "situation_pass": True,
+    }
+    kwargs.update(overrides)
+    return review_window(WINDOW, samples, transport, **kwargs)  # type: ignore[arg-type]
+
+
 GOOD = json.dumps(
     {
         "findings": [
             {
                 "timestamp_s": 61.0,
+                "check_id": "utility.unused_at_death",
                 "category": "utility",
                 "observation": "o",
                 "visible_evidence": "v",
@@ -52,57 +89,60 @@ def samples(tmp_path: Path) -> list[FrameSample]:
     return out
 
 
-def test_happy_path_one_call(samples: list[FrameSample]) -> None:
-    transport = FakeTransport(GOOD)
-    result = review_window(
-        WINDOW, samples, transport, model="m", calls_today=0, cap=10, timeout_s=1.0, context=None
-    )
+def test_two_pass_happy_path(samples: list[FrameSample]) -> None:
+    transport = FakeTransport(SITUATION, GOOD)
+    result = review(transport, samples)
     assert isinstance(result, WindowResult)
-    assert result.model_calls == 1
-    assert len(result.findings) == 1
-    assert result.warnings == ()
-    assert len(transport.calls[0].images_b64) == 3
-    assert transport.calls[0].model == "m"
-
-
-def test_retries_once_with_nudge_then_succeeds(samples: list[FrameSample]) -> None:
-    transport = FakeTransport("I cannot help with that.", GOOD)
-    result = review_window(
-        WINDOW, samples, transport, model="m", calls_today=0, cap=10, timeout_s=1.0, context=None
-    )
     assert result.model_calls == 2
     assert len(result.findings) == 1
-    assert "json" in transport.calls[1].prompt.lower()
+    assert result.findings[0].check_id == "utility.unused_at_death"
+    assert result.warnings == ()
+    assert result.situation is not None and result.situation.agent == "Jett"
+    # detected agent/map merged into the context the coach pass saw; user rank kept
+    assert result.context == PlayerContext(rank="Gold 2", agent="Jett", map="Ascent", side="attack")
+    assert len(transport.calls[0].images_b64) == 3
+    assert "Agent brief: Jett" in transport.calls[1].prompt
+    assert "Map brief: Ascent" in transport.calls[1].prompt
+    assert "Entering A main with dash up." in transport.calls[1].prompt
+    assert transport.calls[1].model == "m"
+
+
+def test_situation_pass_can_be_disabled(samples: list[FrameSample]) -> None:
+    transport = FakeTransport(GOOD)
+    result = review(transport, samples, situation_pass=False)
+    assert result.model_calls == 1
+    assert result.situation is None
+    assert result.context == PlayerContext(rank="Gold 2")
+
+
+def test_unparseable_situation_is_a_warning_not_a_failure(samples: list[FrameSample]) -> None:
+    transport = FakeTransport("I see a video game.", GOOD)
+    result = review(transport, samples)
+    assert result.model_calls == 2
+    assert result.situation is None
+    assert len(result.findings) == 1
+    assert any("situation" in w.lower() for w in result.warnings)
+
+
+def test_retries_coach_pass_once_with_nudge_then_succeeds(samples: list[FrameSample]) -> None:
+    transport = FakeTransport(SITUATION, "I cannot help with that.", GOOD)
+    result = review(transport, samples)
+    assert result.model_calls == 3
+    assert len(result.findings) == 1
+    assert "json" in transport.calls[2].prompt.lower()
     assert any("retry" in w.lower() for w in result.warnings)
 
 
-def test_second_failure_raises_parse_error(samples: list[FrameSample]) -> None:
-    transport = FakeTransport("nope", "still nope")
-    with pytest.raises(ParseError):
-        review_window(
-            WINDOW,
-            samples,
-            transport,
-            model="m",
-            calls_today=0,
-            cap=10,
-            timeout_s=1.0,
-            context=None,
-        )
-    assert len(transport.calls) == 2
+def test_second_coach_failure_raises_parse_error_with_calls(samples: list[FrameSample]) -> None:
+    transport = FakeTransport(SITUATION, "nope", "still nope")
+    with pytest.raises(ParseError) as info:
+        review(transport, samples)
+    assert info.value.model_calls == 3
+    assert len(transport.calls) == 3
 
 
-def test_retry_respects_cap(samples: list[FrameSample]) -> None:
-    transport = FakeTransport("nope", GOOD)
+def test_cap_is_enforced_across_passes(samples: list[FrameSample]) -> None:
+    transport = FakeTransport(SITUATION, GOOD)
     with pytest.raises(CapExceeded):
-        review_window(
-            WINDOW,
-            samples,
-            transport,
-            model="m",
-            calls_today=9,
-            cap=10,
-            timeout_s=1.0,
-            context=None,
-        )
+        review(transport, samples, calls_today=9, cap=10)
     assert len(transport.calls) == 1

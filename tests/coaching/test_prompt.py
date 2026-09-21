@@ -1,16 +1,30 @@
 import json
 from pathlib import Path
 
-from round_review.coaching.prompt import FINDING_SCHEMA, SYSTEM_PROMPT, build_user_prompt
+from round_review.coaching.context import PlayerContext
+from round_review.coaching.knowledge import load_knowledge
+from round_review.coaching.prompt import (
+    FINDING_SCHEMA,
+    SITUATION_SCHEMA,
+    build_coach_prompt,
+    build_situation_prompt,
+    build_system_prompt,
+)
+from round_review.coaching.situation import Situation
 from round_review.video.frames import FrameSample
 from round_review.video.windows import Window
 
+WINDOW = Window(index=1, start_s=100.0, end_s=112.0, source="evenly_spaced")
+SAMPLES = [FrameSample(1, 100.0 + i, Path(f"/f/{i}.jpg")) for i in range(3)]
 
-def test_schema_is_json_serialisable_and_requires_anti_hindsight_fields() -> None:
+
+def test_schemas_are_json_serialisable_and_require_anti_hindsight_fields() -> None:
     json.dumps(FINDING_SCHEMA)
+    json.dumps(SITUATION_SCHEMA)
     finding = FINDING_SCHEMA["properties"]["findings"]["items"]
     for key in (
         "timestamp_s",
+        "check_id",
         "category",
         "observation",
         "visible_evidence",
@@ -21,25 +35,58 @@ def test_schema_is_json_serialisable_and_requires_anti_hindsight_fields() -> Non
         "confidence",
     ):
         assert key in finding["required"], key
+    for key in ("agent", "map", "side", "phase", "abilities_available", "timeline", "summary"):
+        assert key in SITUATION_SCHEMA["required"], key
 
 
-def test_system_prompt_states_the_rules() -> None:
-    lower = SYSTEM_PROMPT.lower()
+def test_system_prompt_contains_persona_rules_and_checklist() -> None:
+    knowledge = load_knowledge()
+    text = build_system_prompt(knowledge)
+    lower = text.lower()
+    assert "coach" in lower
     assert "later" in lower and "earlier" in lower
     assert "json" in lower
+    first_check = knowledge.checklist.categories[0].checks[0]
+    assert f"[{first_check.id}]" in text
 
 
-def test_user_prompt_captions_frames_in_order() -> None:
-    window = Window(index=1, start_s=100.0, end_s=112.0, source="evenly_spaced")
-    samples = [FrameSample(1, 100.0 + i, Path(f"/f/{i}.jpg")) for i in range(3)]
-    text = build_user_prompt(window, samples, context="Gold 2, Jett, Ascent")
-    assert "Gold 2, Jett, Ascent" in text
+def test_situation_prompt_captions_frames_and_asks_for_hud() -> None:
+    text = build_situation_prompt(WINDOW, SAMPLES, PlayerContext(agent="Jett"))
     assert text.index("t=100.0s") < text.index("t=101.0s") < text.index("t=102.0s")
-    assert "100.0" in text and "112.0" in text
+    lower = text.lower()
+    assert "minimap" in lower and "abilit" in lower and "credits" in lower
+    assert "Agent: Jett." in text
+
+
+def test_coach_prompt_includes_briefs_situation_and_rank_focus() -> None:
+    knowledge = load_knowledge()
+    ctx = PlayerContext(rank="Gold 2", agent="Jett", map="Ascent", side="attack", focus="entries")
+    situation = Situation(
+        agent="Jett",
+        map="Ascent",
+        side="attack",
+        phase="early",
+        weapon="Vandal",
+        abilities_available=("Tailwind",),
+        credits=3900,
+        teammates_alive=4,
+        enemies_visible=0,
+        timeline=((100.0, "walking A main"),),
+        summary="Entering A main with dash up.",
+    )
+    text = build_coach_prompt(WINDOW, SAMPLES, ctx, situation, knowledge)
+    assert "Agent brief: Jett (duelist)" in text
+    assert "Map brief: Ascent" in text
+    assert knowledge.checklist.rank_expectations["silver_gold"] in text
+    assert "Entering A main with dash up." in text
+    assert "walking A main" in text
+    assert "Focus: entries." in text
     assert "3 frames" in text
+    assert "check_id" in text
 
 
-def test_user_prompt_without_context() -> None:
-    window = Window(index=0, start_s=0.0, end_s=12.0, source="evenly_spaced")
-    text = build_user_prompt(window, [FrameSample(0, 0.0, Path("/f/0.jpg"))], context=None)
-    assert "t=0.0s" in text
+def test_coach_prompt_without_context_or_situation_still_works() -> None:
+    knowledge = load_knowledge()
+    text = build_coach_prompt(WINDOW, SAMPLES, PlayerContext(), None, knowledge)
+    assert "Agent brief" not in text and "Map brief" not in text
+    assert "t=100.0s" in text

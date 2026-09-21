@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from round_review.coaching.knowledge import Checklist, load_checklist
 from round_review.coaching.parse import Finding
 from round_review.coaching.review import WindowResult
 from round_review.video.probe import Recording
@@ -36,13 +37,23 @@ def _relative(path: Path | None, base_dir: Path) -> str | None:
         return path.as_posix()
 
 
-def _render_finding(index: int, finding: Finding, base_dir: Path) -> list[str]:
-    lines = [
-        f"### {_clock(finding.timestamp_s)} {finding.category}",
-        "",
-        finding.observation,
-        "",
-    ]
+def check_label(checklist: Checklist, check_id: str) -> str | None:
+    """'Category name / check text' for a known check id, else None."""
+    for cat in checklist.categories:
+        for check in cat.checks:
+            if check.id == check_id:
+                return f"{cat.name} / {check.check}"
+    return None
+
+
+def _render_finding(
+    index: int, finding: Finding, base_dir: Path, checklist: Checklist
+) -> list[str]:
+    lines = [f"### {_clock(finding.timestamp_s)} {finding.category}", ""]
+    label = check_label(checklist, finding.check_id)
+    if label:
+        lines += [f"Checklist: {label}", ""]
+    lines += [finding.observation, ""]
     evidence = _relative(finding.evidence_frame, base_dir)
     if evidence:
         lines += [f"![t={finding.timestamp_s:.1f}s]({evidence})", ""]
@@ -65,19 +76,34 @@ def _render_finding(index: int, finding: Finding, base_dir: Path) -> list[str]:
     return lines
 
 
-def _render_window(result: WindowResult, base_dir: Path) -> list[str]:
+def _context_line(result: WindowResult) -> str | None:
+    ctx = result.context
+    if not ctx.agent and not ctx.map:
+        return None
+    where = f" on {ctx.map}" if ctx.map else ""
+    side = f" ({ctx.side})" if ctx.side else ""
+    return f"{ctx.agent or 'Unknown agent'}{where}{side}"
+
+
+def _render_window(result: WindowResult, base_dir: Path, checklist: Checklist) -> list[str]:
     w = result.window
     lines = [f"## Window {w.index + 1}: {_clock(w.start_s)} - {_clock(w.end_s)}", ""]
+    context_line = _context_line(result)
+    if context_line:
+        lines += [context_line, ""]
+    if result.situation:
+        lines += [f"Situation: {result.situation.summary}", ""]
     if not result.findings:
         lines += ["No findings in this window.", ""]
     for i, finding in enumerate(result.findings, start=1):
-        lines += _render_finding(i, finding, base_dir)
+        lines += _render_finding(i, finding, base_dir, checklist)
     if result.warnings:
         lines += ["Warnings:", *[f"- {msg}" for msg in result.warnings], ""]
     return lines
 
 
-def render_report(report: Report, base_dir: Path) -> str:
+def render_report(report: Report, base_dir: Path, checklist: Checklist | None = None) -> str:
+    checklist = checklist or load_checklist()
     rec = report.recording
     lines = [
         f"# Review: {rec.path.name}",
@@ -89,7 +115,7 @@ def render_report(report: Report, base_dir: Path) -> str:
         "",
     ]
     for result in report.results:
-        lines += _render_window(result, base_dir)
+        lines += _render_window(result, base_dir, checklist)
     if report.warnings:
         lines += ["## Warnings", "", *[f"- {msg}" for msg in report.warnings], ""]
     return "\n".join(lines)

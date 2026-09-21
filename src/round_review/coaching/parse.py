@@ -8,12 +8,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from round_review.coaching.prompt import CATEGORIES
+from round_review.coaching.prompt import CATEGORIES, MAX_FINDINGS_PER_WINDOW
 from round_review.errors import ParseError
 from round_review.video.frames import FrameSample
 from round_review.video.windows import Window
 
-MAX_FINDINGS_PER_WINDOW = 3
 # Confidence above this is downgraded when the finding leans on later-revealed information.
 HINDSIGHT_CONFIDENCE_CEILING = 0.5
 HINDSIGHT_TRIGGER = 0.7
@@ -21,6 +20,7 @@ PLACEHOLDER_LATER_INFO: frozenset[str] = frozenset({"", "none", "n/a", "na", "no
 
 REQUIRED_FIELDS: tuple[str, ...] = (
     "timestamp_s",
+    "check_id",
     "category",
     "observation",
     "visible_evidence",
@@ -35,6 +35,7 @@ REQUIRED_FIELDS: tuple[str, ...] = (
 @dataclass(frozen=True, slots=True)
 class Finding:
     timestamp_s: float
+    check_id: str
     category: str
     observation: str
     visible_evidence: str
@@ -66,7 +67,10 @@ def _is_placeholder(text: str) -> bool:
 
 
 def _validate(
-    raw: dict[str, Any], window: Window, samples: Sequence[FrameSample]
+    raw: dict[str, Any],
+    window: Window,
+    samples: Sequence[FrameSample],
+    check_ids: frozenset[str] | None,
 ) -> tuple[Finding | None, list[str]]:
     missing = [k for k in REQUIRED_FIELDS if k not in raw]
     if missing:
@@ -90,6 +94,13 @@ def _validate(
     if category not in CATEGORIES:
         category = "other"
 
+    check_id = str(raw["check_id"]).strip()
+    if check_ids is not None and check_id not in check_ids:
+        warnings.append(
+            f"finding at t={timestamp:.1f}s cited unknown check {check_id!r}; set to other"
+        )
+        check_id = "other"
+
     later = str(raw["information_revealed_later"])
     if not _is_placeholder(later) and confidence > HINDSIGHT_TRIGGER:
         warnings.append(
@@ -100,6 +111,7 @@ def _validate(
 
     finding = Finding(
         timestamp_s=timestamp,
+        check_id=check_id,
         category=category,
         observation=str(raw["observation"]),
         visible_evidence=str(raw["visible_evidence"]),
@@ -114,10 +126,14 @@ def _validate(
 
 
 def parse_findings(
-    text: str, window: Window, samples: Sequence[FrameSample]
+    text: str,
+    window: Window,
+    samples: Sequence[FrameSample],
+    check_ids: frozenset[str] | None = None,
 ) -> tuple[list[Finding], list[str]]:
     """Parse the model reply. Returns (findings, warnings). Raises ParseError when the reply
-    is structurally unusable; individual bad findings become warnings instead."""
+    is structurally unusable; individual bad findings become warnings instead. When
+    `check_ids` is given, unknown ids are mapped to "other" with a warning."""
     try:
         payload = json.loads(extract_json(text))
     except json.JSONDecodeError as exc:
@@ -133,7 +149,7 @@ def parse_findings(
     for raw in raw_findings:
         if not isinstance(raw, dict):
             raise ParseError("finding is not an object")
-        finding, finding_warnings = _validate(raw, window, samples)
+        finding, finding_warnings = _validate(raw, window, samples, check_ids)
         warnings.extend(finding_warnings)
         if finding is not None:
             findings.append(finding)

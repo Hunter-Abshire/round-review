@@ -3,16 +3,18 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
+from dataclasses import asdict as _asdict
 from pathlib import Path
 from typing import Any
 
-from round_review.report.markdown import Report, _relative
+from round_review.coaching.knowledge import load_checklist
+from round_review.report.markdown import Report, _relative, check_label
 
 JSON_REPORT_FILENAME = "report.json"
 
 
 def report_to_dict(report: Report, base_dir: Path) -> dict[str, Any]:
+    checklist = load_checklist()
     rec = report.recording
     return {
         "recording": {
@@ -31,9 +33,12 @@ def report_to_dict(report: Report, base_dir: Path) -> dict[str, Any]:
                 "start_s": r.window.start_s,
                 "end_s": r.window.end_s,
                 "model_calls": r.model_calls,
+                "context": _asdict(r.context),
+                "situation": r.situation.to_dict() if r.situation else None,
                 "findings": [
                     {
-                        **{k: v for k, v in asdict(f).items() if k != "evidence_frame"},
+                        **{k: v for k, v in _asdict(f).items() if k != "evidence_frame"},
+                        "check_label": check_label(checklist, f.check_id),
                         "assumption_flags": list(f.assumption_flags),
                         "evidence_frame": _relative(f.evidence_frame, base_dir),
                     }

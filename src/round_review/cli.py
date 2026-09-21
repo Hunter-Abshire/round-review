@@ -14,6 +14,7 @@ from typing import Any
 import click
 import uvicorn
 
+from round_review.coaching.context import PlayerContext, context_from_mapping
 from round_review.config import Config, load_config
 from round_review.errors import RoundReviewError
 from round_review.ledger import is_processed, read_ledger, recording_key
@@ -68,12 +69,41 @@ def main(ctx: click.Context, config_path: Path | None, verbose: bool) -> None:
 
 @main.command()
 @click.argument("file", type=click.Path(exists=True, dir_okay=False, path_type=Path))
-@click.option("--context", default=None, help='Player context, e.g. "Gold 2, Jett, Ascent".')
+@click.option("--rank", default=None, help='Your rank, e.g. "Gold 2". Sets coaching priorities.')
+@click.option(
+    "--agent", default=None, help="Agent you played (auto-detected from the HUD if omitted)."
+)
+@click.option("--map", "game_map", default=None, help="Map (auto-detected if omitted).")
+@click.option("--side", type=click.Choice(["attack", "defense"]), default=None)
+@click.option(
+    "--focus", default=None, help='What you want reviewed, e.g. "entries" or "post-plant".'
+)
+@click.option("--context", "notes", default=None, help="Free-text notes for the coach.")
 @click.option("--force", is_flag=True, help="Review even if the file is already in the ledger.")
 @click.pass_obj
-def review(config: Config, file: Path, context: str | None, force: bool) -> None:
+def review(
+    config: Config,
+    file: Path,
+    rank: str | None,
+    agent: str | None,
+    game_map: str | None,
+    side: str | None,
+    focus: str | None,
+    notes: str | None,
+    force: bool,
+) -> None:
     """Review one recording and write its report."""
     deps: Deps = make_default_deps(config)
+    context: PlayerContext = context_from_mapping(
+        {
+            "rank": rank,
+            "agent": agent,
+            "map": game_map,
+            "side": side,
+            "focus": focus,
+            "notes": notes,
+        }
+    )
     try:
         report = review_file(file, deps, context=context, force=force)
     except RoundReviewError as exc:

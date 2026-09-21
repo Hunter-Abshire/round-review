@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from round_review.coaching.context import PlayerContext
 from round_review.config import Config
 from round_review.errors import (
     AlreadyProcessed,
@@ -29,6 +30,7 @@ def good(ts: float = 65.0) -> str:
             "findings": [
                 {
                     "timestamp_s": ts,
+                    "check_id": "crosshair.head_level",
                     "category": "timing",
                     "observation": "o",
                     "visible_evidence": "v",
@@ -65,6 +67,9 @@ class FakeFfmpeg:
             raise VideoError("ffmpeg exit 1")
         pattern = Path(args[-1])
         pattern.parent.mkdir(parents=True, exist_ok=True)
+        if "%" not in pattern.name:
+            pattern.write_bytes(b"exact")
+            return ""
         for i in range(1, self.frames + 1):
             (pattern.parent / (pattern.name % i)).write_bytes(b"jpg")
         return ""
@@ -99,6 +104,7 @@ def make_deps(tmp_path: Path, transport: FakeTransport, **overrides: object) -> 
         windows_per_file=3,
         edge_skip_s=30.0,
         daily_call_cap=int(overrides.get("cap", 30)),  # type: ignore[call-overload]
+        situation_pass=False,
     )
     return Deps(
         config=cfg,
@@ -113,11 +119,17 @@ def test_happy_path_writes_report_then_ledger(video: Path, tmp_path: Path) -> No
     # PROBE_JSON duration 123.456 -> usable 63.456 -> 3 windows of 12s
     transport = FakeTransport(good(35.0), good(65.0), good(85.0))
     deps = make_deps(tmp_path, transport)
-    report = review_file(video, deps, context="Gold 2")
+    report = review_file(video, deps, context=PlayerContext(rank="Gold 2"))
 
     assert len(report.results) == 3
     assert sum(len(r.findings) for r in report.results) >= 1
-    assert transport.calls[0].prompt.startswith("Player context: Gold 2")
+    assert "Rank: Gold 2." in transport.calls[0].prompt
+    # evidence frames are re-cut at the exact finding timestamp, not the nearest sample
+    for result in report.results:
+        for finding in result.findings:
+            assert finding.evidence_frame is not None
+            assert finding.evidence_frame.name.startswith("e")
+            assert finding.evidence_frame.read_bytes() == b"exact"
 
     entries = read_ledger(deps.config.ledger_path)
     assert len(entries) == 1
@@ -255,15 +267,16 @@ def test_end_to_end_real_ffmpeg_fake_model(sample_video: Path, tmp_path: Path) -
         probe=SubprocessRunner("ffprobe"),
         ffmpeg=SubprocessRunner("ffmpeg"),
     )
-    report = review_file(sample_video, deps, context="Gold 2, Jett")
+    report = review_file(sample_video, deps, context=PlayerContext(rank="Gold 2", agent="Jett"))
     assert len(report.results) == 1
     (finding,) = report.results[0].findings
     assert finding.evidence_frame is not None and finding.evidence_frame.exists()
+    assert finding.evidence_frame.name == "e00_01.jpg"
     assert len(transport.calls[0].images_b64) == 5  # 1 fps over 5 s
     (entry,) = read_ledger(deps.config.ledger_path)
     text = Path(entry.report_path or "").read_text(encoding="utf-8")
     assert "# Review: sample.mp4" in text
-    assert "![t=2.5s](frames/w00_003.jpg)" in text
+    assert "![t=2.5s](frames/e00_01.jpg)" in text
 
 
 def test_progress_callback_and_json_report(video: Path, tmp_path: Path) -> None:
@@ -284,3 +297,43 @@ def test_key_for_and_report_dir_for(video: Path, tmp_path: Path) -> None:
     key = key_for(video)
     assert len(key) == 16
     assert report_dir_for(deps.config, video) == deps.config.reports_dir / f"match_{key}"
+
+
+def test_situation_pass_doubles_calls_and_records_situation(video: Path, tmp_path: Path) -> None:
+    from tests.coaching.test_review import SITUATION
+
+    transport = FakeTransport(SITUATION, good(35.0), SITUATION, good(65.0), SITUATION, good(85.0))
+    deps = make_deps(tmp_path, transport)
+    deps = Deps(
+        config=Config(
+            reports_dir=deps.config.reports_dir,
+            ledger_path=deps.config.ledger_path,
+            situation_pass=True,
+        ),
+        probe_runner=deps.probe_runner,
+        ffmpeg_runner=deps.ffmpeg_runner,
+        transport=transport,
+        clock=deps.clock,
+    )
+    report = review_file(video, deps)
+    (entry,) = read_ledger(deps.config.ledger_path)
+    assert entry.model_calls == 6
+    assert all(r.situation is not None for r in report.results)
+    assert report.results[0].context.agent == "Jett"
+
+
+def test_exact_frame_failure_keeps_sample_frame_with_warning(video: Path, tmp_path: Path) -> None:
+    class FlakyFfmpeg(FakeFfmpeg):
+        def run(self, args: list[str]) -> str:
+            if "%" not in Path(args[-1]).name:
+                raise VideoError("ffmpeg exit 1: seek failed")
+            return super().run(args)
+
+    transport = FakeTransport(good(35.0), good(65.0), good(85.0))
+    deps = make_deps(tmp_path, transport, ffmpeg=FlakyFfmpeg())
+    report = review_file(video, deps)
+    findings = [f for r in report.results for f in r.findings]
+    assert findings and all(
+        f.evidence_frame is not None and f.evidence_frame.name.startswith("w") for f in findings
+    )
+    assert any("evidence" in w.lower() for w in report.warnings)

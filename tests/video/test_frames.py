@@ -6,8 +6,10 @@ from round_review.errors import VideoError
 from round_review.video.frames import (
     FrameSample,
     build_extract_args,
+    build_single_frame_args,
     encode_frame_b64,
     extract_frames,
+    extract_single_frame,
 )
 from round_review.video.probe import Recording, SubprocessRunner
 from round_review.video.windows import Window
@@ -22,6 +24,10 @@ class FakeFfmpeg:
     def run(self, args: list[str]) -> str:
         self.calls.append(args)
         pattern = Path(args[-1])
+        if "%" not in pattern.name:
+            if self.files_to_create:
+                pattern.write_bytes(b"jpeg")
+            return ""
         for i in range(1, self.files_to_create + 1):
             (pattern.parent / (pattern.name % i)).write_bytes(b"jpeg")
         return ""
@@ -87,3 +93,34 @@ def test_extract_frames_real_video(sample_video: Path, tmp_path: Path) -> None:
     assert len(samples) == 3
     assert all(s.path.exists() and s.path.stat().st_size > 0 for s in samples)
     assert samples[0].path.read_bytes()[:2] == b"\xff\xd8"  # JPEG magic
+
+
+def test_build_single_frame_args(tmp_path: Path) -> None:
+    out = tmp_path / "e01_02.jpg"
+    args = build_single_frame_args(Path("/v/a.mp4"), 64.4, width=1280, out_path=out)
+    assert args[args.index("-ss") + 1] == "64.400"
+    assert args.index("-ss") < args.index("-i")
+    assert args[args.index("-frames:v") + 1] == "1"
+    assert "scale=1280:-2" in args[args.index("-vf") + 1]
+    assert args[-1] == str(out)
+
+
+def test_extract_single_frame_returns_path(tmp_path: Path) -> None:
+    out = tmp_path / "e" / "e00_01.jpg"
+    path = extract_single_frame(rec(), 64.4, FakeFfmpeg(1), width=640, out_path=out)
+    assert path == out and out.exists()
+
+
+def test_extract_single_frame_missing_output_is_video_error(tmp_path: Path) -> None:
+    with pytest.raises(VideoError, match="no frame"):
+        extract_single_frame(rec(), 1.0, FakeFfmpeg(0), width=640, out_path=tmp_path / "x.jpg")
+
+
+@requires_ffmpeg
+@pytest.mark.integration
+def test_extract_single_frame_real_video(sample_video: Path, tmp_path: Path) -> None:
+    out = tmp_path / "exact.jpg"
+    extract_single_frame(
+        rec(sample_video), 2.5, SubprocessRunner("ffmpeg"), width=320, out_path=out
+    )
+    assert out.read_bytes()[:2] == b"\xff\xd8"

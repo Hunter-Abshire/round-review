@@ -1,0 +1,12 @@
+{
+  "agents": [
+    {"id": "jett", "name": "Jett", "role": "duelist",
+     "abilities": [{"key": "C", "name": "Cloudburst", "purpose": "small smoke for a peek"}, {"key": "Q", "name": "Updraft", "purpose": "vertical reposition"}, {"key": "E", "name": "Tailwind", "purpose": "dash to escape or entry"}, {"key": "X", "name": "Blade Storm", "purpose": "eco-round knives"}],
+     "job_in_round": "Entry first with dash available to get out; take space so the team can follow.",
+     "good_play_looks_like": ["Activates dash before the peek", "Takes an off-angle after entry"],
+     "common_mistakes": ["Dies with Tailwind unused", "Dashes into site alone with no follow-up"],
+     "ability_checks": ["If the Tailwind icon is lit at death, the escape was wasted"],
+     "tips": ["Peek to bait, dash out, re-peek"]}
+  ],
+  "sources": []
+}

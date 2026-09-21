@@ -14,7 +14,8 @@ def test_defaults_when_file_missing(tmp_path: Path) -> None:
     assert cfg.windows_per_file == 3
     assert cfg.fps == 1.0
     assert cfg.frame_width == 1280
-    assert cfg.daily_call_cap == 30
+    assert cfg.daily_call_cap == 60
+    assert cfg.situation_pass is True
     assert cfg.poll_s == 20.0
     assert cfg.quiet_polls == 3
     assert cfg.min_age_s == 120.0
@@ -102,3 +103,23 @@ def test_invalid_context_size_rejected(tmp_path: Path, value: str) -> None:
     path.write_text(f"num_ctx = {value}\n")
     with pytest.raises(ConfigError, match="num_ctx"):
         load_config(path, env={}, data_dir=tmp_path)
+
+
+def test_bool_from_toml_and_env(tmp_path: Path) -> None:
+    path = tmp_path / "config.toml"
+    path.write_text("situation_pass = false\n")
+    assert load_config(path, env={}, data_dir=tmp_path).situation_pass is False
+    assert (
+        load_config(
+            path, env={"ROUND_REVIEW_SITUATION_PASS": "true"}, data_dir=tmp_path
+        ).situation_pass
+        is True
+    )
+    assert (
+        load_config(
+            path, env={"ROUND_REVIEW_SITUATION_PASS": "0"}, data_dir=tmp_path
+        ).situation_pass
+        is False
+    )
+    with pytest.raises(ConfigError, match="SITUATION_PASS"):
+        load_config(path, env={"ROUND_REVIEW_SITUATION_PASS": "maybe"}, data_dir=tmp_path)

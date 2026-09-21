@@ -32,12 +32,14 @@ class Config:
     edge_skip_s: float = 30.0
     fps: float = 1.0
     frame_width: int = 1280
-    daily_call_cap: int = 30
+    daily_call_cap: int = 60
     poll_s: float = 20.0
     quiet_polls: int = 3
     min_age_s: float = 120.0
     request_timeout_s: float = 300.0
     api_port: int = 8765
+    # Two model calls per window (situation read, then coaching). Off = coaching only.
+    situation_pass: bool = True
 
 
 # Keys whose values must be strictly positive. Everything else is a path or string.
@@ -79,6 +81,14 @@ def _coerce(key: str, raw: object, source: str) -> object:
             if not isinstance(raw, str):
                 raise TypeError("expected a path string")
             return Path(raw).expanduser()
+        if declared in ("bool", bool):
+            if isinstance(raw, bool):
+                return raw
+            if isinstance(raw, str) and raw.strip().lower() in ("true", "1", "yes", "on"):
+                return True
+            if isinstance(raw, str) and raw.strip().lower() in ("false", "0", "no", "off"):
+                return False
+            raise TypeError("expected a boolean")
         if declared in ("int", int):
             if isinstance(raw, bool) or not isinstance(raw, int | str):
                 raise TypeError("expected an integer")

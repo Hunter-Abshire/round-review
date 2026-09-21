@@ -75,6 +75,9 @@ export interface Settings {
   fps: number;
   situation_pass: boolean;
   daily_call_cap: number;
+  hud_check: boolean;
+  hud_ready: boolean;
+  hud_missing_characters: string[];
 }
 
 export interface PlayerContext {

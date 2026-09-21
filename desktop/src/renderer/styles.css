@@ -697,3 +697,17 @@ video {
   color: #ffb3ba;
   border-left: 3px solid var(--accent);
 }
+
+.hud-hint {
+  margin-bottom: 12px;
+}
+
+.hint {
+  margin: 0;
+  padding: 9px 11px;
+  background: var(--panel-2);
+  border-left: 3px solid var(--warn);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}

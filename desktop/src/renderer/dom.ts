@@ -133,6 +133,25 @@ export const renderClipList = (root: HTMLElement, props: ClipListProps): void =>
   }
 };
 
+/**
+ * The deterministic HUD clock check silently does nothing until the digits are learned, so
+ * say so where the review options are chosen rather than letting it look like it works.
+ */
+export const renderHudHint = (root: HTMLElement, settings: Settings | null): void => {
+  root.replaceChildren();
+  const show = settings !== null && settings.hud_check && !settings.hud_ready;
+  root.hidden = !show;
+  if (!show || settings === null) return;
+  root.append(
+    el(
+      'p',
+      'hint',
+      `Timer check is on but untrained, so it is doing nothing. Teach it once with ` +
+        `\`round-review hud learn\`; still missing: ${settings.hud_missing_characters.join(' ')}.`,
+    ),
+  );
+};
+
 // ------------------------------------------------------------------------- review presets
 
 const PRESET_LABELS: ReadonlyArray<[string, string, string]> = [

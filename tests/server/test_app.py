@@ -1,3 +1,4 @@
+import dataclasses
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -308,3 +309,24 @@ def test_partial_ledger_status_is_reported_as_partial(
     )
     (item,) = client.get("/api/clips").json()["clips"]
     assert item["status"] == "partial"
+
+
+def test_settings_reports_whether_hud_checking_is_usable(client: TestClient) -> None:
+    body = client.get("/api/settings").json()
+    assert body["hud_check"] is True
+    assert body["hud_ready"] is False  # nothing learned yet
+    assert ":" in body["hud_missing_characters"]
+
+
+def test_settings_reports_a_trained_hud_as_ready(cfg: Config, tmp_path: Path) -> None:
+    from round_review.vision.digits import CLOCK_CHARACTERS, DigitTemplates
+    from round_review.vision.raster import Glyph
+
+    store = tmp_path / "digits.json"
+    DigitTemplates({c: (Glyph(("#",), 0.5),) for c in CLOCK_CHARACTERS}).save(store)
+    trained = dataclasses.replace(cfg, hud_templates_path=store)
+    jobs = JobQueue(lambda p, c, o, f: None, clock=lambda: NOW)
+    with TestClient(create_app(trained, jobs, probe_runner=FakeProbe())) as c:
+        body = c.get("/api/settings").json()
+    assert body["hud_ready"] is True
+    assert body["hud_missing_characters"] == []

@@ -23,6 +23,7 @@ from round_review.report.json_report import JSON_REPORT_FILENAME, load_report_js
 from round_review.server.jobs import Job, JobOptions, JobQueue
 from round_review.video.probe import CommandRunner, SubprocessRunner, probe
 from round_review.video.windows import estimate_window_count
+from round_review.vision.digits import CLOCK_CHARACTERS, DigitTemplates
 from round_review.watcher import list_candidates
 
 KEY_RE = re.compile(r"^[0-9a-f]{16}$")
@@ -204,6 +205,14 @@ def create_app(
             jobs.submit(path, key_for(path), context_from_mapping(body.context), options)
         )
 
+    def hud_missing() -> list[str]:
+        if not config.hud_templates_path:
+            return list(CLOCK_CHARACTERS)
+        try:
+            return DigitTemplates.load(config.hud_templates_path).missing()
+        except RoundReviewError:
+            return list(CLOCK_CHARACTERS)
+
     @app.get("/api/settings")
     def settings() -> dict[str, Any]:
         """Review defaults, so the app can show what a review will do before starting one."""
@@ -218,6 +227,11 @@ def create_app(
             "fps": config.fps,
             "situation_pass": config.situation_pass,
             "daily_call_cap": config.daily_call_cap,
+            "hud_check": config.hud_check,
+            # A HUD check with no learned digits does nothing, so say so rather than
+            # leaving the player to wonder why nothing changed.
+            "hud_ready": not hud_missing() if config.hud_check else False,
+            "hud_missing_characters": hud_missing() if config.hud_check else [],
         }
 
     @app.get("/api/knowledge")

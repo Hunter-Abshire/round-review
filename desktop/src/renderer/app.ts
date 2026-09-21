@@ -7,6 +7,7 @@ import {
   renderCoverageSummary,
   renderFindingCard,
   renderFindingList,
+  renderHudHint,
   renderPresetPicker,
   renderTimeline,
 } from './dom';
@@ -62,6 +63,7 @@ const run = (api: Api): void => {
     renderPresetPicker(presetPicker, state.preset, preset =>
       dispatch({ type: 'review_preset_chosen', preset: preset as Preset }),
     );
+    renderHudHint(byId('hud-hint'), state.settings);
     renderClipList(clipsRoot, {
       clips: state.clips,
       jobs: state.jobs,

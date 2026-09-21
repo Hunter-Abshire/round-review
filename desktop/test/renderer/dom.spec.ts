@@ -7,6 +7,7 @@ import {
   renderCoverageSummary,
   renderFindingCard,
   renderFindingList,
+  renderHudHint,
   renderPresetPicker,
   renderTimeline,
 } from '../../src/renderer/dom';
@@ -366,5 +367,37 @@ describe('renderFindingList, empty reviews', () => {
     const root = document.createElement('div');
     renderFindingList(root, [], null, () => undefined, 'the model skipped every window');
     expect(root.textContent).toContain('the model skipped every window');
+  });
+});
+
+describe('renderHudHint', () => {
+  it('says nothing when the HUD check is trained and active', () => {
+    const root = document.createElement('div');
+    renderHudHint(root, settings());
+    expect(root.textContent).toBe('');
+    expect(root.hidden).toBe(true);
+  });
+
+  it('says nothing when the HUD check is switched off', () => {
+    const root = document.createElement('div');
+    renderHudHint(
+      root,
+      settings({ hud_check: false, hud_ready: false, hud_missing_characters: ['1'] }),
+    );
+    expect(root.hidden).toBe(true);
+  });
+
+  it('warns that an untrained HUD check does nothing, and how to fix it', () => {
+    const root = document.createElement('div');
+    renderHudHint(root, settings({ hud_ready: false, hud_missing_characters: ['0', '2', ':'] }));
+    expect(root.hidden).toBe(false);
+    expect(root.textContent).toContain('hud learn');
+    expect(root.textContent).toContain('0 2 :');
+  });
+
+  it('says nothing before settings have loaded', () => {
+    const root = document.createElement('div');
+    renderHudHint(root, null);
+    expect(root.hidden).toBe(true);
   });
 });

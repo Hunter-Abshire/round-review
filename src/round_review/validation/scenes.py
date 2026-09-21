@@ -32,6 +32,7 @@ from round_review.video.frames import (
 )
 from round_review.video.probe import CommandRunner, Recording
 from round_review.video.windows import Window
+from round_review.vision.hud import HudRead, constrain_phase
 
 log = logging.getLogger(__name__)
 
@@ -40,6 +41,7 @@ LABELLED_PHASES: frozenset[str] = frozenset(PHASES) | {UNREADABLE}
 
 ProbeFn = Callable[[Path], Recording]
 ProgressFn = Callable[[int, int], None]
+HudReaderFn = Callable[["SceneCase", Recording], HudRead]
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,6 +63,18 @@ class SceneOutcome:
     situation: Situation | None
     error: str | None
     frame: Path | None
+    hud: HudRead | None = None
+    # The phase after the deterministic HUD clock has had its say, and whether it changed.
+    final_phase_override: str | None = None
+    hud_corrected: bool = False
+
+    @property
+    def final_phase(self) -> str:
+        return self.final_phase_override or self.detected_phase
+
+    @property
+    def final_ok(self) -> bool:
+        return self.final_phase == self.case.expected_phase
 
     @property
     def detected_phase(self) -> str:
@@ -138,6 +152,15 @@ class SceneReport:
     def accuracy(self) -> float:
         return scene_accuracy(self.outcomes)
 
+    def hud_accuracy(self) -> float:
+        """Phase accuracy once the HUD clock has corrected what it can prove wrong."""
+        if not self.outcomes:
+            return 0.0
+        return sum(1 for o in self.outcomes if o.final_ok) / len(self.outcomes)
+
+    def corrections(self) -> int:
+        return sum(1 for o in self.outcomes if o.hud_corrected)
+
     def confusion(self) -> dict[tuple[str, str], int]:
         counts: dict[tuple[str, str], int] = {}
         for outcome in self.outcomes:
@@ -166,6 +189,8 @@ class SceneReport:
             "model": self.model,
             "frames_per_case": self.frames_per_case,
             "accuracy": self.accuracy(),
+            "hud_accuracy": self.hud_accuracy(),
+            "hud_corrections": self.corrections(),
             "by_phase": {k: {"correct": c, "total": t} for k, (c, t) in self.by_phase().items()},
             "confusion": [
                 {"expected": e, "detected": d, "count": n} for (e, d), n in self.confusion().items()
@@ -178,6 +203,10 @@ class SceneReport:
                     "expected_phase": o.case.expected_phase,
                     "detected_phase": o.detected_phase,
                     "phase_ok": o.phase_ok,
+                    "final_phase": o.final_phase,
+                    "final_ok": o.final_ok,
+                    "hud_clock": o.hud.clock_text if o.hud else None,
+                    "hud_corrected": o.hud_corrected,
                     "fields": {
                         k: {"expected": e, "detected": d, "ok": ok}
                         for k, (e, d, ok) in o.field_results().items()
@@ -330,6 +359,9 @@ def _read_scene(
     width: int,
     frames_dir: Path,
     timeout_s: float,
+    hud_reader: HudReaderFn | None,
+    buy_phase_max_s: float,
+    hud_min_confidence: float,
 ) -> SceneOutcome:
     stem = f"{case.clip.stem}_{case.timestamp_s:.1f}".replace(".", "_")
     samples: list[FrameSample] = []
@@ -350,14 +382,29 @@ def _read_scene(
         timeout_s,
     )
     frame = samples[len(samples) // 2].path
+    hud = hud_reader(case, recording) if hud_reader else None
+
+    def scored(situation: Situation | None, error: str | None) -> SceneOutcome:
+        model_phase = situation.phase if situation else None
+        verdict = constrain_phase(model_phase, hud, buy_phase_max_s, hud_min_confidence)
+        return SceneOutcome(
+            case,
+            situation,
+            error,
+            frame,
+            hud,
+            verdict.phase if verdict.overridden else None,
+            verdict.overridden,
+        )
+
     try:
         response = transport.chat(request)
     except RoundReviewError as exc:
-        return SceneOutcome(case, None, f"{type(exc).__name__}: {exc}", frame)
+        return scored(None, f"{type(exc).__name__}: {exc}")
     try:
-        return SceneOutcome(case, parse_situation(response.content), None, frame)
+        return scored(parse_situation(response.content), None)
     except RoundReviewError as exc:
-        return SceneOutcome(case, None, f"{type(exc).__name__}: {exc}", frame)
+        return scored(None, f"{type(exc).__name__}: {exc}")
 
 
 def run_cases(
@@ -373,6 +420,9 @@ def run_cases(
     frames_dir: Path,
     timeout_s: float,
     on_progress: ProgressFn | None = None,
+    hud_reader: HudReaderFn | None = None,
+    buy_phase_max_s: float = 45.0,
+    hud_min_confidence: float = 0.8,
 ) -> SceneReport:
     """Run the situation pass over every labelled case. Per-case failures are recorded as
     unreadable rather than raised, so one bad case never ends the run."""
@@ -393,6 +443,9 @@ def run_cases(
                 width,
                 frames_dir,
                 timeout_s,
+                hud_reader,
+                buy_phase_max_s,
+                hud_min_confidence,
             )
         )
         if on_progress:
@@ -423,6 +476,17 @@ def render_scene_report(report: SceneReport) -> str:
     if confusions:
         lines += ["", "Most common mistakes:"]
         lines += [f"  expected {e} -> detected {d} ({n}x)" for n, e, d in confusions[:5]]
+
+    if report.corrections():
+        lines += [
+            "",
+            f"With the HUD clock: {sum(1 for o in report.outcomes if o.final_ok)}/{total} correct "
+            f"({round(100 * report.hud_accuracy())}%), {report.corrections()} correction(s) made "
+            "from the round timer",
+        ]
+        wrong = [o for o in report.outcomes if o.hud_corrected and not o.final_ok]
+        if wrong:
+            lines.append(f"  {len(wrong)} correction(s) made the answer worse, not better")
 
     collapsed = report.collapsed_to()
     if collapsed:

@@ -289,3 +289,87 @@ class TestReporting:
         json.dumps(report.to_dict())
         assert report.to_dict()["accuracy"] == pytest.approx(1.0)
         assert report.to_dict()["cases"][0]["expected_phase"] == "early"
+
+
+class TestHudScoring:
+    def cases(self) -> list[SceneCase]:
+        return [
+            SceneCase(Path("/v/a.mp4"), 10.0, "early"),
+            SceneCase(Path("/v/a.mp4"), 20.0, "mid"),
+            SceneCase(Path("/v/a.mp4"), 30.0, "pre_round"),
+        ]
+
+    def run(
+        self, transport: FakeTransport, tmp_path: Path, clocks: list[float | None]
+    ) -> SceneReport:
+        from round_review.vision.hud import HudRead
+
+        reads = iter(
+            HudRead("1:39" if c else None, c, 0.95 if c else 0.0, 4 if c else 0) for c in clocks
+        )
+        return run_cases(
+            self.cases(),
+            transport=transport,
+            probe=lambda path: RECORDING,
+            ffmpeg=FakeFfmpeg(),
+            model="m",
+            frames_per_case=1,
+            spread_s=1.0,
+            width=640,
+            frames_dir=tmp_path / "frames",
+            timeout_s=30.0,
+            hud_reader=lambda case, recording: next(reads),
+        )
+
+    def test_hud_corrects_the_model_and_both_are_scored(self, tmp_path: Path) -> None:
+        # the model says buy phase for everything; the clock says the first two are live
+        transport = FakeTransport(*[situation_json("pre_round")] * 3)
+        report = self.run(transport, tmp_path, [99.0, 70.0, 20.0])
+
+        assert report.accuracy() == pytest.approx(1 / 3)  # only the real buy phase is right
+        assert report.hud_accuracy() == pytest.approx(1.0)  # all three right after correction
+        assert [o.final_phase for o in report.outcomes] == ["early", "mid", "pre_round"]
+        assert [o.hud_corrected for o in report.outcomes] == [True, True, False]
+
+    def test_a_correction_that_makes_things_worse_is_visible(self, tmp_path: Path) -> None:
+        # the model was right, and a (hypothetically) long clock overrides it wrongly
+        transport = FakeTransport(
+            situation_json("early"), situation_json("mid"), situation_json("pre_round")
+        )
+        report = self.run(transport, tmp_path, [None, None, 99.0])
+        assert report.accuracy() == pytest.approx(1.0)
+        assert report.hud_accuracy() == pytest.approx(2 / 3)
+        assert report.outcomes[2].hud_corrected is True
+        assert report.outcomes[2].final_ok is False
+
+    def test_without_a_hud_reader_the_scores_match(self, tmp_path: Path) -> None:
+        report = run_cases(
+            self.cases(),
+            transport=FakeTransport(*[situation_json("early")] * 3),
+            probe=lambda path: RECORDING,
+            ffmpeg=FakeFfmpeg(),
+            model="m",
+            frames_per_case=1,
+            spread_s=1.0,
+            width=640,
+            frames_dir=tmp_path / "frames",
+            timeout_s=30.0,
+        )
+        assert report.hud_accuracy() == report.accuracy()
+        assert not any(o.hud_corrected for o in report.outcomes)
+
+    def test_render_compares_the_two(self, tmp_path: Path) -> None:
+        transport = FakeTransport(*[situation_json("pre_round")] * 3)
+        report = self.run(transport, tmp_path, [99.0, 70.0, 20.0])
+        text = render_scene_report(report)
+        assert "With the HUD clock" in text
+        assert "100%" in text
+        assert "2 correction" in text
+
+    def test_hud_results_reach_the_json(self, tmp_path: Path) -> None:
+        transport = FakeTransport(*[situation_json("pre_round")] * 3)
+        data = self.run(transport, tmp_path, [99.0, 70.0, 20.0]).to_dict()
+        assert data["hud_accuracy"] == pytest.approx(1.0)
+        assert data["cases"][0]["hud_clock"] == "1:39"
+        assert data["cases"][0]["final_phase"] == "early"
+        assert data["cases"][0]["hud_corrected"] is True

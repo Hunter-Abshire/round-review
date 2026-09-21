@@ -116,5 +116,8 @@ export const settings = (overrides: Partial<Settings> = {}): Settings => ({
   fps: 1,
   situation_pass: true,
   daily_call_cap: 0,
+  hud_check: true,
+  hud_ready: true,
+  hud_missing_characters: [],
   ...overrides,
 });

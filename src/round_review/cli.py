@@ -31,9 +31,9 @@ from round_review.validation.scenes import (
     scaffold_cases,
     write_cases,
 )
-from round_review.video.probe import SubprocessRunner, probe
+from round_review.video.probe import Recording, SubprocessRunner, probe
 from round_review.vision.digits import DigitTemplates
-from round_review.vision.hud import Region, learn_from_crop, parse_region, read_hud
+from round_review.vision.hud import HudRead, Region, learn_from_crop, parse_region, read_hud
 from round_review.watcher import stat_snapshot, watch_loop
 
 log = logging.getLogger("round_review")
@@ -405,8 +405,39 @@ def scenes_scaffold(
     )
 
 
+def _hud_reader(config: Config, use_hud: bool) -> object | None:
+    """A callable that reads the round clock for a case, or None when it cannot be used."""
+    if not use_hud:
+        return None
+    path = _templates_path(config, None)
+    templates = DigitTemplates.load(path)
+    if not templates.characters():
+        click.echo(f"No digit templates in {path}; scoring the model only.", err=True)
+        return None
+    region = parse_region(config.hud_timer_region)
+    runner = SubprocessRunner(config.ffmpeg_path)
+
+    def read(case: SceneCase, recording: Recording) -> HudRead:
+        return read_hud(
+            recording,
+            case.timestamp_s,
+            region,
+            runner,
+            templates,
+            out_dir=path.parent / "hud-scenes",
+            min_confidence=config.hud_min_confidence,
+        )
+
+    return read
+
+
 def _run_scene_cases(
-    config: Config, cases: list[SceneCase], frames: int, spread_s: float, frames_dir: Path
+    config: Config,
+    cases: list[SceneCase],
+    frames: int,
+    spread_s: float,
+    frames_dir: Path,
+    use_hud: bool = True,
 ) -> SceneReport:
     deps: Deps = make_default_deps(config)
     total = len(cases)
@@ -426,6 +457,9 @@ def _run_scene_cases(
         frames_dir=frames_dir,
         timeout_s=config.request_timeout_s,
         on_progress=on_progress,
+        hud_reader=_hud_reader(config, use_hud),  # type: ignore[arg-type]
+        buy_phase_max_s=config.buy_phase_max_s,
+        hud_min_confidence=config.hud_min_confidence,
     )
 
 
@@ -446,6 +480,12 @@ def _run_scene_cases(
     default=0.0,
     help="Exit non-zero when phase accuracy is below this (0-1).",
 )
+@click.option(
+    "--hud/--no-hud",
+    "use_hud",
+    default=True,
+    help="Also score the deterministic HUD clock and the corrections it makes.",
+)
 @click.pass_obj
 def scenes_validate(
     config: Config,
@@ -455,6 +495,7 @@ def scenes_validate(
     model: str | None,
     json_out: Path | None,
     min_accuracy: float,
+    use_hud: bool,
 ) -> None:
     """Score the situation pass against a labels file."""
     if model:
@@ -465,13 +506,13 @@ def scenes_validate(
         _fail(exc)
         return
     frames_dir = labels.parent / f"{labels.stem}-run-frames"
-    report = _run_scene_cases(config, cases, frames, spread_s, frames_dir)
+    report = _run_scene_cases(config, cases, frames, spread_s, frames_dir, use_hud)
     click.echo(render_scene_report(report))
     if json_out:
         json_out.parent.mkdir(parents=True, exist_ok=True)
         json_out.write_text(json.dumps(report.to_dict(), indent=2) + "\n", encoding="utf-8")
         click.echo(f"\nWrote {json_out}")
-    accuracy = report.accuracy()
+    accuracy = max(report.accuracy(), report.hud_accuracy())
     if min_accuracy > 0 and accuracy < min_accuracy:
         click.echo(
             f"\nPhase accuracy {accuracy:.0%} is below the required {min_accuracy:.0%}.", err=True

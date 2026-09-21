@@ -1,143 +1,298 @@
 # round-review
 
-Local, offline coaching for recorded Valorant gameplay. Watches your Outplayed (Overwolf) recordings folder, samples frames from finished clips with ffmpeg, asks a local Ollama vision model for timestamped findings, and writes a Markdown report with evidence screenshots. Nothing leaves your machine.
+Local coaching for your own Valorant recordings. It picks up finished clips from your
+Outplayed folder, samples frames with ffmpeg, asks a vision model running on your own
+machine for timestamped findings, and shows you each one against the moment it happened.
 
-Status: pipeline, CLI, local API and Electron desktop app all run end to end against a fake model in tests and boot on macOS. **Scene recognition with a small local model is not yet validated** and coaching quality depends on it, so start with `round-review scenes validate` before trusting any findings. See `docs/coaching-quality.md`.
+Nothing is uploaded. There is no account and no API key. The only network traffic is to
+Ollama on `localhost`.
 
-## Overview
+**Read this first.** Coaching quality depends entirely on whether the local model can read
+your screen, and on a small model it often cannot: it will call live gameplay "buy phase"
+and then skip the round. The setup below has you check that before you rely on any advice.
+Steps 6 and 7 are not optional garnish; they are how you find out whether this works on
+your hardware. Background in [docs/coaching-quality.md](docs/coaching-quality.md).
+
+---
+
+## What you need
+
+| | Why | Check it with |
+| --- | --- | --- |
+| Windows 10/11 | Where Valorant and Outplayed run. macOS works for everything except recording. | |
+| A GPU with 8 GB+ VRAM | Runs the vision model. 12 GB+ for the better one. | `nvidia-smi` |
+| Python 3.12 or newer | The review engine | `python --version` |
+| Node.js 20 or newer | Only for the desktop app | `node --version` |
+| ffmpeg and ffprobe on PATH | Frame extraction and HUD reading | `ffmpeg -version` |
+| Ollama | Runs the vision model locally | `ollama --version` |
+| Outplayed (Overwolf) | Records your matches | |
+
+Installing the missing pieces on Windows:
+
+```powershell
+winget install Python.Python.3.12
+winget install OpenJS.NodeJS.LTS
+winget install Gyan.FFmpeg
+winget install Ollama.Ollama
+```
+
+Close and reopen your terminal afterwards so PATH updates. On macOS use
+`brew install python@3.12 node ffmpeg ollama` instead.
+
+---
+
+## Setup
+
+### 1. Get the code and install it
+
+```powershell
+git clone https://github.com/Hunter-Abshire/round-review.git
+cd round-review
+python -m venv .venv
+.venv\Scripts\pip install -e ".[dev]"
+```
+
+On macOS the last two lines are `python3 -m venv .venv` and
+`.venv/bin/pip install -e ".[dev]"`.
+
+Every command below starts with `.venv\Scripts\round-review` on Windows or
+`.venv/bin/round-review` on macOS. Activate the virtual environment
+(`.venv\Scripts\Activate.ps1`) and you can just type `round-review`.
+
+Check it installed:
+
+```powershell
+round-review --help
+```
+
+### 2. Pull the vision model
+
+```powershell
+ollama pull qwen3-vl:8b
+```
+
+Use `qwen3-vl:4b` if you have 8 GB of VRAM or less, but expect worse scene reading. Confirm
+Ollama is up and holding the model:
+
+```powershell
+ollama list
+curl http://localhost:11434/api/tags
+```
+
+### 3. Find your recordings folder
+
+In Outplayed: **Settings → Capture → Storage**. It is usually
+`C:\Users\<you>\Videos\Outplayed\VALORANT`. Copy that path.
+
+While you are in there, set the **encoder to H.264**, not HEVC. HEVC clips review fine but
+will not play back inside the desktop app.
+
+### 4. Create your config file
+
+```powershell
+round-review config init --recordings-dir "C:/Users/you/Videos/Outplayed/VALORANT"
+round-review config show
+```
+
+`config init` writes a commented starter file; `config path` tells you where it lives
+(`%LOCALAPPDATA%\round-review\config.toml` on Windows). Use forward slashes in the path, or
+double the backslashes, because the file is TOML.
+
+`config show` prints every effective setting. If `recordings_dir` reads `None`, the path did
+not take.
+
+### 5. Review one clip, bounded
+
+Do not start with a full 12 minute match. Time one minute first:
+
+```powershell
+round-review review "C:/path/to/clip.mp4" --first 60 --rank "Gold 2"
+```
+
+This reviews the first minute of gameplay, roughly five windows, two model calls each. Watch
+how long a window takes. Multiply by 57 to see what a full 12 minute match would cost you.
+
+You should see a report path printed at the end. If you get `OllamaError: cannot reach
+Ollama`, Ollama is not running. If you get zero findings and a warning about the model
+misreading the screen, that is the known problem and steps 6 and 7 are how you deal with it.
+
+### 6. Teach it to read the round clock
+
+This is the fix for the model calling live play "buy phase". The round timer settles the
+question without a model: above 45 seconds the round must be live, because neither the buy
+phase nor the post-plant spike timer ever shows more than that. Teach the digits once and
+every review from then on can overrule that misread.
+
+```powershell
+round-review hud crop "C:/path/to/clip.mp4" --at 45
+```
+
+**Open `hud-timer.png` and look at it.** It should contain the round timer and almost nothing
+else. The default region was estimated, not measured on your resolution, so it may well be
+off. If it is, edit `hud_timer_region` in your config (`x,y,w,h` as fractions of the frame,
+so `0.455,0.020,0.090,0.055` means 45.5% across, 2% down, 9% wide, 5.5% tall) and crop again
+until the picture is right.
+
+Then teach it the digits. Pick timestamps where you can read the clock yourself, and tell it
+what you see:
+
+```powershell
+round-review hud learn "C:/path/to/clip.mp4" --at 45 --reads 1:39
+round-review hud learn "C:/path/to/clip.mp4" --at 70 --reads 1:02
+round-review hud learn "C:/path/to/clip.mp4" --at 95 --reads 0:47
+```
+
+After each one it lists which digits are still missing. Keep going until nothing is. Then
+confirm:
+
+```powershell
+round-review hud read "C:/path/to/clip.mp4" --at 45
+```
+
+It should print the clock, a confidence near 100%, and "live round, so any buy phase or
+post-plant call is wrong".
+
+### 7. Check the model can read your screen
+
+Now measure the thing that actually determines whether the coaching is worth anything.
+
+```powershell
+round-review scenes scaffold "C:/path/to/clip.mp4" --every 30
+```
+
+That saves a frame every 30 seconds and writes `scene-labels.json` with a blank
+`expected_phase` for each. Open the frames, and for each one write what you actually see:
+
+| Label | When |
+| --- | --- |
+| `pre_round` | Buy phase, behind the barrier |
+| `early` | Round just started, moving out |
+| `mid` | Round in progress |
+| `post_plant` | Spike is down, you are defending it |
+| `retake` | Spike is down, you are attacking it |
+| `spectating` | You are dead and watching someone else |
+| `unreadable` | You genuinely cannot tell |
+
+Then score it:
+
+```powershell
+round-review scenes validate scene-labels.json --json-out run-8b.json
+```
+
+This spends no coaching calls. It prints accuracy per phase, the most common confusions, and
+every failing case with the frame that caused it. It also scores the model with and without
+the clock reader, so you can see how much step 6 bought you.
+
+**How to read the result.** If it warns that the model answered the same phase for every
+case, the model is not reading the scene at all and the accuracy number means nothing. Try
+`--model qwen3-vl:8b` if you were on the 4b, or `--frames 3` to give it motion. Until this
+number is respectable, treat every finding as unverified.
+
+### 8. Run the desktop app
+
+```powershell
+cd desktop
+npm install
+npm start
+```
+
+`npm install` downloads Electron, about 100 MB, once. `npm start` builds and launches. The
+app starts the review engine itself on a loopback port; you do not run `serve` separately.
+
+In the app: pick how much to review, hit **Analyze** on a clip, watch the window counter, then
+**Open review**. The timeline under the video shades the stretches that were reviewed and puts
+a numbered pin on each finding. Click a pin to jump there. Shift plus the arrow keys steps
+between findings.
+
+If you are launching from a VS Code terminal, Electron will fail with
+`Cannot read properties of undefined (reading 'whenReady')`. That terminal sets
+`ELECTRON_RUN_AS_NODE`. Clear it first: `Remove-Item Env:ELECTRON_RUN_AS_NODE` in PowerShell,
+or `env -u ELECTRON_RUN_AS_NODE npm start` on macOS.
+
+---
+
+## Day to day
+
+```powershell
+round-review review <clip>                 # whole clip
+round-review review <clip> --first 120     # first two minutes only
+round-review review <clip> --coverage sampled   # a few windows, fastest
+round-review review <clip> --force         # review it again
+round-review watch                         # review new recordings as they appear
+round-review ledger list                   # what has been reviewed
+```
+
+Add `--rank`, `--agent`, `--map`, `--side` or `--focus` to any review. Anything you leave out
+the model tries to read off the HUD. `--rank` is worth setting: it changes which coaching
+priorities apply.
+
+Reports are written to `%LOCALAPPDATA%\round-review\reports\<clip>_<key>\`, containing
+`report.md` to read, `report.json` for the app, and `frames/` with the evidence images. Every
+review appends a line to `ledger.jsonl`.
+
+---
+
+## When something goes wrong
+
+| What you see | What it means |
+| --- | --- |
+| `OllamaError: cannot reach Ollama` | Ollama is not running. Start it and check `ollama list`. |
+| Zero findings, warning about misreading the screen | The model called the footage buy phase or spectating. Do steps 6 and 7. |
+| `daily model-call cap reached` | Set `daily_call_cap = 0` in your config. Local calls cost nothing. |
+| Review stopped early, report says partial | A cap or a failure interrupted it. The findings so far are kept; **Re-analyze** runs it again. |
+| Timer check is on but untrained | `hud_check = true` with no digits learned does nothing. Do step 6, or set `hud_check = false`. |
+| Findings are empty or truncated with a big clip | Raise `num_ctx` to 32768, or lower `frame_width` to 960 or `fps` to 0.5. |
+| Video will not play in the app | The clip is HEVC. Findings still work; switch Outplayed to H.264 for playback. |
+| `binary not found on PATH` | ffmpeg or ffprobe is not installed, or set `ffmpeg_path` and `ffprobe_path` in your config. |
+| A review takes forever | Two model calls per 12 second window. Use `--first` or `--coverage sampled`. Setting `situation_pass = false` halves the calls but turns off both the scene read and the clock veto, so only do that once you trust the coaching. |
+
+---
+
+## How it works
 
 ```
 Outplayed writes match.mp4
         |
         v
-round-review watch  -- polls the folder, waits until the file stops changing
+watcher polls the folder until the file stops changing
         |
         v
 ffprobe -> tile the whole clip into 12 s windows -> ffmpeg extracts 1 fps JPEGs
         |
+        +--> ffmpeg crops the round timer -> digits read without a model
+        |         (a clock above 45 s proves the round is live)
         v
-Ollama /api/chat (qwen3-vl:8b): pass 1 reads the scene, pass 2 coaches -> JSON findings
+Ollama, twice per window: pass 1 reads the scene, pass 2 coaches against a checklist
         |
         v
-reports/<clip>_<key>/report.md + frames/   and a line in ledger.jsonl
+report.md + report.json + frames/, and a line in ledger.jsonl
 ```
 
-Requirements and diagrams: `docs/requirements.md`, `docs/uml/`.
+Each finding has to cite a checklist item, say what was visible, separate what you knew from
+what only became clear later, and name its assumptions. That is deliberate: it is what stops
+the model telling you that you should have known about an enemy you could not possibly see.
 
-## Install & Run Locally
+The coaching knowledge lives in JSON under `src/round_review/coaching/knowledge/`: a checklist
+of 87 concrete checks, a brief for each of the 29 agents, and one for each of the 13 maps.
+Edit those files to change what the coach looks for; there is no need to touch the prompt.
 
-Needs Python 3.12, ffmpeg and ffprobe on PATH, and Ollama with a vision model pulled.
+Requirements and diagrams: [docs/requirements.md](docs/requirements.md) and
+[docs/uml/](docs/uml/). Known quality problems and what is being done about them:
+[docs/coaching-quality.md](docs/coaching-quality.md).
 
-```
-python3 -m venv .venv
-.venv/bin/pip install -e ".[dev]"
+---
 
-ollama pull qwen3-vl:8b        # 12 GB+ VRAM; use qwen3-vl:4b on smaller cards
-```
+## Working on it
 
-Config lives in the user data dir (`%LOCALAPPDATA%\round-review\config.toml` on Windows, `~/Library/Application Support/round-review/config.toml` on macOS). Everything has a default except `recordings_dir`, which `watch` needs:
-
-```toml
-recordings_dir = "C:/Users/you/Videos/Outplayed/VALORANT"
-model = "qwen3-vl:8b"
-num_ctx = 16384
-windows_per_file = 3
-fps = 1.0
-daily_call_cap = 30
-```
-
-Any key can be overridden with `ROUND_REVIEW_<KEY>` in the environment.
-
-`num_ctx` sets the Ollama context size in tokens for every request, including retries.
-The default is 16,384: sampled images can exceed Ollama's 4,096-token default.
-If a request still exceeds the context, increase `num_ctx` (allowing room for the response),
-or reduce `fps` / `frame_width`. Larger contexts require more memory.
-Restart the desktop app and watcher after changing configuration. Retry an already-recorded
-failure with `review <file> --force`; it remains in the ledger until explicitly re-reviewed.
-
-Structured requests disable thinking. If Ollama returns a completed JSON object in
-`message.thinking` with empty `message.content`, the app logs a compatibility warning
-and validates that object through the normal finding parser. Prose and truncated
-responses are not accepted through this fallback.
+With the virtual environment activated:
 
 ```
-round-review config show
-round-review review "C:/Users/you/Videos/Outplayed/VALORANT/clip.mp4" --context "Gold 2, Jett, Ascent"
-round-review watch
-round-review ledger list
-```
-
-`review` exits non-zero with the error class name (`OllamaError: ...`, `VideoError: ...`) on failure. A file already in the ledger is refused unless you pass `--force`. Add `--coverage sampled`, `--first 60` or `--max-windows 10` to bound a review.
-
-## Teach it to read the clock (do this once)
-
-A vision model will sometimes call live play "buy phase", and a review then skips every
-window and tells you nothing. The round timer settles it without a model: above 45 seconds
-the round must be live, because neither the buy phase nor the post-plant spike timer ever
-shows more than that. Teach the digits once from your own footage and every review gains a
-veto over that misread.
-
-```
-round-review hud crop <clip> --at 45                  # is the box on the timer?
-round-review hud learn <clip> --at 45 --reads 1:39    # repeat until nothing is missing
-round-review hud read <clip> --at 45                  # confirm, and see what it proves
-```
-
-If the crop is not showing the timer, adjust `hud_timer_region` (x,y,w,h as fractions of
-the frame) and try again. Set `hud_check = false` to turn the whole thing off.
-
-## Check the model can read the screen
-
-A vision model that misreads the scene produces useless coaching, so measure that first:
-
-```
-round-review scenes scaffold path/to/clip.mp4 --every 30
-# open the frames it saved, write the phase you actually see into scene-labels.json
-round-review scenes validate scene-labels.json --json-out run1.json
-round-review scenes validate scene-labels.json --model qwen3-vl:4b --frames 3 --json-out run2.json
-```
-
-This spends no coaching calls. It prints accuracy per phase, the most common confusions,
-and every failing case with the frame that produced it. Once the clock reader is trained it
-also scores the model with and without the clock, so you can see how much the veto buys you.
-
-## Desktop app
-
-`desktop/` is an Electron shell. It starts `round-review serve` from the repo `.venv` as a sidecar on a free loopback port, lists the clips in `recordings_dir` with their status, queues analyses one at a time with progress, and opens a finished review as the clip playing in a video element with one clickable marker per finding underneath. Clicking a marker seeks the video and shows the finding: what you could see, what you knew, what you couldn't have known, assumptions, the alternative, and the evidence frame.
-
-```
-cd desktop
-npm install
-npm test
-env -u ELECTRON_RUN_AS_NODE npm start     # the env var is set by VS Code terminals and breaks Electron
-```
-
-Clips must be H.264 for playback; Outplayed set to HEVC records fine but the player shows an unsupported-codec message.
-
-## Debugger
-
-Run the CLI module directly with `-v` for debug logging:
-
-```
-.venv/bin/python -m round_review.cli -v review path/to/clip.mp4
-```
-
-For a breakpoint inside the pipeline, set one in `src/round_review/pipeline.py` and run the same command under `python -m pdb`, or use the VS Code "Python: Module" launch config with module `round_review.cli`.
-
-## Logging
-
-Standard `logging`, root logger `round_review`, INFO by default and DEBUG with `-v`. The watcher logs each poll decision at DEBUG and each review outcome at INFO/ERROR. Nothing is written to a log file; redirect stdout/stderr if you run `watch` as a background task.
-
-## Tests
-
-```
-.venv/bin/pytest                 # generates its own 5 s MP4 with ffmpeg; no Ollama needed
-.venv/bin/pytest -m "not integration"
-.venv/bin/ruff check . && .venv/bin/mypy
-```
-
-No test talks to Ollama. The model is a fake transport with canned JSON.
-
-```
+pytest                       # generates its own test video with ffmpeg
+pytest -m "not integration"  # skips the tests that need ffmpeg
+ruff check . && mypy
 cd desktop && npm test && npm run typecheck && npm run lint
 ```
+
+No test contacts Ollama; the model is always a fake transport with canned responses. Run
+`round-review --help` or any subcommand with `--help` for the full option list. Contributor
+notes are in [AGENTS.md](AGENTS.md).

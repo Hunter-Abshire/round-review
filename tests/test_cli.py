@@ -400,3 +400,54 @@ def test_hud_read_says_when_it_cannot_read_the_clock(
     assert result.exit_code == 0
     assert "7 glyph" in result.output
     assert "hud learn" in result.output  # tells you what to do about it
+
+
+def test_config_path_prints_the_file_location(patched: dict[str, object], tmp_path: Path) -> None:
+    result = CliRunner().invoke(cli.main, ["config", "path"])
+    assert result.exit_code == 0, result.output
+    assert "config.toml" in result.output
+
+
+def test_config_init_writes_a_starter_file(
+    monkeypatch: pytest.MonkeyPatch, patched: dict[str, object], tmp_path: Path
+) -> None:
+    target = tmp_path / "config.toml"
+    monkeypatch.setattr(cli, "default_config_path", lambda: target)
+    result = CliRunner().invoke(cli.main, ["config", "init"])
+    assert result.exit_code == 0, result.output
+    text = target.read_text()
+    assert "recordings_dir" in text
+    assert "model" in text
+    assert "hud_check" in text
+    assert str(target) in result.output
+    # the starter file must be valid and loadable
+    from round_review.config import load_config
+
+    load_config(target, env={}, data_dir=tmp_path)
+
+
+def test_config_init_refuses_to_clobber(
+    monkeypatch: pytest.MonkeyPatch, patched: dict[str, object], tmp_path: Path
+) -> None:
+    target = tmp_path / "config.toml"
+    target.write_text('model = "mine"\n')
+    monkeypatch.setattr(cli, "default_config_path", lambda: target)
+    result = CliRunner().invoke(cli.main, ["config", "init"])
+    assert result.exit_code == 1
+    assert "already exists" in result.output
+    assert target.read_text() == 'model = "mine"\n'
+    forced = CliRunner().invoke(cli.main, ["config", "init", "--force"])
+    assert forced.exit_code == 0
+    assert "recordings_dir" in target.read_text()
+
+
+def test_config_init_can_set_the_recordings_folder(
+    monkeypatch: pytest.MonkeyPatch, patched: dict[str, object], tmp_path: Path
+) -> None:
+    target = tmp_path / "config.toml"
+    monkeypatch.setattr(cli, "default_config_path", lambda: target)
+    vids = tmp_path / "vids"
+    vids.mkdir()
+    result = CliRunner().invoke(cli.main, ["config", "init", "--recordings-dir", str(vids)])
+    assert result.exit_code == 0, result.output
+    assert f'recordings_dir = "{vids.as_posix()}"' in target.read_text()

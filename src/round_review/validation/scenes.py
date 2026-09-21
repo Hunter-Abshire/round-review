@@ -37,7 +37,11 @@ from round_review.vision.hud import HudRead, constrain_phase
 log = logging.getLogger(__name__)
 
 UNREADABLE = "unreadable"
-LABELLED_PHASES: frozenset[str] = frozenset(PHASES) | {UNREADABLE}
+# What a human may write in a labels file. "unknown" is deliberately absent: a detection
+# normalises it to "unreadable", so a case labelled "unknown" could never match. It is
+# accepted as an alias below rather than offered as a choice.
+LABELLED_PHASES: frozenset[str] = (frozenset(PHASES) - {"unknown"}) | {UNREADABLE}
+PHASE_ALIASES: dict[str, str] = {"unknown": UNREADABLE}
 
 ProbeFn = Callable[[Path], Recording]
 ProgressFn = Callable[[int, int], None]
@@ -243,6 +247,7 @@ def load_cases(path: Path) -> list[SceneCase]:
         if not phase:
             unlabelled += 1
             continue
+        phase = PHASE_ALIASES.get(phase, phase)
         if phase not in LABELLED_PHASES:
             raise LabelsError(
                 f"{path}: case {i} has unknown expected_phase {phase!r}; "

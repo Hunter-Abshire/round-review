@@ -16,7 +16,7 @@ import click
 import uvicorn
 
 from round_review.coaching.context import PlayerContext, context_from_mapping
-from round_review.config import Config, default_data_dir, load_config
+from round_review.config import Config, default_config_path, default_data_dir, load_config
 from round_review.errors import RoundReviewError
 from round_review.ledger import is_processed, read_ledger, recording_key
 from round_review.pipeline import Deps, make_default_deps, review_file
@@ -577,6 +577,69 @@ def serve(config: Config, port: int | None) -> None:
 @main.group(name="config")
 def config_group() -> None:
     """Configuration commands."""
+
+
+STARTER_CONFIG = """# round-review configuration. Everything here is optional except
+# recordings_dir, which `watch` and the desktop app need to find your clips.
+# Full reference: docs/requirements.md
+
+{recordings_line}
+
+# Ollama model. qwen3-vl:8b wants about 12 GB of VRAM; use qwen3-vl:4b on smaller cards.
+model = "qwen3-vl:8b"
+num_ctx = 24576
+
+# How much of each recording to review. "full" tiles the whole clip; "sampled" takes a few
+# windows. max_span_s = 60 reviews only the first minute of gameplay.
+coverage = "full"
+max_span_s = 0
+max_windows = 0
+
+# 0 means unlimited. Local inference has no per-call cost and a full review is dozens of calls.
+daily_call_cap = 0
+
+# Read the round clock deterministically and veto the model when it misreads the phase.
+# Check the region against your own footage with: round-review hud crop <clip> --at 45
+hud_check = true
+hud_timer_region = "{region}"
+"""
+
+
+@config_group.command("path")
+@click.pass_obj
+def config_path_command(config: Config) -> None:
+    """Print where the configuration file is read from."""
+    click.echo(default_config_path())
+
+
+@config_group.command("init")
+@click.option(
+    "--recordings-dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=None,
+    help="Your Outplayed output folder.",
+)
+@click.option("--force", is_flag=True, help="Overwrite an existing configuration file.")
+@click.pass_obj
+def config_init(config: Config, recordings_dir: Path | None, force: bool) -> None:
+    """Write a starter configuration file with comments, ready to edit."""
+    target = default_config_path()
+    if target.exists() and not force:
+        click.echo(f"{target} already exists; edit it, or pass --force to replace it.", err=True)
+        sys.exit(1)
+    recordings_line = (
+        f'recordings_dir = "{recordings_dir.as_posix()}"'
+        if recordings_dir
+        else '# recordings_dir = "C:/Users/you/Videos/Outplayed/VALORANT"'
+    )
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        STARTER_CONFIG.format(recordings_line=recordings_line, region=config.hud_timer_region),
+        encoding="utf-8",
+    )
+    click.echo(f"Wrote {target}")
+    if not recordings_dir:
+        click.echo("Set recordings_dir in it to your Outplayed folder, then run `config show`.")
 
 
 @config_group.command("show")

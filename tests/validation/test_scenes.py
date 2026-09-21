@@ -373,3 +373,35 @@ class TestHudScoring:
         assert data["cases"][0]["hud_clock"] == "1:39"
         assert data["cases"][0]["final_phase"] == "early"
         assert data["cases"][0]["hud_corrected"] is True
+
+
+class TestLabelVocabulary:
+    def test_the_offered_labels_are_exactly_what_a_detection_can_produce(
+        self, tmp_path: Path
+    ) -> None:
+        from round_review.validation.scenes import LABELLED_PHASES
+
+        # "unknown" must not be offered: a detection normalises it to "unreadable", so a case
+        # labelled "unknown" could never match and would always look like a failure.
+        assert "unknown" not in LABELLED_PHASES
+        assert (
+            frozenset(
+                {"pre_round", "early", "mid", "post_plant", "retake", "spectating", "unreadable"}
+            )
+            == LABELLED_PHASES
+        )
+
+    def test_unknown_is_accepted_as_an_alias_for_unreadable(self, tmp_path: Path) -> None:
+        path = tmp_path / "labels.json"
+        path.write_text(
+            json.dumps({"cases": [{"clip": "/v/a.mp4", "t": 1.0, "expected_phase": "unknown"}]})
+        )
+        (case,) = load_cases(path)
+        assert case.expected_phase == "unreadable"
+
+    def test_the_scaffold_lists_only_usable_labels(self, tmp_path: Path) -> None:
+        path = tmp_path / "labels.json"
+        write_cases(path, [SceneCase(Path("/v/a.mp4"), 0.0, "")])
+        offered = json.loads(path.read_text())["phases"]
+        assert "unknown" not in offered
+        assert "unreadable" in offered

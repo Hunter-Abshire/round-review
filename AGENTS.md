@@ -46,6 +46,7 @@ Definition of done for any change: pytest, ruff, mypy, jest, typecheck and lint 
 - `ELECTRON_RUN_AS_NODE=1` is set in VS Code-style terminals and makes `require('electron')` return a path string (`app` is undefined). Launch Electron with `env -u ELECTRON_RUN_AS_NODE`.
 - macOS has no `timeout` binary; background the process and kill it instead.
 - Do not commit or push unless asked. Commits use Conventional Commits (`feat`, `fix`, `chore`, `refactor`, `docs`, `test`) with an optional scope, no ticket IDs.
+- Keep generated dependencies, build output, caches, recordings, and local logs out of Git. Track `desktop/package.json` and `desktop/package-lock.json`; install dependencies locally instead of committing `node_modules`.
 
 ## How to work here
 
@@ -73,6 +74,8 @@ Definition of done for any change: pytest, ruff, mypy, jest, typecheck and lint 
 
 - **Dependency injection by argument.** `video.probe.CommandRunner` (ffprobe/ffmpeg), `llm.transport.Transport` (Ollama) and the `opener` on `UrllibTransport` are passed in. Tests use `FakeRunner` / `FakeTransport` classes next to the tests; production wiring happens once in `pipeline.make_default_deps`.
 - **Daily cap is checked before the network.** `llm.client.send_review` raises `CapExceeded` when `calls_today >= cap`; retries count as calls. Never call a transport directly from coaching code.
+- **Context size is explicit.** `Config.num_ctx` (default 16384, positive integer) is injected into `UrllibTransport` by `make_default_deps` and sent as `options.num_ctx` on every request, including retries. Do not rely on Ollama's server default for multi-image prompts.
+- **Structured output compatibility is narrow.** Send `think=false` with structured requests. Only when content is empty and generation completed normally may a whole JSON object in `message.thinking` with the schema's required root keys be passed to normal finding validation. Log this fallback; never use reasoning prose or truncated output as findings.
 - **Parse is lenient on format, strict on content.** `coaching.parse.extract_json` slices the first `{` to the last `}`; missing required fields raise `ParseError`; findings outside the window, over the 3-per-window limit, or with confidence out of range become warnings.
 - **Anti-hindsight is enforced in code.** A finding with non-placeholder `information_revealed_later` and confidence above 0.7 is downgraded to 0.5 with a warning. Keep in sync with `docs/requirements.md` AH-1..AH-5.
 - **One retry.** `coaching.review.review_window` re-asks once with `RETRY_NUDGE` on `ParseError`, then raises a `ParseError` carrying `model_calls`. `pipeline.review_file` turns one bad window into a warning and fails the file only when every window is unparseable.

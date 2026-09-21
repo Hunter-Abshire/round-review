@@ -1,3 +1,4 @@
+# Python environments, caches, and coverage
 .venv/
 __pycache__/
 *.pyc
@@ -6,10 +7,24 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+# JavaScript dependencies and coverage
+node_modules/
+coverage/
+*.tsbuildinfo
+# Generated builds and packaging
 dist/
 build/
+out/
 *.egg-info/
+# OS metadata
 .DS_Store
-# local run artefacts
+Thumbs.db
+# Local configuration and run artifacts
+.env
+.env.*
+!.env.example
+*.log
+recordings/
+*.mp4
 reports/
 *.jsonl

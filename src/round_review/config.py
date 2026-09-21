@@ -14,6 +14,7 @@ from round_review.errors import ConfigError
 
 APP_NAME = "round-review"
 ENV_PREFIX = "ROUND_REVIEW_"
+DEFAULT_NUM_CTX = 16384
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,6 +26,7 @@ class Config:
     ffprobe_path: str = "ffprobe"
     ollama_url: str = "http://localhost:11434"
     model: str = "qwen3-vl:8b"
+    num_ctx: int = DEFAULT_NUM_CTX
     window_s: float = 12.0
     windows_per_file: int = 3
     edge_skip_s: float = 30.0
@@ -51,6 +53,7 @@ POSITIVE_KEYS: frozenset[str] = frozenset(
         "min_age_s",
         "request_timeout_s",
         "api_port",
+        "num_ctx",
     }
 )
 PATH_KEYS: frozenset[str] = frozenset({"recordings_dir", "reports_dir", "ledger_path"})

@@ -58,7 +58,7 @@ def make_default_deps(config: Config) -> Deps:
         config=config,
         probe_runner=SubprocessRunner(config.ffprobe_path),
         ffmpeg_runner=SubprocessRunner(config.ffmpeg_path),
-        transport=UrllibTransport(config.ollama_url),
+        transport=UrllibTransport(config.ollama_url, num_ctx=config.num_ctx),
         clock=_utc_now,
     )
 

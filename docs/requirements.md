@@ -25,7 +25,7 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | FR-2 | Treat a file as finished only when its size and mtime are unchanged across N consecutive polls, the mtime is older than a minimum age, and ffprobe returns a duration. Files still being written are left pending, not failed. |
 | FR-3 | Select a configurable number of fixed-length windows (default 3 x 12 s) from each recording, skipping the first and last 30 s. Selection is deterministic for a given duration. |
 | FR-4 | Extract frames per window with ffmpeg at a configurable rate and width (default 1 fps, 1280 px), as JPEGs on disk. |
-| FR-5 | Send each window's frames, in order and captioned with their offset, to the configured Ollama model and require a JSON response matching the finding schema. |
+| FR-5 | Send each window's frames, in order and captioned with their offset, to the configured Ollama model and require a JSON response matching the finding schema. Every request, including retries, sends the configured context size as `options.num_ctx`. |
 | FR-6 | Write one Markdown report per recording with, per finding: timestamp, category, observation, what was visible, what the player could know, what was only revealed later, assumptions the model made, suggested alternative, confidence, and a linked evidence frame. |
 | FR-7 | Record every processed file in an append-only ledger (status ok / failed / skipped, model call count, report path, error). Never re-review a file already in the ledger. Enforce a daily cap on model calls; retries count. |
 | FR-8 | CLI commands: `review <file>`, `watch <dir>`, `config show`, `ledger list`. Non-zero exit with the error class name on failure. |
@@ -35,6 +35,7 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | FR-12 | Reviews requested from the UI run on a single background worker, one at a time, in submission order. Submitting a clip that is already queued or running returns the existing job. |
 | FR-13 | Desktop app (Electron) starts the Python API as a sidecar, shows the clip list with status, lets the player click Analyze, shows progress, and opens a finished review. |
 | FR-14 | The review view plays the clip in an HTML5 video element with a marker track underneath: one marker per finding at its timestamp. Clicking a marker seeks the video and shows that finding (observation, what you could see, what you couldn't have known, assumptions, alternative, confidence, evidence frame). |
+| FR-15 | Structured requests send `think: false`. If a completed response (`done=true`, `done_reason=stop`) has empty content and a whole JSON object with the schema's required root keys in `message.thinking`, log a compatibility warning and pass it through normal finding validation. Never substitute prose, incomplete output, or thinking when content is present. |
 
 ## Anti-hindsight requirements
 
@@ -80,6 +81,7 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | `ffmpeg_path` / `ffprobe_path` | `ffmpeg` / `ffprobe` | Override on Windows if not on PATH |
 | `ollama_url` | `http://localhost:11434` | |
 | `model` | `qwen3-vl:8b` | Sized for 12 GB+ VRAM; `qwen3-vl:4b` for smaller cards |
+| `num_ctx` | 16384 | Positive integer context size in tokens, sent to Ollama on every request; override with `ROUND_REVIEW_NUM_CTX`. Budget for image inputs and the response. |
 | `window_s` | 12 | |
 | `windows_per_file` | 3 | |
 | `fps` | 1.0 | Frames per second sampled inside a window |
@@ -93,7 +95,7 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 
 ## Known risks
 
-- 12 frames at 1280 px per call may exceed model context or take 30-90 s on a 12 GB card. `fps` and `frame_width` are tunable; measure on the target PC.
+- 12 frames at 1280 px per call may exceed model context or take substantial time on the target GPU. `num_ctx` defaults to 16,384; increase it if inputs plus the response do not fit, or reduce `fps` / `frame_width`. Larger contexts use more memory; measure on the target PC.
 - Outplayed writes MP4 progressively. Whether it writes to a temp name and renames is unverified; the stability rule in FR-2 covers both cases.
 - ffmpeg `-ss` before `-i` is keyframe-approximate. Timestamps may be off by up to a GOP; acceptable for 12 s windows.
 - Coaching quality from a general vision model is unproven. Validate on real clips against a human coach before trusting `watch` mode.

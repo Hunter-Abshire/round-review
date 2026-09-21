@@ -14,6 +14,7 @@ classDiagram
         +str ffprobe_path
         +str ollama_url
         +str model
+        +int num_ctx
         +float window_s
         +int windows_per_file
         +float fps
@@ -116,6 +117,7 @@ classDiagram
     }
     class UrllibTransport {
         +str base_url
+        +int num_ctx
         +chat(request) ChatResponse
     }
     class SubprocessRunner {

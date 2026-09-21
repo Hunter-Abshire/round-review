@@ -1,5 +1,6 @@
 import json
 from collections import deque
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -14,8 +15,9 @@ from round_review.errors import (
     VideoError,
 )
 from round_review.ledger import read_ledger
-from round_review.llm.transport import ChatRequest, ChatResponse
-from round_review.pipeline import Deps, review_file
+from round_review.llm.transport import ChatRequest, ChatResponse, UrllibTransport
+from round_review.pipeline import Deps, make_default_deps, review_file
+from tests.llm.test_transport import FakeResponse
 from tests.video.test_probe import PROBE_JSON
 
 FIXED_NOW = datetime(2026, 9, 20, 12, 0, tzinfo=UTC)
@@ -137,6 +139,27 @@ def test_already_processed_raises_and_makes_no_calls(video: Path, tmp_path: Path
         review_file(video, deps)
     assert len(transport.calls) == 3
     assert len(read_ledger(deps.config.ledger_path)) == 1
+
+
+def test_configured_context_sent_on_every_window_and_retry(video: Path, tmp_path: Path) -> None:
+    deps = make_deps(tmp_path, FakeTransport())
+    config = replace(deps.config, num_ctx=32768)
+    transport = make_default_deps(config).transport
+    assert isinstance(transport, UrllibTransport)
+    bodies = []
+    responses = deque(["invalid JSON", '{"findings": []}', '{"findings": []}', '{"findings": []}'])
+
+    def opener(request, timeout):
+        bodies.append(json.loads(request.data))
+        return FakeResponse({"message": {"content": responses.popleft()}})
+
+    report = review_file(
+        video, replace(deps, config=config, transport=replace(transport, opener=opener))
+    )
+    assert len(report.results) == 3
+    assert len(bodies) == 4
+    assert all(body["options"]["num_ctx"] == 32768 for body in bodies)
+    assert read_ledger(config.ledger_path)[0].model_calls == 4
 
 
 def test_force_reprocesses(video: Path, tmp_path: Path) -> None:

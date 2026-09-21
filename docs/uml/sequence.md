@@ -34,7 +34,8 @@ sequenceDiagram
         Rev->>Cl: build_chat_request(model, prompt, images)
         Rev->>Cl: send_review(request, transport, calls_today, cap)
         Cl->>Cl: cap check
-        Cl->>T: chat(request)  POST /api/chat
+        Cl->>T: chat(request) POST /api/chat with configured options.num_ctx
+        Note over T: think=false; completed JSON-only thinking fallback is logged and validated normally
         T-->>Cl: ChatResponse(content=json)
         Cl-->>Rev: content
         Rev->>Pa: parse_findings(content, window)
@@ -87,7 +88,7 @@ sequenceDiagram
                     P-->>W: raise OllamaError
                     W->>W: log, continue loop
                 else ParseError on one window
-                    Rev->>T: chat(request) retry once with JSON nudge
+                    Rev->>T: chat(request) retry once with JSON nudge and same options.num_ctx
                     alt retry parses
                         Rev-->>P: WindowResult
                     else still invalid

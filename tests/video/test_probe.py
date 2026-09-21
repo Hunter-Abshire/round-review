@@ -1,4 +1,5 @@
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -98,9 +99,9 @@ def test_subprocess_runner_missing_binary_is_video_error() -> None:
 
 
 def test_subprocess_runner_nonzero_exit_is_video_error() -> None:
-    runner = SubprocessRunner(executable="false")
-    with pytest.raises(VideoError, match="exit"):
-        runner.run([])
+    runner = SubprocessRunner(executable=sys.executable)
+    with pytest.raises(VideoError, match="exit 1"):
+        runner.run(["-c", "import sys; sys.exit(1)"])
 
 
 @requires_ffmpeg

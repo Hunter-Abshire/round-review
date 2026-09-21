@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import json
+import logging
 import urllib.error
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from round_review.config import DEFAULT_NUM_CTX
 from round_review.errors import OllamaError
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,7 +44,7 @@ def _default_opener(req: urllib.request.Request, timeout: float) -> Any:
     return urllib.request.urlopen(req, timeout=timeout)
 
 
-def build_body(request: ChatRequest) -> dict[str, Any]:
+def build_body(request: ChatRequest, num_ctx: int = DEFAULT_NUM_CTX) -> dict[str, Any]:
     body: dict[str, Any] = {
         "model": request.model,
         "stream": False,
@@ -49,23 +53,53 @@ def build_body(request: ChatRequest) -> dict[str, Any]:
             {"role": "user", "content": request.prompt, "images": list(request.images_b64)},
         ],
         # Low temperature: we want consistent, evidence-bound findings, not creativity.
-        "options": {"temperature": 0.2},
+        "options": {"temperature": 0.2, "num_ctx": num_ctx},
     }
     if request.format is not None:
         body["format"] = request.format
+        body["think"] = False
     return body
+
+
+def _response_content(payload: dict[str, Any], schema: dict[str, Any] | str | None) -> str:
+    message = payload["message"]
+    content = str(message["content"])
+    if (
+        content.strip()
+        or not isinstance(schema, dict)
+        or schema.get("type") != "object"
+        or payload.get("done") is not True
+        or payload.get("done_reason") != "stop"
+    ):
+        return content
+    # Some Qwen/Ollama versions route the complete schema response into thinking,
+    # even with think=false. Never promote reasoning prose or truncated responses.
+    thinking = message.get("thinking")
+    if not isinstance(thinking, str):
+        return content
+    try:
+        document = json.loads(thinking)
+    except json.JSONDecodeError:
+        return content  # Preserve the empty answer so the normal parse/retry path handles it.
+    if not isinstance(document, dict) or any(
+        key not in document for key in schema.get("required", [])
+    ):
+        return content
+    log.warning("Ollama returned structured JSON in message.thinking; using it for validation")
+    return thinking
 
 
 @dataclass(frozen=True, slots=True)
 class UrllibTransport:
     base_url: str
     opener: Opener = field(default=_default_opener)
+    num_ctx: int = DEFAULT_NUM_CTX
 
     def chat(self, request: ChatRequest) -> ChatResponse:
         url = self.base_url.rstrip("/") + "/api/chat"
         req = urllib.request.Request(
             url,
-            data=json.dumps(build_body(request)).encode("utf-8"),
+            data=json.dumps(build_body(request, self.num_ctx)).encode("utf-8"),
             headers={"Content-Type": "application/json"},
             method="POST",
         )
@@ -82,7 +116,7 @@ class UrllibTransport:
         try:
             payload = json.loads(raw)
             return ChatResponse(
-                content=str(payload["message"]["content"]),
+                content=_response_content(payload, request.format),
                 prompt_eval_count=int(payload.get("prompt_eval_count", 0)),
                 eval_count=int(payload.get("eval_count", 0)),
             )

@@ -38,7 +38,7 @@ def test_build_extract_args_shape(tmp_path: Path) -> None:
     assert args.index("-ss") < args.index("-i")
     assert args[args.index("-ss") + 1] == "40.000"
     assert args[args.index("-t") + 1] == "12.000"
-    assert args[args.index("-i") + 1] == "/v/a.mp4"
+    assert args[args.index("-i") + 1] == str(Path("/v/a.mp4"))
     vf = args[args.index("-vf") + 1]
     assert "fps=1.0" in vf
     assert "scale=1280:-2" in vf

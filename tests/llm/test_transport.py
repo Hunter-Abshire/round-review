@@ -66,6 +66,8 @@ def test_posts_expected_body_to_api_chat() -> None:
     assert body["model"] == "qwen3-vl:8b"
     assert body["stream"] is False
     assert body["format"] == {"type": "object"}
+    assert body["options"] == {"temperature": 0.2, "num_ctx": 16384}
+    assert body["think"] is False
     assert body["messages"][0] == {"role": "system", "content": "be a coach"}
     assert body["messages"][1]["role"] == "user"
     assert body["messages"][1]["content"] == "review these"
@@ -77,6 +79,58 @@ def test_format_omitted_when_none() -> None:
     seen, opener = capture_opener(OK_PAYLOAD)
     UrllibTransport("http://x", opener=opener).chat(make_request(format=None))
     assert "format" not in json.loads(seen[0][0].data)
+
+
+def test_custom_context_size_sent_to_ollama() -> None:
+    seen, opener = capture_opener(OK_PAYLOAD)
+    UrllibTransport("http://x", opener=opener, num_ctx=32768).chat(make_request())
+    assert json.loads(seen[0][0].data)["options"]["num_ctx"] == 32768
+
+
+def test_complete_structured_json_in_thinking_used_when_content_empty(caplog) -> None:
+    payload = {
+        "message": {"content": "", "thinking": '{"findings": []}'},
+        "done": True,
+        "done_reason": "stop",
+    }
+    _, opener = capture_opener(payload)
+    response = UrllibTransport("http://x", opener=opener).chat(
+        make_request(format={"type": "object", "required": ["findings"]})
+    )
+    assert response.content == '{"findings": []}'
+    assert "message.thinking" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("thinking", "done", "reason", "schema"),
+    [
+        ('Reasoning first. {"findings": []}', True, "stop", {"type": "object"}),
+        ('{"findings":', True, "stop", {"type": "object"}),
+        ('{"findings": []}', True, "length", {"type": "object"}),
+        ('{"findings": []}', False, "stop", {"type": "object"}),
+        ('{"findings": []}', True, "stop", None),
+        ('{"analysis": []}', True, "stop", {"type": "object", "required": ["findings"]}),
+        ("[]", True, "stop", {"type": "object"}),
+    ],
+)
+def test_unusable_thinking_does_not_replace_content(thinking, done, reason, schema) -> None:
+    _, opener = capture_opener(
+        {"message": {"content": "", "thinking": thinking}, "done": done, "done_reason": reason}
+    )
+    response = UrllibTransport("http://x", opener=opener).chat(make_request(format=schema))
+    assert response.content == ""
+
+
+def test_content_takes_precedence_over_thinking() -> None:
+    _, opener = capture_opener(
+        {
+            "message": {"content": '{"findings": []}', "thinking": '{"findings": [1]}'},
+            "done": True,
+            "done_reason": "stop",
+        }
+    )
+    response = UrllibTransport("http://x", opener=opener).chat(make_request())
+    assert response.content == '{"findings": []}'
 
 
 def test_http_error_is_ollama_error() -> None:

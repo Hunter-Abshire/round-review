@@ -19,6 +19,7 @@ def test_defaults_when_file_missing(tmp_path: Path) -> None:
     assert cfg.quiet_polls == 3
     assert cfg.min_age_s == 120.0
     assert cfg.request_timeout_s == 300.0
+    assert cfg.num_ctx == 16384
     assert cfg.ffmpeg_path == "ffmpeg"
     assert cfg.ffprobe_path == "ffprobe"
     assert cfg.recordings_dir is None
@@ -85,3 +86,19 @@ def test_config_is_frozen(tmp_path: Path) -> None:
     assert isinstance(cfg, Config)
     with pytest.raises(AttributeError):
         cfg.model = "other"  # type: ignore[misc]
+
+
+def test_context_size_from_toml_and_environment(tmp_path: Path) -> None:
+    path = tmp_path / "config.toml"
+    path.write_text("num_ctx = 32768\n")
+    assert load_config(path, env={}, data_dir=tmp_path).num_ctx == 32768
+    cfg = load_config(path, env={"ROUND_REVIEW_NUM_CTX": "65536"}, data_dir=tmp_path)
+    assert cfg.num_ctx == 65536
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "1.5", "true", '"large"'])
+def test_invalid_context_size_rejected(tmp_path: Path, value: str) -> None:
+    path = tmp_path / "config.toml"
+    path.write_text(f"num_ctx = {value}\n")
+    with pytest.raises(ConfigError, match="num_ctx"):
+        load_config(path, env={}, data_dir=tmp_path)

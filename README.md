@@ -40,12 +40,25 @@ Config lives in the user data dir (`%LOCALAPPDATA%\round-review\config.toml` on 
 ```toml
 recordings_dir = "C:/Users/you/Videos/Outplayed/VALORANT"
 model = "qwen3-vl:8b"
+num_ctx = 16384
 windows_per_file = 3
 fps = 1.0
 daily_call_cap = 30
 ```
 
 Any key can be overridden with `ROUND_REVIEW_<KEY>` in the environment.
+
+`num_ctx` sets the Ollama context size in tokens for every request, including retries.
+The default is 16,384: sampled images can exceed Ollama's 4,096-token default.
+If a request still exceeds the context, increase `num_ctx` (allowing room for the response),
+or reduce `fps` / `frame_width`. Larger contexts require more memory.
+Restart the desktop app and watcher after changing configuration. Retry an already-recorded
+failure with `review <file> --force`; it remains in the ledger until explicitly re-reviewed.
+
+Structured requests disable thinking. If Ollama returns a completed JSON object in
+`message.thinking` with empty `message.content`, the app logs a compatibility warning
+and validates that object through the normal finding parser. Prose and truncated
+responses are not accepted through this fallback.
 
 ```
 round-review config show

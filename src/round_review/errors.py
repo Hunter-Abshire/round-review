@@ -47,3 +47,7 @@ class KnowledgeError(RoundReviewError):
 
 class LabelsError(RoundReviewError):
     """A scene-validation labels file is missing, malformed, or has nothing labelled."""
+
+
+class HudError(RoundReviewError):
+    """A HUD raster could not be read, or its digit templates are unusable."""

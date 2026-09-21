@@ -309,3 +309,94 @@ def test_scenes_describe_prints_the_situation_json(
     assert "early" in result.output
     assert "Live round." in result.output
     assert "/f/x.jpg" in result.output
+
+
+def test_hud_crop_saves_a_picture_to_check_the_region(
+    monkeypatch: pytest.MonkeyPatch, patched: dict[str, object], scene_video: Path, tmp_path: Path
+) -> None:
+    saved: dict[str, object] = {}
+
+    def fake_run(args: list[str]) -> str:
+        saved["args"] = args
+        Path(args[-1]).parent.mkdir(parents=True, exist_ok=True)
+        Path(args[-1]).write_bytes(b"png")
+        return ""
+
+    monkeypatch.setattr(cli, "probe", lambda p, r: Recording(p, 300.0, 60.0, 1920, 1080, 1, 0.0))
+    monkeypatch.setattr(
+        cli, "SubprocessRunner", lambda exe: type("R", (), {"run": staticmethod(fake_run)})()
+    )
+    result = CliRunner().invoke(
+        cli.main, ["hud", "crop", str(scene_video), "--at", "45", "--out", str(tmp_path / "t.png")]
+    )
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / "t.png").exists()
+    assert "t.png" in result.output
+    assert "crop=" in " ".join(saved["args"])  # type: ignore[arg-type]
+
+
+def test_hud_learn_teaches_digits_and_reports_what_is_missing(
+    monkeypatch: pytest.MonkeyPatch, patched: dict[str, object], scene_video: Path, tmp_path: Path
+) -> None:
+    from round_review.vision.raster import Glyph
+
+    monkeypatch.setattr(cli, "probe", lambda p, r: Recording(p, 300.0, 60.0, 1920, 1080, 1, 0.0))
+    monkeypatch.setattr(
+        cli,
+        "learn_from_crop",
+        lambda *a, **k: [("1", Glyph(("#",), 0.5)), (":", Glyph((".",), 0.2))],
+    )
+    store = tmp_path / "digits.json"
+    result = CliRunner().invoke(
+        cli.main,
+        ["hud", "learn", str(scene_video), "--at", "45", "--reads", "1:", "--store", str(store)],
+    )
+    assert result.exit_code == 0, result.output
+    assert store.exists()
+    assert "Still missing" in result.output
+    assert "0" in result.output and "9" in result.output
+
+
+def test_hud_learn_reports_a_mismatched_reading(
+    monkeypatch: pytest.MonkeyPatch, patched: dict[str, object], scene_video: Path, tmp_path: Path
+) -> None:
+    from round_review.errors import HudError
+
+    def boom(*a: object, **k: object) -> list[object]:
+        raise HudError("the crop has 4 glyph(s) but you said it reads '12:34'")
+
+    monkeypatch.setattr(cli, "probe", lambda p, r: Recording(p, 300.0, 60.0, 1920, 1080, 1, 0.0))
+    monkeypatch.setattr(cli, "learn_from_crop", boom)
+    result = CliRunner().invoke(
+        cli.main, ["hud", "learn", str(scene_video), "--at", "45", "--reads", "12:34"]
+    )
+    assert result.exit_code == 1
+    assert "HudError" in result.output
+
+
+def test_hud_read_prints_the_clock_and_what_it_proves(
+    monkeypatch: pytest.MonkeyPatch, patched: dict[str, object], scene_video: Path
+) -> None:
+    from round_review.vision.hud import HudRead
+
+    monkeypatch.setattr(cli, "probe", lambda p, r: Recording(p, 300.0, 60.0, 1920, 1080, 1, 0.0))
+    monkeypatch.setattr(cli, "read_hud", lambda *a, **k: HudRead("1:39", 99.0, 0.94, 4))
+    result = CliRunner().invoke(cli.main, ["hud", "read", str(scene_video), "--at", "45"])
+    assert result.exit_code == 0, result.output
+    assert "1:39" in result.output
+    assert "live" in result.output.lower()
+
+
+def test_hud_read_says_when_it_cannot_read_the_clock(
+    monkeypatch: pytest.MonkeyPatch, patched: dict[str, object], scene_video: Path
+) -> None:
+    from round_review.vision.hud import HudRead
+
+    monkeypatch.setattr(cli, "probe", lambda p, r: Recording(p, 300.0, 60.0, 1920, 1080, 1, 0.0))
+    monkeypatch.setattr(
+        cli, "read_hud", lambda *a, **k: HudRead(None, None, 0.0, 7, Path("/tmp/c.pgm"))
+    )
+    result = CliRunner().invoke(cli.main, ["hud", "read", str(scene_video), "--at", "45"])
+    assert result.exit_code == 0
+    assert "7 glyph" in result.output
+    assert "hud learn" in result.output  # tells you what to do about it

@@ -10,7 +10,7 @@ from typing import Any
 
 from platformdirs import user_data_dir
 
-from round_review.errors import ConfigError
+from round_review.errors import ConfigError, RoundReviewError
 
 APP_NAME = "round-review"
 ENV_PREFIX = "ROUND_REVIEW_"
@@ -46,6 +46,14 @@ class Config:
     # Two model calls per window (situation read, then coaching). Off = coaching only.
     situation_pass: bool = True
     player_notes: str = ""
+    # Deterministic HUD reading. The clock is the one fact a vision model cannot argue with,
+    # so it vetoes phase misreads. The region is x,y,w,h as fractions of the frame; check it
+    # against your own footage with `round-review hud crop`.
+    hud_check: bool = True
+    hud_timer_region: str = "0.455,0.020,0.090,0.055"
+    hud_templates_path: Path | None = None
+    hud_min_confidence: float = 0.8
+    buy_phase_max_s: float = 45.0
 
 
 # Keys whose values must be strictly positive. Everything else is a path or string.
@@ -61,11 +69,14 @@ POSITIVE_KEYS: frozenset[str] = frozenset(
         "request_timeout_s",
         "api_port",
         "num_ctx",
+        "buy_phase_max_s",
     }
 )
 # 0 is allowed and means "unlimited"; negative never is.
 NON_NEGATIVE_KEYS: frozenset[str] = frozenset({"daily_call_cap", "max_windows", "max_span_s"})
-PATH_KEYS: frozenset[str] = frozenset({"recordings_dir", "reports_dir", "ledger_path"})
+PATH_KEYS: frozenset[str] = frozenset(
+    {"recordings_dir", "reports_dir", "ledger_path", "hud_templates_path"}
+)
 COVERAGE_MODES: frozenset[str] = frozenset({"full", "sampled"})
 
 
@@ -152,6 +163,7 @@ def load_config(
     values: dict[str, object] = {
         "reports_dir": data_dir / "reports",
         "ledger_path": data_dir / "ledger.jsonl",
+        "hud_templates_path": data_dir / "hud-digits.json",
     }
 
     for key, raw in _read_toml(path).items():
@@ -175,6 +187,15 @@ def load_config(
             assert isinstance(number, int | float)
             if number < 0:
                 raise ConfigError(f"{key} must be >= 0 (0 means unlimited), got {number}")
+
+    region = values.get("hud_timer_region")
+    if isinstance(region, str):
+        from round_review.vision.hud import parse_region
+
+        try:
+            parse_region(region)
+        except RoundReviewError as exc:
+            raise ConfigError(f"hud_timer_region: {exc}") from exc
 
     coverage = values.get("coverage")
     if coverage is not None and coverage not in COVERAGE_MODES:

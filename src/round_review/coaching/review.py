@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from round_review.coaching.context import PlayerContext, merge_context
 from round_review.coaching.knowledge import CoachingKnowledge, relevant_categories
@@ -24,6 +24,7 @@ from round_review.llm.client import build_chat_request, send_review
 from round_review.llm.transport import Transport
 from round_review.video.frames import FrameSample, encode_frame_b64
 from round_review.video.windows import Window
+from round_review.vision.hud import HudRead, constrain_phase
 
 log = logging.getLogger(__name__)
 
@@ -66,6 +67,8 @@ class WindowResult:
     # Why coaching was skipped for this window, if it was. Kept separate from the warning
     # text so the report can count reasons and diagnose a model that misreads the screen.
     abstained_reason: str | None = None
+    # True when the deterministic HUD read corrected the model's round phase.
+    hud_override: bool = False
 
     @property
     def abstained(self) -> bool:
@@ -83,6 +86,9 @@ def review_window(
     context: PlayerContext | None,
     knowledge: CoachingKnowledge,
     situation_pass: bool = True,
+    hud: HudRead | None = None,
+    buy_phase_max_s: float = 45.0,
+    hud_min_confidence: float = 0.8,
 ) -> WindowResult:
     """Pass 1 (optional) asks the model to describe what is on screen; a failed pass 1 is a
     warning. Pass 2 coaches against the checklist and retries once with a JSON-only nudge;
@@ -93,6 +99,7 @@ def review_window(
     warnings: list[str] = []
     calls = 0
     situation: Situation | None = None
+    hud_override = False
 
     if situation_pass:
         request = build_chat_request(
@@ -113,6 +120,15 @@ def review_window(
         else:
             context = merge_context(context, situation.to_context())
 
+        if situation is not None:
+            # The clock is ground truth the model cannot argue with: a round timer above the
+            # buy phase maximum proves the round is live, whatever the model called it.
+            verdict = constrain_phase(situation.phase, hud, buy_phase_max_s, hud_min_confidence)
+            if verdict.overridden:
+                situation = replace(situation, phase=verdict.phase)
+                hud_override = True
+                warnings.append(f"HUD override: {verdict.reason}")
+
         if situation is not None and situation.phase in (None, "pre_round", "spectating"):
             reason = {"pre_round": "buy phase", "spectating": "spectating another player"}.get(
                 situation.phase or "", "round phase unreadable"
@@ -127,6 +143,7 @@ def review_window(
                 situation,
                 context,
                 abstained_reason=reason,
+                hud_override=hud_override,
             )
 
     system = build_system_prompt(knowledge, situation.phase if situation else None)
@@ -158,6 +175,7 @@ def review_window(
             tuple(warnings + parse_warnings),
             situation,
             context,
+            hud_override=hud_override,
         )
 
     assert last_error is not None

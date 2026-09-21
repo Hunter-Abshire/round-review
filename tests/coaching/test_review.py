@@ -11,6 +11,7 @@ from round_review.errors import CapExceeded, ParseError
 from round_review.llm.transport import ChatRequest, ChatResponse
 from round_review.video.frames import FrameSample
 from round_review.video.windows import Window
+from round_review.vision.hud import HudRead
 
 WINDOW = Window(index=0, start_s=60.0, end_s=72.0, source="evenly_spaced")
 
@@ -229,3 +230,52 @@ def test_a_coached_window_is_not_marked_abstained(samples: list[FrameSample]) ->
     result = review(FakeTransport(SITUATION, GOOD), samples)
     assert result.abstained is False
     assert result.abstained_reason is None
+
+
+def hud_live(clock: str = "1:39", seconds: float = 99.0, confidence: float = 0.95) -> HudRead:
+    return HudRead(clock, seconds, confidence, 4)
+
+
+def test_hud_clock_overrides_a_buy_phase_misread(samples: list[FrameSample]) -> None:
+    buy_phase = json.loads(SITUATION)
+    buy_phase["phase"] = "pre_round"
+    transport = FakeTransport(json.dumps(buy_phase), GOOD)
+    result = review(transport, samples, hud=hud_live())
+
+    assert result.abstained is False  # the window is coached instead of skipped
+    assert len(result.findings) == 1
+    assert result.situation is not None and result.situation.phase == "early"
+    assert any("HUD round timer reads 1:39" in w for w in result.warnings)
+    assert result.hud_override is True
+
+
+def test_hud_rescues_an_unreadable_phase(samples: list[FrameSample]) -> None:
+    unreadable = json.loads(SITUATION)
+    unreadable["phase"] = "unknown"
+    result = review(FakeTransport(json.dumps(unreadable), GOOD), samples, hud=hud_live())
+    assert result.abstained is False
+    assert result.situation is not None and result.situation.phase == "early"
+
+
+def test_hud_does_not_override_spectating(samples: list[FrameSample]) -> None:
+    spectating = json.loads(SITUATION)
+    spectating["phase"] = "spectating"
+    result = review(FakeTransport(json.dumps(spectating)), samples, hud=hud_live())
+    assert result.abstained is True
+    assert result.abstained_reason == "spectating another player"
+    assert result.hud_override is False
+
+
+def test_a_short_hud_clock_leaves_the_buy_phase_call_alone(samples: list[FrameSample]) -> None:
+    buy_phase = json.loads(SITUATION)
+    buy_phase["phase"] = "pre_round"
+    result = review(FakeTransport(json.dumps(buy_phase)), samples, hud=hud_live("0:20", 20.0))
+    assert result.abstained is True
+    assert result.hud_override is False
+
+
+def test_an_unread_hud_changes_nothing(samples: list[FrameSample]) -> None:
+    buy_phase = json.loads(SITUATION)
+    buy_phase["phase"] = "pre_round"
+    result = review(FakeTransport(json.dumps(buy_phase)), samples, hud=HudRead(None, None, 0.0, 0))
+    assert result.abstained is True

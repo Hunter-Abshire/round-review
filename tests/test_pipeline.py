@@ -452,3 +452,73 @@ def test_a_complete_review_is_not_partial(video: Path, tmp_path: Path) -> None:
     report = review_file(video, make_deps(tmp_path, transport))
     assert report.partial is False
     assert report.stopped_reason is None
+
+
+def test_hud_clock_rescues_windows_the_model_called_buy_phase(
+    video: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The whole point: the model calls live play buy phase, the clock proves it wrong."""
+    import round_review.pipeline as pipeline_module
+    from round_review.vision.hud import HudRead
+    from tests.coaching.test_review import SITUATION
+
+    buy = json.loads(SITUATION)
+    buy["phase"] = "pre_round"
+    # one situation call plus one coach call per window, because none of them abstain now
+    transport = FakeTransport(
+        json.dumps(buy), good(35.0), json.dumps(buy), good(65.0), json.dumps(buy), good(85.0)
+    )
+    monkeypatch.setattr(pipeline_module, "read_hud", lambda *a, **k: HudRead("1:39", 99.0, 0.95, 4))
+    templates = tmp_path / "digits.json"
+    templates.write_text(json.dumps({"characters": {"1": [{"grid": ["#"], "aspect": 0.5}]}}))
+    deps = make_deps(
+        tmp_path, transport, situation_pass=True, hud_check=True, hud_templates_path=templates
+    )
+    report = review_file(video, deps)
+
+    assert not any(r.abstained for r in report.results)
+    assert all(r.hud_override for r in report.results)
+    assert sum(len(r.findings) for r in report.results) == 3
+    assert all(r.situation is not None and r.situation.phase == "early" for r in report.results)
+
+
+def test_without_learned_digits_the_hud_is_not_consulted(
+    video: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import round_review.pipeline as pipeline_module
+    from tests.coaching.test_review import SITUATION
+
+    reads: list[object] = []
+    monkeypatch.setattr(
+        pipeline_module,
+        "read_hud",
+        lambda *a, **k: reads.append(a) or None,  # type: ignore[func-returns-value]
+    )
+    buy = json.loads(SITUATION)
+    buy["phase"] = "pre_round"
+    empty = tmp_path / "digits.json"
+    empty.write_text(json.dumps({"characters": {}}))
+    deps = make_deps(
+        tmp_path,
+        FakeTransport(*[json.dumps(buy)] * 3),
+        situation_pass=True,
+        hud_check=True,
+        hud_templates_path=empty,
+    )
+    report = review_file(video, deps)
+    assert reads == []  # nothing to match against, so no crop is taken
+    assert all(r.abstained for r in report.results)
+
+
+def test_hud_check_off_never_reads_the_hud(
+    video: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import round_review.pipeline as pipeline_module
+
+    monkeypatch.setattr(
+        pipeline_module,
+        "read_hud",
+        lambda *a, **k: pytest.fail("HUD read attempted while hud_check is off"),
+    )
+    deps = make_deps(tmp_path, FakeTransport(good(35.0), good(65.0), good(85.0)), hud_check=False)
+    assert len(review_file(video, deps).results) == 3

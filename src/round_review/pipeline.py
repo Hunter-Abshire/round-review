@@ -36,7 +36,9 @@ from round_review.report.json_report import write_report_json
 from round_review.report.markdown import Report, write_report
 from round_review.video.frames import extract_frames, extract_single_frame
 from round_review.video.probe import CommandRunner, Recording, SubprocessRunner, probe
-from round_review.video.windows import plan_windows
+from round_review.video.windows import Window, plan_windows
+from round_review.vision.digits import DigitTemplates
+from round_review.vision.hud import HudRead, parse_region, read_hud
 
 log = logging.getLogger(__name__)
 
@@ -127,6 +129,35 @@ def _attach_exact_evidence(
     return replace(result, findings=tuple(findings)), warnings
 
 
+def _read_window_hud(
+    recording: Recording,
+    window: Window,
+    deps: Deps,
+    templates: DigitTemplates,
+    frames_dir: Path,
+) -> HudRead | None:
+    """Read the round clock once per window, from the middle frame. Costs one ffmpeg crop
+    and no model call; returns None when HUD checking is off or unconfigured."""
+    cfg = deps.config
+    if not (cfg.hud_check and cfg.situation_pass) or not templates.characters():
+        return None
+    try:
+        region = parse_region(cfg.hud_timer_region)
+    except RoundReviewError as exc:
+        log.warning("hud_timer_region is unusable, skipping HUD checks: %s", exc)
+        return None
+    midpoint = (window.start_s + window.end_s) / 2
+    return read_hud(
+        recording,
+        midpoint,
+        region,
+        deps.ffmpeg_runner,
+        templates,
+        out_dir=frames_dir / "hud",
+        min_confidence=cfg.hud_min_confidence,
+    )
+
+
 def review_file(
     path: Path,
     deps: Deps,
@@ -154,6 +185,11 @@ def review_file(
     unparseable_windows = 0
     warnings: list[str] = []
     knowledge = load_knowledge()
+    hud_templates = (
+        DigitTemplates.load(cfg.hud_templates_path)
+        if cfg.hud_check and cfg.situation_pass and cfg.hud_templates_path
+        else DigitTemplates({})
+    )
 
     try:
         recording = probe(path, deps.probe_runner)
@@ -193,6 +229,9 @@ def review_file(
                 context,
                 knowledge,
                 cfg.situation_pass,
+                hud=_read_window_hud(recording, window, deps, hud_templates, frames_dir),
+                buy_phase_max_s=cfg.buy_phase_max_s,
+                hud_min_confidence=cfg.hud_min_confidence,
             )
         except ParseError as exc:
             # One unreadable window is a warning; every window unreadable fails the file.

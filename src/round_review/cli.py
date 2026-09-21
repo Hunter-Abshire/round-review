@@ -16,7 +16,7 @@ import click
 import uvicorn
 
 from round_review.coaching.context import PlayerContext, context_from_mapping
-from round_review.config import Config, load_config
+from round_review.config import Config, default_data_dir, load_config
 from round_review.errors import RoundReviewError
 from round_review.ledger import is_processed, read_ledger, recording_key
 from round_review.pipeline import Deps, make_default_deps, review_file
@@ -31,7 +31,9 @@ from round_review.validation.scenes import (
     scaffold_cases,
     write_cases,
 )
-from round_review.video.probe import probe
+from round_review.video.probe import SubprocessRunner, probe
+from round_review.vision.digits import DigitTemplates
+from round_review.vision.hud import Region, learn_from_crop, parse_region, read_hud
 from round_review.watcher import stat_snapshot, watch_loop
 
 log = logging.getLogger("round_review")
@@ -195,6 +197,166 @@ def _with_coverage(
     if max_windows is not None:
         config = replace(config, max_windows=max_windows)
     return config
+
+
+@main.group()
+def hud() -> None:
+    """Read the round clock straight off the HUD, with no model involved.
+
+    A vision model can call live play "buy phase"; the round timer cannot. Teach the digits
+    once from your own footage and every review gains a veto over that misread.
+
+    Workflow: `hud crop` to check the region lines up with your recordings, `hud learn` a
+    few times to teach the digits, then `hud read` to confirm.
+    """
+
+
+def _hud_region(config: Config, override: str | None) -> Region:
+    try:
+        return parse_region(override or config.hud_timer_region)
+    except RoundReviewError as exc:
+        _fail(exc)
+        raise  # unreachable, _fail exits
+
+
+def _templates_path(config: Config, override: Path | None) -> Path:
+    return override or config.hud_templates_path or default_data_dir() / "hud-digits.json"
+
+
+@hud.command("crop")
+@click.argument("file", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--at", "timestamp_s", type=float, required=True, help="Timestamp to crop.")
+@click.option("--region", default=None, help="Override the timer region as x,y,w,h fractions.")
+@click.option(
+    "--out",
+    "out_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=Path("hud-timer.png"),
+)
+@click.pass_obj
+def hud_crop(
+    config: Config, file: Path, timestamp_s: float, region: str | None, out_path: Path
+) -> None:
+    """Save the timer region as a picture, so you can see whether it is pointed at the clock."""
+    from round_review.vision.hud import build_crop_args
+
+    box = _hud_region(config, region)
+    runner = SubprocessRunner(config.ffmpeg_path)
+    try:
+        recording = probe(file, SubprocessRunner(config.ffprobe_path))
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        runner.run(build_crop_args(file, timestamp_s, box, recording, out_path))
+    except RoundReviewError as exc:
+        _fail(exc)
+        return
+    click.echo(
+        f"Wrote {out_path}. It should show only the round timer. If it does not, adjust "
+        f"hud_timer_region in config.toml (currently {config.hud_timer_region}) and try again."
+    )
+
+
+@hud.command("learn")
+@click.argument("file", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--at", "timestamp_s", type=float, required=True, help="Timestamp to learn from.")
+@click.option("--reads", required=True, help="What the timer says at that moment, e.g. 1:39.")
+@click.option("--region", default=None, help="Override the timer region as x,y,w,h fractions.")
+@click.option(
+    "--store", type=click.Path(dir_okay=False, path_type=Path), default=None, help="Template file."
+)
+@click.pass_obj
+def hud_learn(
+    config: Config,
+    file: Path,
+    timestamp_s: float,
+    reads: str,
+    region: str | None,
+    store: Path | None,
+) -> None:
+    """Teach the digit shapes from one frame you have read with your own eyes."""
+    box = _hud_region(config, region)
+    path = _templates_path(config, store)
+    try:
+        recording = probe(file, SubprocessRunner(config.ffprobe_path))
+        samples = learn_from_crop(
+            recording,
+            timestamp_s,
+            box,
+            SubprocessRunner(config.ffmpeg_path),
+            path.parent / "hud-learn",
+            reads,
+        )
+        templates = DigitTemplates.load(path).learn(samples)
+        templates.save(path)
+    except RoundReviewError as exc:
+        _fail(exc)
+        return
+    known = "".join(sorted(templates.characters()))
+    missing = templates.missing()
+    click.echo(f"Learned {len(samples)} glyph(s) from t={timestamp_s:.1f}s into {path}.")
+    click.echo(f"Known characters: {known or 'none'}")
+    if missing:
+        click.echo(
+            f"Still missing: {' '.join(missing)}. Run `hud learn` at other timestamps until "
+            "every digit and the colon are covered."
+        )
+    else:
+        click.echo("Every digit and the colon are covered. Try `hud read` to confirm.")
+
+
+@hud.command("read")
+@click.argument("file", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--at", "timestamps", type=float, multiple=True, required=True)
+@click.option("--region", default=None)
+@click.option("--store", type=click.Path(dir_okay=False, path_type=Path), default=None)
+@click.pass_obj
+def hud_read(
+    config: Config,
+    file: Path,
+    timestamps: tuple[float, ...],
+    region: str | None,
+    store: Path | None,
+) -> None:
+    """Read the clock at given timestamps and say what it proves about the round."""
+    box = _hud_region(config, region)
+    path = _templates_path(config, store)
+    try:
+        templates = DigitTemplates.load(path)
+        recording = probe(file, SubprocessRunner(config.ffprobe_path))
+    except RoundReviewError as exc:
+        _fail(exc)
+        return
+    if not templates.characters():
+        click.echo(f"No digit templates in {path} yet; run `hud learn` first.", err=True)
+    for timestamp in timestamps:
+        read = read_hud(
+            recording,
+            timestamp,
+            box,
+            SubprocessRunner(config.ffmpeg_path),
+            templates,
+            out_dir=path.parent / "hud-read",
+            min_confidence=config.hud_min_confidence,
+        )
+        click.echo(f"\nt={timestamp:.1f}s  crop: {read.crop_path}")
+        if read.error:
+            click.echo(f"  error: {read.error}")
+            continue
+        if read.clock_text is None:
+            click.echo(
+                f"  found {read.glyph_count} glyph(s) but could not read them. "
+                "Teach these shapes with `hud learn --at "
+                f"{timestamp:.1f} --reads <what you see>`."
+            )
+            continue
+        proof = (
+            "live round, so any buy phase or post-plant call is wrong"
+            if read.clock_s is not None and read.clock_s > config.buy_phase_max_s
+            else "consistent with buy phase, mid round or post-plant alike"
+        )
+        click.echo(
+            f"  clock {read.clock_text} ({read.clock_s:.0f}s), confidence {read.confidence:.0%}"
+        )
+        click.echo(f"  {proof}")
 
 
 @main.group()

@@ -1,12 +1,1656 @@
 {
   "agents": [
-    {"id": "jett", "name": "Jett", "role": "duelist",
-     "abilities": [{"key": "C", "name": "Cloudburst", "purpose": "small smoke for a peek"}, {"key": "Q", "name": "Updraft", "purpose": "vertical reposition"}, {"key": "E", "name": "Tailwind", "purpose": "dash to escape or entry"}, {"key": "X", "name": "Blade Storm", "purpose": "eco-round knives"}],
-     "job_in_round": "Entry first with dash available to get out; take space so the team can follow.",
-     "good_play_looks_like": ["Activates dash before the peek", "Takes an off-angle after entry"],
-     "common_mistakes": ["Dies with Tailwind unused", "Dashes into site alone with no follow-up"],
-     "ability_checks": ["If the Tailwind icon is lit at death, the escape was wasted"],
-     "tips": ["Peek to bait, dash out, re-peek"]}
+    {
+      "id": "jett",
+      "name": "Jett",
+      "role": "duelist",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Cloudburst",
+          "purpose": "2 short smokes (2.5s) to cut an angle while you cross, dash, or plant; not a controller smoke."
+        },
+        {
+          "key": "Q",
+          "name": "Updraft",
+          "purpose": "1 charge: reach off-angles or escape vertically; the escape tool once Tailwind is spent."
+        },
+        {
+          "key": "E",
+          "name": "Tailwind",
+          "purpose": "Activate then dash within 7.5s; recharges on 2 kills. Entry into site or bail after the first duel."
+        },
+        {
+          "key": "X",
+          "name": "Blade Storm",
+          "purpose": "Eco/force-round kill tool with knives that refresh on left-click kills; take Op-like duels without buying."
+        }
+      ],
+      "job_in_round": "On attack Jett is first into site: she takes the opening duel, dashes out after taking damage, and lets the team trade. On defense she plays Operator or aggressive off-angles, takes one shot, and Tailwinds to safety before the swing.",
+      "good_play_looks_like": [
+        "Activates Tailwind before the peek so the dash is armed the moment she takes damage",
+        "Enters first on executes right behind flashes, pulling defenders' attention while teammates trade",
+        "Op peek, one shot, dash to cover before the second enemy swings",
+        "Uses Updraft to reach an unexpected high angle, then re-pathes instead of holding it twice",
+        "Cloudburst thrown to cross a gap or cover the plant, not as a standalone site smoke"
+      ],
+      "common_mistakes": [
+        "Dies with Tailwind icon still lit (never armed or never used) after taking damage in the open",
+        "Dashes in with no team behind her and no flash, then dies untraded",
+        "Burns Tailwind speculatively at round start and later gets caught with no escape",
+        "Takes the Operator and then sits passively instead of taking the first shot and repositioning",
+        "Throws both Cloudbursts at once on the same angle, then has none for the plant",
+        "Right-clicks Blade Storm at range and wastes all knives without a kill"
+      ],
+      "ability_checks": [
+        "If Tailwind (E) is lit at death, the escape was wasted; if it is on cooldown after a kill, check that the dash was used to reposition, not to re-peek",
+        "If Updraft (Q) is lit at death after being caught in the open, the vertical escape was not used",
+        "Cloudburst (C) charges still full at the plant means no cover was made for the spike",
+        "Blade Storm ready (X lit) for several rounds with no use is a wasted eco-round kill tool"
+      ],
+      "tips": [
+        "Arm Tailwind before you peek, not after you are hit",
+        "Your job is the first duel, not the last; take it and get out",
+        "Save Updraft as a panic exit if Tailwind is down",
+        "Pop Blade Storm on rounds where you have no gun, not when you have a Vandal"
+      ]
+    },
+    {
+      "id": "phoenix",
+      "name": "Phoenix",
+      "role": "duelist",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Blaze",
+          "purpose": "Curvable fire wall that blocks vision and heals Phoenix; used to split a site or self-heal."
+        },
+        {
+          "key": "Q",
+          "name": "Curveball",
+          "purpose": "2 curving flashes; pop from cover to blind a corner you are about to swing."
+        },
+        {
+          "key": "E",
+          "name": "Hot Hands",
+          "purpose": "Fireball molly: damage a corner or stand in it to heal; 1 charge, refreshes on 2 kills."
+        },
+        {
+          "key": "X",
+          "name": "Run It Back",
+          "purpose": "Free respawn marker; use to take a high-risk peek, dry entry, or scout a site for free."
+        }
+      ],
+      "job_in_round": "On attack Phoenix self-flashes and enters site, using Blaze to cut off crossfire and Hot Hands to clear corners. On defense he holds close angles, self-heals off his wall or molly, and uses Run It Back to take fights he could not otherwise afford.",
+      "good_play_looks_like": [
+        "Curveball popped tight around the corner with an immediate swing while the flash is active",
+        "Blaze placed to divide the site so only one defender can see him at a time",
+        "Ult used on a round where the free peek gains a kill or clear information before the real push",
+        "Heals in Blaze or Hot Hands between fights when at low HP and nobody is pushing",
+        "Enters with teammates behind him ready to trade"
+      ],
+      "common_mistakes": [
+        "Curveball thrown wide or too early, flashing nobody or flashing himself and teammates",
+        "Blaze placed with Phoenix on the wrong side, blinding his own team",
+        "Run It Back used at round end or behind the team, gaining nothing",
+        "Sits inside Blaze or molly to heal while the site is being taken",
+        "Peeks without flashing and dies to a set angle with both Curveballs unused",
+        "Uses Hot Hands only as a heal and never to clear a corner or delay a defuse"
+      ],
+      "ability_checks": [
+        "If both Curveball (Q) charges are lit at death on entry, he dry-peeked with flashes available",
+        "Blaze (C) lit at death on a site hit means he took the crossfire without cutting an angle",
+        "Run It Back (X) ready for multiple rounds means the free aggressive peek is not being cashed in",
+        "Hot Hands (E) unused at low HP in a lull means the self-heal was skipped"
+      ],
+      "tips": [
+        "Flash then swing; never swing then flash",
+        "Stand on the correct side of your wall before you throw it",
+        "Ult is for a peek you would not take otherwise, then the real push",
+        "Heal only when the map is quiet, not mid-execute"
+      ]
+    },
+    {
+      "id": "reyna",
+      "name": "Reyna",
+      "role": "duelist",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Leer",
+          "purpose": "2 nearsight eyes (60 HP); throw above head height into site so defenders must shoot it or lose vision."
+        },
+        {
+          "key": "Q",
+          "name": "Devour",
+          "purpose": "Consume a soul orb to heal 50 temporary HP; only when no second enemy can trade."
+        },
+        {
+          "key": "E",
+          "name": "Dismiss",
+          "purpose": "Consume a soul orb to go intangible 1.5s; the reposition after a kill. Default over Devour."
+        },
+        {
+          "key": "X",
+          "name": "Empress",
+          "purpose": "Combat stim plus auto-Devour on kills; chain fights on a pushed site or a retake."
+        }
+      ],
+      "job_in_round": "On attack Reyna throws Leer over the site, takes the first duel, and Dismisses out of the line of fire after the kill. On defense she takes aggressive early picks and relies on Leer plus Dismiss to escape; without a kill she has no utility, so she must play with the team.",
+      "good_play_looks_like": [
+        "Leer thrown at head height into site just before swinging, so it must be shot",
+        "Dismiss immediately after a kill when a second enemy is nearby, then re-peeks from a new angle",
+        "Devour used only when the area is confirmed clear",
+        "Pops Empress before entering a contested site to snowball multiple kills",
+        "Plays as a trader when she has no orbs, not as a solo entry"
+      ],
+      "common_mistakes": [
+        "Devours in the open and dies to a second enemy while channeling",
+        "Never uses Dismiss after a kill and gets traded standing still",
+        "Throws Leer from too far, so it is shot before anyone swings",
+        "Over-extends after a kill chasing the 3s orb window into a bad position",
+        "Activates Empress after taking heavy damage, losing the chance to Devour first",
+        "Plays as a lone wolf with no orbs and no team, dying without any impact"
+      ],
+      "ability_checks": [
+        "If Dismiss (E) is lit and a soul orb was available at death, the escape was wasted",
+        "Devour (Q) used with an enemy still nearby is the wrong orb choice; check if a second enemy was in frame",
+        "Both Leer (C) charges lit on a site entry means no nearsight was used before the peek",
+        "Empress (X) held for many rounds while ready is a wasted snowball tool"
+      ],
+      "tips": [
+        "Dismiss first, Devour never when a trade is possible",
+        "Leer above head height, tight before the swing",
+        "No orbs means you are a trader, not an entry",
+        "Empress before the site push, not after the fight"
+      ]
+    },
+    {
+      "id": "raze",
+      "name": "Raze",
+      "role": "duelist",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Boom Bot",
+          "purpose": "Ground drone that hunts and damages; clears close corners or flushes a lurker before entry."
+        },
+        {
+          "key": "Q",
+          "name": "Blast Pack",
+          "purpose": "2 satchels for movement (satchel jump into site) or damage; slows now reduce mid-air force."
+        },
+        {
+          "key": "E",
+          "name": "Paint Shells",
+          "purpose": "Cluster grenade for corners, post-plant denial, or after an enemy is stalled; refreshes on 2 kills."
+        },
+        {
+          "key": "X",
+          "name": "Showstopper",
+          "purpose": "Rocket launcher for a guaranteed opening kill or stalling a retake; pair with a satchel jump."
+        }
+      ],
+      "job_in_round": "On attack Raze clears close corners with Boom Bot and Paint Shells, then satchels onto site to create the opening pick. On defense she delays with utility on chokes and plays for high-damage entry denial, using Showstopper to end retakes or stop a push.",
+      "good_play_looks_like": [
+        "Boom Bot sent through a likely close-corner position before the team enters",
+        "Paint Shells thrown onto a cornered or slowed enemy for a kill or forced move",
+        "Satchel jump into site timed with a flash from an initiator",
+        "Showstopper fired from an unexpected angle or mid-satchel jump",
+        "Saves a Blast Pack to break a wall of defenders in post-plant"
+      ],
+      "common_mistakes": [
+        "Dies on a site hit with Boom Bot and Paint Shells icons still lit",
+        "Satchel-jumps in alone with no flash, landing in front of three guns",
+        "Throws Paint Shells at nothing at round start just to use it",
+        "Showstopper fired at a single unconfirmed enemy behind cover",
+        "Uses both Blast Packs for movement and has none for a post-plant stall",
+        "Boom Bot sent down an obvious lane where it is shot instantly"
+      ],
+      "ability_checks": [
+        "Boom Bot (C) and Paint Shells (E) lit at death entering site means no corner was cleared",
+        "Both Blast Pack (Q) charges lit when she dies in the open means no reposition was available or used",
+        "Showstopper (X) ready across several rounds with no use is wasted round-winning damage",
+        "Paint Shells used before the team is ready to swing on the damaged enemy is a wasted nade"
+      ],
+      "tips": [
+        "Clear the corner with a bot before your body checks it",
+        "Nade a slowed or stalled enemy, not empty space",
+        "Satchel in behind a flash, not before it",
+        "Ult from an angle they have not pre-aimed"
+      ]
+    },
+    {
+      "id": "yoru",
+      "name": "Yoru",
+      "role": "duelist",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Fakeout",
+          "purpose": "Decoy that walks forward with your last weapon and flashes when shot; bait a peek or fake a push."
+        },
+        {
+          "key": "Q",
+          "name": "Blindside",
+          "purpose": "1 bounce flash (1.5s); bounce off a wall then swing. Only one charge since 12.05."
+        },
+        {
+          "key": "E",
+          "name": "Gatecrash",
+          "purpose": "Teleport beacon (20 HP, 20s active); use to enter behind a defender or to escape after a peek."
+        },
+        {
+          "key": "X",
+          "name": "Dimensional Drift",
+          "purpose": "Invisible walk to scout or reposition behind enemies; cannot cast Blindside or set Fakeout while in it."
+        }
+      ],
+      "job_in_round": "On attack Yoru creates a second front: teleport behind the site or fake a push with Fakeout, then flash and entry when the team commits. On defense he takes an early flash-assisted pick and Gatecrashes out, or uses the ult to gather information for the retake.",
+      "good_play_looks_like": [
+        "Gatecrash placed early to a flank spot, then used when the defenders are looking at the main push",
+        "Blindside bounced around the corner and swung immediately",
+        "Fakeout sent down a different lane than the actual push to split attention",
+        "Ult used before an execute to confirm defender positions and call them",
+        "Peeks with a pre-placed Gatecrash to escape after one duel"
+      ],
+      "common_mistakes": [
+        "Dies with Gatecrash beacon active and unused after taking a fight in the open",
+        "Solo teleports behind the site and dies with no team pressure on the front",
+        "Blindside thrown into open ground instead of bounced, blinding nobody",
+        "Fakeout walked straight down main, telegraphing the push",
+        "Ult walk that ends behind enemies with no call to the team and no follow-up",
+        "Gatecrash beacon placed in a spot the defenders naturally see and shoot"
+      ],
+      "ability_checks": [
+        "Gatecrash (E) icon lit or beacon active at death means the escape was not used",
+        "Blindside (Q) lit on an entry death means he dry-peeked with a flash in hand",
+        "Fakeout (C) never used across a half means the fake potential was ignored",
+        "Dimensional Drift (X) used but no kill or call followed it is wasted info"
+      ],
+      "tips": [
+        "Place the beacon before you take the fight, not after",
+        "Bounce every flash; a straight Blindside is a wasted charge",
+        "Fake with the decoy where they expect you, go where they don't",
+        "Time the flank to the team's push, not to your own boredom"
+      ]
+    },
+    {
+      "id": "neon",
+      "name": "Neon",
+      "role": "duelist",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Fast Lane",
+          "purpose": "Two electric walls that block vision; run a corridor into site without being shot from the sides."
+        },
+        {
+          "key": "Q",
+          "name": "Relay Bolt",
+          "purpose": "2 bouncing concuss bolts (2.5s); stun the corner you are about to slide onto."
+        },
+        {
+          "key": "E",
+          "name": "High Gear",
+          "purpose": "Sprint (16s) plus a slide; 60s recharge so the sprint must be planned, not toggled on a whim."
+        },
+        {
+          "key": "X",
+          "name": "Overdrive",
+          "purpose": "Lightning beam with accuracy while sprinting; use to entry and chain kills on a stacked site."
+        }
+      ],
+      "job_in_round": "On attack Neon uses Fast Lane and Relay Bolt to sprint and slide into site before defenders can set up, forcing the opening duel. On defense she takes fast off-angle peeks or rotates quicker than anyone to rejoin a retake; the 60s High Gear recharge means one big sprint per round.",
+      "good_play_looks_like": [
+        "Relay Bolt bounced onto a common defender spot, then slides in during the stun",
+        "Fast Lane thrown to walk from the main choke to the plant spot without side vision",
+        "High Gear saved for the execute, then used for the site entry",
+        "Overdrive popped to run through a stunned or smoked defender line",
+        "Slide is used to close a corner, not to peek a long angle"
+      ],
+      "common_mistakes": [
+        "Sprints into site with Relay Bolts unused and slides into a set angle",
+        "Uses High Gear at round start to run around, then has no sprint on the execute",
+        "Fast Lane placed after the team has already crossed",
+        "Stuns an empty corner while defenders are on the other side",
+        "Slides across a long open lane and gets shot at the end of the slide",
+        "Overdrive used at range instead of point-blank on a rush"
+      ],
+      "ability_checks": [
+        "Both Relay Bolt (Q) charges lit at death on entry means she never stunned her target corner",
+        "High Gear (E) on cooldown at execute time means the sprint was wasted earlier in the round",
+        "Fast Lane (C) still lit while she dies crossing an open lane is a wasted wall",
+        "Overdrive (X) ready for many rounds with no use is a wasted rush tool"
+      ],
+      "tips": [
+        "Stun then slide; never slide onto an unstunned corner",
+        "One sprint per round: spend it on the site hit",
+        "Wall your path before you run it",
+        "Ult up close on a stacked site, not from range"
+      ]
+    },
+    {
+      "id": "iso",
+      "name": "Iso",
+      "role": "duelist",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Contingency",
+          "purpose": "Indestructible bullet-blocking wall that moves forward; cross a lane or push a defender off an angle."
+        },
+        {
+          "key": "Q",
+          "name": "Undercut",
+          "purpose": "Bolt that applies Vulnerable and Suppress for 4s through walls; throw before a peek to disable a Sentinel or Op angle."
+        },
+        {
+          "key": "E",
+          "name": "Double Tap",
+          "purpose": "Shield that absorbs one hit; orbs from downed enemies refresh it. Activate before every planned duel; instant weapon draw after cancel."
+        },
+        {
+          "key": "X",
+          "name": "Kill Contract",
+          "purpose": "Pulls one enemy into a 1v1 arena (36m); isolate the anchor or the Op player before the push."
+        }
+      ],
+      "job_in_round": "On attack Iso activates Double Tap, Undercuts the angle he is about to peek, and takes the first duel with the shield up while the team enters. On defense he holds an aggressive angle with the shield, uses Contingency to escape or reposition, and ults the most dangerous enemy on a retake.",
+      "good_play_looks_like": [
+        "Double Tap active and shield up before every entry duel",
+        "Undercut through a wall onto a known Sentinel setup before pushing it",
+        "Contingency walked forward to cross a sniper lane or plant behind",
+        "Shoots the energy orb after a kill to refresh the shield before the next duel",
+        "Kill Contract cast on the Op or anchor so the site is empty for the team"
+      ],
+      "common_mistakes": [
+        "Dies in a duel with Double Tap icon still lit (never activated)",
+        "Activates Double Tap and then waits so long the 12s window expires before the fight",
+        "Undercut thrown at nothing instead of through the wall onto a held angle",
+        "Contingency cast sideways or placed so teammates cannot use it",
+        "Kill Contract fired blind down a lane and hits nobody or the wrong target",
+        "Ignores the orb after a kill and enters the next fight shieldless"
+      ],
+      "ability_checks": [
+        "Double Tap (E) lit at death means the free shield was never used",
+        "Undercut (Q) lit when he dies to a set angle means the Vulnerable/Suppress was skipped",
+        "Contingency (C) lit at death crossing an open lane is a wasted wall",
+        "Kill Contract (X) ready across rounds with a strong Op enemy alive is a missed isolation"
+      ],
+      "tips": [
+        "Shield up before every planned peek",
+        "Undercut the angle, then swing it",
+        "Wall to cross, not to hide",
+        "Ult the enemy who wins the site, not the first one you see"
+      ]
+    },
+    {
+      "id": "waylay",
+      "name": "Waylay",
+      "role": "duelist",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Saturate",
+          "purpose": "Bouncing light bomb that Hinders (slows everything) for 3s; bounce into a corner before you enter."
+        },
+        {
+          "key": "Q",
+          "name": "Light Speed",
+          "purpose": "Two dashes, first one can go up; entry across a gap or escape after a duel."
+        },
+        {
+          "key": "E",
+          "name": "Refract",
+          "purpose": "Drop a beacon, then return to it for a free peek; the escape after a first-contact duel."
+        },
+        {
+          "key": "X",
+          "name": "Convergent Paths",
+          "purpose": "Wide Hinder zone with an afterimage; aim restriction on enemies; use to break a stacked site or a retake."
+        }
+      ],
+      "job_in_round": "On attack Waylay places Refract, dashes across the entry, takes the opening duel, and returns to safety, using Saturate to stop a defender from swinging. On defense she takes one fast off-angle fight and Refracts back before the trade, delaying pushes with Saturate on chokes.",
+      "good_play_looks_like": [
+        "Refract beacon placed behind cover before the peek, then used after the first shot",
+        "Saturate bounced into the corner defenders hold, then a normal-speed swing",
+        "Light Speed double dash used to cross a lane and reach an off-angle in one go",
+        "Convergent Paths popped on a stacked site so the team walks in on Hindered enemies",
+        "Uses Light Speed's upward dash to reach unexpected height, then plays the timing"
+      ],
+      "common_mistakes": [
+        "Dies with Refract icon lit or beacon active but unused after a first duel",
+        "Dashes into site first without Saturate, landing on a hindered nobody",
+        "Refract placed in open ground so she returns into the same crossfire",
+        "Uses both Light Speed dashes to enter and has none to reposition",
+        "Saturate thrown at feet of teammates, slowing her own team",
+        "Ult used on an empty site or too early before the team is ready to swing"
+      ],
+      "ability_checks": [
+        "Refract (E) lit at death, or beacon still visible on the ground, means the free escape was unused",
+        "Saturate (C) lit at entry death means she skipped the Hinder on the defender angle",
+        "Light Speed (Q) with charges lit while she dies in the open means no dash out was taken",
+        "Convergent Paths (X) ready for multiple rounds without use is a wasted execute tool"
+      ],
+      "tips": [
+        "Beacon before the peek, every time",
+        "Saturate the corner, then walk in at normal speed",
+        "One dash in, keep one for out",
+        "Ult when the team is ready to push through it, not before"
+      ]
+    },
+    {
+      "id": "sova",
+      "name": "Sova",
+      "role": "initiator",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Owl Drone",
+          "purpose": "Pilot a drone to scout and tag one enemy; clear a corner or confirm site presence before entry."
+        },
+        {
+          "key": "Q",
+          "name": "Shock Bolt",
+          "purpose": "2 bolts (damage); lineups on post-plant defusers or to punish a revealed enemy."
+        },
+        {
+          "key": "E",
+          "name": "Recon Bolt",
+          "purpose": "Reveals enemies in a radius; the pre-execute and retake info tool, 50s cooldown."
+        },
+        {
+          "key": "X",
+          "name": "Hunter's Fury",
+          "purpose": "3 wall-piercing energy blasts; punish revealed or post-plant enemies through walls."
+        }
+      ],
+      "job_in_round": "On attack Sova gives the team information before it commits: Recon Bolt the site, drone the close corners, and Shock Bolt any revealed enemy. On defense he recons the main choke early to see what is coming, then drones or recons for the retake.",
+      "good_play_looks_like": [
+        "Recon Bolt fired from a lineup that lands where it cannot be shot, before the team pushes",
+        "Drone flown with a pre-planned path and a dart landed on the anchor",
+        "Shock Bolts thrown onto a revealed or defusing enemy, not at random",
+        "Calls what recon shows in a form teammates can act on",
+        "Hunter's Fury used through smoke or walls on enemies shown by recon"
+      ],
+      "common_mistakes": [
+        "Dies with Recon Bolt icon lit while the team executes blind",
+        "Drone flown straight down main and shot instantly with no dart",
+        "Recon Bolt fired into a spot it is immediately destroyed",
+        "Shock Bolts thrown at empty corners at round start",
+        "Uses the drone standing in the open and dies while piloting",
+        "Hunter's Fury fired at a guess without any reveal"
+      ],
+      "ability_checks": [
+        "Recon Bolt (E) lit at team execute or retake time means the info tool was not used",
+        "Owl Drone (C) unused across the half means close corners were never cleared for the entry",
+        "Shock Bolt (Q) charges full during a post-plant means no defuse denial",
+        "Hunter's Fury (X) ready for several rounds while enemies are revealed is a wasted punish"
+      ],
+      "tips": [
+        "Recon before the push, not after the entry dies",
+        "Drone with a plan: one corner, one dart",
+        "Shock a revealed target, not an empty corner",
+        "Stand behind cover when you pilot"
+      ]
+    },
+    {
+      "id": "breach",
+      "name": "Breach",
+      "role": "initiator",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Aftershock",
+          "purpose": "Delayed 3-burst damage through a wall; clear a corner, stall a defuse, or force a plant delay."
+        },
+        {
+          "key": "Q",
+          "name": "Flashpoint",
+          "purpose": "2 through-wall flashes (2.25s); blind the site as teammates swing."
+        },
+        {
+          "key": "E",
+          "name": "Fault Line",
+          "purpose": "Long through-wall concuss (2.5s, 1.2s delay); stun the anchor then the team swings; 50s cooldown."
+        },
+        {
+          "key": "X",
+          "name": "Rolling Thunder",
+          "purpose": "Cascading concuss (18m wide); commit the team through it on a site or a retake."
+        }
+      ],
+      "job_in_round": "On attack Breach flashes and stuns through the wall so the team can enter without dueling a set defender. On defense he delays pushes with Fault Line and Aftershock, and his flashes are the retake tool that lets teammates swing onto a site together.",
+      "good_play_looks_like": [
+        "Flashpoint placed on a wall right next to the corner teammates are about to swing",
+        "Fault Line aimed at a known anchor spot with a teammate ready to peek during the 1.2s windup",
+        "Aftershock used to deny a defuse or clear a close corner before entry",
+        "Rolling Thunder timed with the whole team walking in behind it",
+        "Calls 'stun' and 'flash' timings so duelists can act on them"
+      ],
+      "common_mistakes": [
+        "Flashes with nobody ready to swing, or flashes his own teammates who are already peeking",
+        "Fault Line used with no teammate in position, stunning an empty area",
+        "Dies to a set angle with both Flashpoints and Fault Line still lit",
+        "Aftershock used at round start to check a corner nobody is going to push",
+        "Rolling Thunder cast into an empty site or after the team has already entered",
+        "Plays as first entry instead of behind the duelist"
+      ],
+      "ability_checks": [
+        "Flashpoint (Q) charges lit at team entry means no flash was thrown for the swing",
+        "Fault Line (E) lit while the team executes means the stun was not used to break the anchor",
+        "Aftershock (C) lit during a post-plant defuse means no denial",
+        "Rolling Thunder (X) ready across several rounds with no use is wasted retake power"
+      ],
+      "tips": [
+        "Flash for the swing, not for yourself",
+        "Stun a spot you know is held, with a teammate ready to peek",
+        "Aftershock the defuse, not an empty corner",
+        "Ult when the team walks in behind it"
+      ]
+    },
+    {
+      "id": "skye",
+      "name": "Skye",
+      "role": "initiator",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Regrowth",
+          "purpose": "Channel heal for allies in range; heal after the fight, never during it."
+        },
+        {
+          "key": "Q",
+          "name": "Trailblazer",
+          "purpose": "Tiger that clears a corner and concusses (4s direct hit); pilot it into site before the entry."
+        },
+        {
+          "key": "E",
+          "name": "Guiding Light",
+          "purpose": "Controllable hawk flash; 60s cooldown so plan one at the execute, one at the retake."
+        },
+        {
+          "key": "X",
+          "name": "Seekers",
+          "purpose": "Three seekers that track and nearsight the three closest enemies; reveal positions before a push."
+        }
+      ],
+      "job_in_round": "On attack Skye scouts with Trailblazer, flashes with Guiding Light as the team swings, and heals after site is taken. On defense she flashes to let a teammate re-peek, uses the tiger to stall or check, and saves Seekers to open a retake.",
+      "good_play_looks_like": [
+        "Hawk flown through a hidden path and popped with teammates already moving to swing",
+        "Trailblazer sent into the close corner before the duelist peeks, with the team ready to swing on the stun",
+        "Regrowth channeled from cover after the fight when multiple teammates are low",
+        "Seekers cast at the start of a retake or a push so the team knows where all three are",
+        "Varies hawk launch points round to round"
+      ],
+      "common_mistakes": [
+        "Flashes at round start to scout, then has no flash for the execute (60s cooldown)",
+        "Pops the hawk too early or in view, flashing nobody or her own team",
+        "Channels Regrowth in the open or while the team is taking a site",
+        "Tiger flown down an obvious lane and shot without a stun",
+        "Dies with Guiding Light lit on a site hit or retake",
+        "Uses Seekers only to finish a round instead of to open it"
+      ],
+      "ability_checks": [
+        "Guiding Light (E) lit at execute or retake death means the flash was not used",
+        "Trailblazer (Q) lit when the team walks into an unchecked corner means no scout was sent",
+        "Regrowth (C) unused across the half while teammates fight at low HP means the heal was skipped",
+        "Seekers (X) ready and unused during a full retake is a wasted reveal"
+      ],
+      "tips": [
+        "One flash per minute: spend it on the swing",
+        "Tiger the corner, then teammates swing on the stun",
+        "Heal behind cover after the fight",
+        "Seekers open the retake, they do not end it"
+      ]
+    },
+    {
+      "id": "kayo",
+      "name": "KAY/O",
+      "role": "initiator",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "FRAG/ment",
+          "purpose": "Lingering damage pulses; deny a plant or defuse, or clear a close corner."
+        },
+        {
+          "key": "Q",
+          "name": "FLASH/drive",
+          "purpose": "2 flashes, right-click for a short 2.25s underhand pop-flash around corners."
+        },
+        {
+          "key": "E",
+          "name": "ZERO/point",
+          "purpose": "Suppression blade that disables abilities and reveals who is hit; throw before a push or retake; 50s cooldown."
+        },
+        {
+          "key": "X",
+          "name": "NULL/cmd",
+          "purpose": "Pulsing suppression plus combat stim and downed-state revival; pop at the start of a site hit or retake."
+        }
+      ],
+      "job_in_round": "On attack KAY/O suppresses the site with ZERO/point so Sentinels and Controllers cannot respond, then pop-flashes as the team enters. On defense he throws the knife at the main push, flashes for re-peeks, and uses FRAG/ment to stall the plant or defuse.",
+      "good_play_looks_like": [
+        "ZERO/point thrown deep enough to hit the anchor spot before the team commits, and the reveal is called",
+        "Underhand FLASH/drive popped from cover with a teammate swinging on it",
+        "FRAG/ment landed on the spike to deny a defuse or plant",
+        "NULL/cmd cast at the start of the hit so the whole site is suppressed",
+        "Plays behind the duelist, not in front"
+      ],
+      "common_mistakes": [
+        "Knife thrown where it sticks in a wall the enemy can shoot instantly",
+        "Overhand flash thrown too far, blinding nobody",
+        "Flashes thrown while teammates are already peeking",
+        "Dies with both FLASH/drive charges and the knife lit",
+        "FRAG/ment used on an empty corner at round start",
+        "NULL/cmd popped standing in the open or after the site fight is over"
+      ],
+      "ability_checks": [
+        "ZERO/point (E) lit while the team executes means Sentinels were not suppressed",
+        "FLASH/drive (Q) charges lit at entry death means no pop-flash was used",
+        "FRAG/ment (C) lit during a post-plant means no defuse denial",
+        "NULL/cmd (X) ready and unused during a retake is a wasted suppression"
+      ],
+      "tips": [
+        "Knife first, flash second, swing third",
+        "Right-click pop-flash around corners",
+        "Save the molly for the spike",
+        "Ult at the start of the hit, from cover"
+      ]
+    },
+    {
+      "id": "fade",
+      "name": "Fade",
+      "role": "initiator",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Prowler",
+          "purpose": "2 creatures that nearsight the first enemy they reach; send them into corners before the team swings."
+        },
+        {
+          "key": "Q",
+          "name": "Seize",
+          "purpose": "Orb that tethers, deafens and decays; hold enemies in place for a swing or stall a push."
+        },
+        {
+          "key": "E",
+          "name": "Haunt",
+          "purpose": "Reveals enemies in line of sight and marks them with trails; the pre-push info tool, 50s cooldown."
+        },
+        {
+          "key": "X",
+          "name": "Nightfall",
+          "purpose": "Wave that deafens, marks and decays; commit the team behind it on an execute or retake."
+        }
+      ],
+      "job_in_round": "On attack Fade Haunts the site before the push, sends Prowlers into the revealed positions, and Seizes anyone holding a strong angle. On defense she Haunts the main choke to see the push, uses Seize to stall, and Nightfall for a retake.",
+      "good_play_looks_like": [
+        "Haunt thrown to reveal the site, then Prowlers sent along the trails to the revealed enemies",
+        "Seize placed on a revealed anchor while a teammate swings during the tether",
+        "Nightfall cast with the team moving in behind it",
+        "Prowlers used to check a close corner before a duelist enters",
+        "Calls the number and position of revealed enemies"
+      ],
+      "common_mistakes": [
+        "Haunt thrown where it is immediately shot or lands with no line of sight to the site",
+        "Prowlers sent with nobody following them to swing on the nearsighted enemy",
+        "Seize thrown onto empty ground or with nobody in position to punish",
+        "Dies with Haunt lit on a site hit or retake",
+        "Nightfall used on an empty site or after teammates have already pushed",
+        "Enters first instead of behind the duelist"
+      ],
+      "ability_checks": [
+        "Haunt (E) lit while the team executes or retakes means no reveal was used",
+        "Both Prowler (C) charges lit at entry death means close corners were never checked",
+        "Seize (Q) lit when a revealed enemy holds a strong angle is a missed tether",
+        "Nightfall (X) ready across rounds with no use is a wasted execute tool"
+      ],
+      "tips": [
+        "Haunt first, then prowl the trails",
+        "Seize the revealed player, and have someone swing on it",
+        "Prowlers need a follow-up or they are wasted",
+        "Ult when the team walks with it"
+      ]
+    },
+    {
+      "id": "gekko",
+      "name": "Gekko",
+      "role": "initiator",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Mosh Pit",
+          "purpose": "Lingering damage pool; deny a plant/defuse or force enemies off a corner; reclaimable since 12.03."
+        },
+        {
+          "key": "Q",
+          "name": "Wingman",
+          "purpose": "Seeks and concusses (2.5s), or plants/defuses the spike; pick up the globule after."
+        },
+        {
+          "key": "E",
+          "name": "Dizzy",
+          "purpose": "Flying flash that blinds enemies in her sight; pop at a corner with teammates ready, then reclaim."
+        },
+        {
+          "key": "X",
+          "name": "Thrash",
+          "purpose": "Controllable creature that detains enemies; open a site or a retake, then reclaim for a second cast."
+        }
+      ],
+      "job_in_round": "On attack Gekko sends Wingman and Dizzy into site ahead of the entry, reclaims both, and uses Wingman to plant while the team holds. On defense he uses Dizzy for re-peeks, Wingman to stall a push, and Mosh Pit for post-plant denial; reclaiming (15s cooldown) is what makes him cheap.",
+      "good_play_looks_like": [
+        "Dizzy thrown at a corner she can actually see, with a teammate swinging on the blind",
+        "Wingman sent into site then reclaimed as the team walks in",
+        "Wingman planting the spike while the team holds angles",
+        "Thrash detain on a stacked position, then reclaimed for a second use",
+        "Constantly moving forward to pick up globules instead of leaving them"
+      ],
+      "common_mistakes": [
+        "Throws Dizzy and leaves the globule on the ground, playing at half utility",
+        "Dizzy thrown over a wall where it cannot see the enemies it should flash",
+        "Wingman sent with nobody ready to trade or swing on the concuss",
+        "Mosh Pit thrown as random initiation instead of a plant or defuse denial",
+        "Dies with Dizzy and Wingman lit on a site hit",
+        "Plants with his own body when Wingman is available and the site is contested"
+      ],
+      "ability_checks": [
+        "Dizzy (E) or Wingman (Q) lit at entry death means the site was not opened",
+        "Globules left on the ground visible while Dizzy/Wingman stay on cooldown means reclaims were skipped",
+        "Mosh Pit (C) full during a post-plant means no denial",
+        "Thrash (X) ready across rounds with no use is a wasted detain"
+      ],
+      "tips": [
+        "Pick up everything you throw",
+        "Dizzy needs line of sight on the target",
+        "Let Wingman plant on contested sites",
+        "Mosh the spike, not the entry"
+      ]
+    },
+    {
+      "id": "tejo",
+      "name": "Tejo",
+      "role": "initiator",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Stealth Drone",
+          "purpose": "Pilotable drone; pulse for a full reveal and suppress in 16m; check a site before the push (400 credits)."
+        },
+        {
+          "key": "Q",
+          "name": "Special Delivery",
+          "purpose": "Sticky grenade that concusses (2.5s) and damages; stun a corner before the swing."
+        },
+        {
+          "key": "E",
+          "name": "Guided Salvo",
+          "purpose": "Up to 2 map-targeted missiles that destroy utility and damage; clear Sentinel setups or force enemies off a spot."
+        },
+        {
+          "key": "X",
+          "name": "Armageddon",
+          "purpose": "Map-targeted explosive path (9 points); commit the team behind it on an execute or retake."
+        }
+      ],
+      "job_in_round": "On attack Tejo clears the site's utility with Guided Salvo, drones for a reveal, and concusses the anchor as the team enters. On defense he uses the drone to read the push, Salvo to break attacker setups or a post-plant, and Special Delivery to stall.",
+      "good_play_looks_like": [
+        "Guided Salvo targeted at a known Sentinel setup or held corner before the team pushes",
+        "Stealth Drone flown with a purpose (close contact vs deep anchor), pulse landed, and the reveal called",
+        "Special Delivery stuck on the corner the duelist swings a moment later",
+        "Armageddon path drawn through the site with the team moving in behind it",
+        "Plays behind the entry, not first in"
+      ],
+      "common_mistakes": [
+        "Missiles fired at random spots with nobody swinging on them",
+        "Drone flown standing in the open, dying mid-pilot",
+        "Special Delivery stuck where the enemy already left",
+        "Dies with Guided Salvo charges and drone lit on a site hit",
+        "Armageddon cast on an empty area or after teammates have already pushed",
+        "Drones the wrong site or too late, giving no time to act on the reveal"
+      ],
+      "ability_checks": [
+        "Guided Salvo (E) charges lit while the team executes into a Sentinel setup means no utility clear",
+        "Stealth Drone (C) lit at entry death means the site was never checked",
+        "Special Delivery (Q) lit at entry death means no stun on the target corner",
+        "Armageddon (X) ready across rounds without use is a wasted execute tool"
+      ],
+      "tips": [
+        "Missiles on a known setup, with someone ready to swing",
+        "Drone with a question in mind, then answer it",
+        "Stun the corner the duelist swings",
+        "Ult where they are, with the team behind it"
+      ]
+    },
+    {
+      "id": "brimstone",
+      "name": "Brimstone",
+      "role": "controller",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Stim Beacon",
+          "purpose": "Fire-rate and speed buff (10%); drop before a site push or a retake swing."
+        },
+        {
+          "key": "Q",
+          "name": "Incendiary",
+          "purpose": "Molly that damages; post-plant lineups and corner clears."
+        },
+        {
+          "key": "E",
+          "name": "Sky Smoke",
+          "purpose": "Up to 3 long map-placed smokes; block defender angles as the team enters."
+        },
+        {
+          "key": "X",
+          "name": "Orbital Strike",
+          "purpose": "Map-targeted laser; deny a defuse or clear a post-plant hold."
+        }
+      ],
+      "job_in_round": "On attack Brimstone smokes the angles defenders hold so the team can enter, then denies the defuse with Incendiary or Orbital Strike. On defense he smokes the main choke on the push and saves smokes for the retake, using Stim Beacon on swings.",
+      "good_play_looks_like": [
+        "All three smokes placed on the execute at the moment the team commits, not seconds earlier",
+        "Incendiary lineups on the spike for the post-plant",
+        "Stim Beacon dropped for the team just before entering or retaking",
+        "Orbital Strike used on the spike during a defuse attempt",
+        "Keeps a smoke for the retake instead of using all three on the initial push"
+      ],
+      "common_mistakes": [
+        "Smokes placed after teammates already pushed, or placed so early they fade during the execute",
+        "Dies with Sky Smoke charges lit while the team enters a site with open angles",
+        "Incendiary thrown at nothing at round start",
+        "Never uses Stim Beacon across a half",
+        "Orbital Strike fired at a guess with nobody on the spike",
+        "Plays in front of the team as an entry"
+      ],
+      "ability_checks": [
+        "Sky Smoke (E) charges lit at entry death means the site was not smoked",
+        "Incendiary (Q) lit during a post-plant means no defuse denial",
+        "Stim Beacon (C) never used is a free buff wasted every round",
+        "Orbital Strike (X) ready across rounds with a live spike is wasted denial"
+      ],
+      "tips": [
+        "Smoke as the team commits, not before or after",
+        "Save one smoke for the retake",
+        "Molly the spike, not the corner",
+        "Stim before every team swing"
+      ]
+    },
+    {
+      "id": "omen",
+      "name": "Omen",
+      "role": "controller",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Shrouded Step",
+          "purpose": "Short teleport; reach an off-angle or reposition through a smoke."
+        },
+        {
+          "key": "Q",
+          "name": "Paranoia",
+          "purpose": "Through-wall nearsight (25m); throw as a teammate swings a held angle."
+        },
+        {
+          "key": "E",
+          "name": "Dark Cover",
+          "purpose": "2 global smokes on a 40s cooldown; block angles as the team enters or delay pushes."
+        },
+        {
+          "key": "X",
+          "name": "From the Shadows",
+          "purpose": "Map-wide teleport; flank onto a site or reposition for a retake."
+        }
+      ],
+      "job_in_round": "On attack Omen smokes the defender angles on the execute and Paranoias the entry corner as the duelist swings. On defense he smokes the main choke when the push starts, plays off-angles with Shrouded Step, and keeps a smoke for the retake.",
+      "good_play_looks_like": [
+        "Dark Cover placed as the team commits, on the angles that actually hold the site",
+        "Paranoia thrown through the wall onto the corner a teammate swings a moment later",
+        "Shrouded Step used to reach a non-standard angle after the first contact",
+        "Ult used to flank onto a distracted site with a gun equipped",
+        "Rotates smokes to keep one available for the retake"
+      ],
+      "common_mistakes": [
+        "Smokes placed 20s before the push so they fade during the execute",
+        "Dies with both Dark Cover charges lit while teammates enter a site with open angles",
+        "Paranoia thrown at empty space or into teammates' line of sight",
+        "Shrouded Step into the open, landing in a crossfire",
+        "Ults into a coinflip re-peek or arrives with a knife out",
+        "Plays as a first entry instead of smoking for the team"
+      ],
+      "ability_checks": [
+        "Dark Cover (E) charges lit at entry death means the site was not smoked",
+        "Paranoia (Q) lit when a teammate dies to a set angle means the nearsight was skipped",
+        "Shrouded Step (C) unused across the half means no off-angle play",
+        "From the Shadows (X) ready across rounds with no use is a wasted flank"
+      ],
+      "tips": [
+        "Smoke on the commit, not on the walk-up",
+        "Paranoia the corner someone is about to swing",
+        "Save one smoke for the retake",
+        "Equip your gun before the ult teleport"
+      ]
+    },
+    {
+      "id": "viper",
+      "name": "Viper",
+      "role": "controller",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Snake Bite",
+          "purpose": "2 acid mollies with Vulnerable; deny a defuse or clear a corner."
+        },
+        {
+          "key": "Q",
+          "name": "Poison Cloud",
+          "purpose": "Reusable gas orb; block one angle repeatedly, toggle on a push."
+        },
+        {
+          "key": "E",
+          "name": "Toxic Screen",
+          "purpose": "Long gas wall; split the site so only one side sees the entry, toggle on the execute."
+        },
+        {
+          "key": "X",
+          "name": "Viper's Pit",
+          "purpose": "Large gas dome; anchor a post-plant or lock down a site on defense."
+        }
+      ],
+      "job_in_round": "On attack Viper places wall and orb before the push and toggles them as the team commits, then holds the post-plant with Snake Bites and fuel. On defense she walls the main choke or site, delays with orb and mollies, and uses Viper's Pit to anchor a site alone.",
+      "good_play_looks_like": [
+        "Toxic Screen placed pre-round to split the site, activated only when the team commits",
+        "Poison Cloud toggled on when a teammate crosses and off to conserve fuel",
+        "Snake Bite lineups on the spike used when the defuse starts",
+        "Viper's Pit anchored on a site or post-plant with teammates positioned around it",
+        "Fuel managed so wall and orb are both up when the fight happens"
+      ],
+      "common_mistakes": [
+        "Wall left up from round start and out of fuel by the time the execute happens",
+        "Dies with Toxic Screen or Poison Cloud lit as the team enters an unsmoked site",
+        "Snake Bites thrown at empty corners instead of saved for the post-plant",
+        "Orb placed where it blocks her own team's angles",
+        "Viper's Pit cast in a spot with no team support, dying alone inside it",
+        "Never toggles utility off, so it is unavailable for the retake"
+      ],
+      "ability_checks": [
+        "Toxic Screen (E) or Poison Cloud (Q) lit at entry death means the site was not split",
+        "Fuel bar empty at the execute means utility was left up too early",
+        "Both Snake Bite (C) charges lit during a post-plant defuse means no denial",
+        "Viper's Pit (X) ready across rounds with a post-plant to hold is wasted"
+      ],
+      "tips": [
+        "Place early, activate late",
+        "Toggle off to save fuel for the fight",
+        "Mollies belong to the spike",
+        "Pit where the team can play around it"
+      ]
+    },
+    {
+      "id": "astra",
+      "name": "Astra",
+      "role": "controller",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Gravity Well",
+          "purpose": "Star that pulls and makes enemies Fragile (2.5s); pull an anchor off an angle or a defuser off the spike."
+        },
+        {
+          "key": "Q",
+          "name": "Nova Pulse",
+          "purpose": "Star that concusses (2.5s); stun a corner as teammates swing."
+        },
+        {
+          "key": "E",
+          "name": "Nebula / Dissipate",
+          "purpose": "Star becomes a smoke or fakes one; pre-place stars and smoke the site on the execute."
+        },
+        {
+          "key": "X",
+          "name": "Cosmic Divide",
+          "purpose": "Map-wide wall blocking bullets and sound; split the site for a plant or retake."
+        }
+      ],
+      "job_in_round": "On attack Astra pre-places stars on the defender angles and converts them to smokes as the team commits, using pulls and stuns on held corners. On defense she stalls the push with a stun or pull and keeps stars available for the retake; star management across the round is her whole job.",
+      "good_play_looks_like": [
+        "Stars placed on the standard defender angles before the round or the push begins",
+        "Smokes activated the moment the team commits, not seconds before",
+        "Gravity Well on the plant spot during a defuse or on a corner as teammates swing",
+        "Cosmic Divide cast to cut the site in half during the plant or the retake",
+        "Uses Astral form only from cover, not in the open"
+      ],
+      "common_mistakes": [
+        "Enters Astral form in the open and dies with no stars placed",
+        "Smokes activated too early and they fade during the execute",
+        "Dies with stars still unactivated on the map while the team enters",
+        "Pulls or stuns cast on empty spots to use them, wasting the star",
+        "Never recalls stars to reposition for the retake",
+        "Cosmic Divide placed where it blocks the team's own angles"
+      ],
+      "ability_checks": [
+        "Stars on the map unactivated at entry death means the site was not smoked",
+        "Nebula (E) charges lit at retake time means no smoke was saved",
+        "Gravity Well (C) unused during a post-plant defuse is missed denial",
+        "Cosmic Divide (X) ready across rounds with no use is wasted"
+      ],
+      "tips": [
+        "Place stars early, activate on the commit",
+        "Go Astral only from cover",
+        "Keep a star for the retake",
+        "Pull the defuser, stun the swing"
+      ]
+    },
+    {
+      "id": "harbor",
+      "name": "Harbor",
+      "role": "controller",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Storm Surge",
+          "purpose": "Thrown whirlpool that Nearsights and Slows (2s); throw on the corner a teammate swings."
+        },
+        {
+          "key": "Q",
+          "name": "High Tide",
+          "purpose": "Guidable water wall (300 credits) that blocks vision and slows; cut a site in half on the push."
+        },
+        {
+          "key": "E",
+          "name": "Cove",
+          "purpose": "Remote-placed water smoke (30s cooldown); reactivate to shield it from bullets; plant behind it."
+        },
+        {
+          "key": "X",
+          "name": "Reckoning",
+          "purpose": "Forward wave that Nearsights and Slows; team pushes in behind it on an execute or retake."
+        }
+      ],
+      "job_in_round": "Since the 11.10 rework Harbor is an aggressive controller: on attack he smokes with Cove, splits the site with High Tide, and Storm Surges the corner the entry swings. On defense he walls the choke, uses Storm Surge to stall, and Reckoning to open a retake; he is strongest paired with a second controller.",
+      "good_play_looks_like": [
+        "Cove placed remotely on the defender angle as the team commits, shielded when a teammate plants behind it",
+        "High Tide curved to isolate one side of the site while the team takes the other",
+        "Storm Surge thrown onto a held corner with a teammate swinging as it lands",
+        "Reckoning cast with the team walking in behind the wave",
+        "Wall used so the team can cross rather than for a solo peek"
+      ],
+      "common_mistakes": [
+        "Dies with Cove and High Tide lit while the team enters an unsmoked site",
+        "High Tide placed after teammates already crossed the open lane",
+        "Storm Surge thrown at empty space at round start",
+        "Cove shield never used while a teammate plants in the open",
+        "Reckoning cast down an empty lane or after the team has already pushed",
+        "Plays as a solo controller on a map that needs full smoke coverage"
+      ],
+      "ability_checks": [
+        "Cove (E) lit at entry death means no smoke was placed for the team",
+        "High Tide (Q) lit while a teammate crosses and dies in the open is a wasted wall",
+        "Storm Surge (C) lit when a teammate dies to a set angle means the nearsight was skipped",
+        "Reckoning (X) ready across rounds with no use is a wasted retake tool"
+      ],
+      "tips": [
+        "Cove where they hold, shield it when you plant",
+        "Wall to split, not to hide",
+        "Surge the corner, then swing it",
+        "Ult as the team moves with it"
+      ]
+    },
+    {
+      "id": "clove",
+      "name": "Clove",
+      "role": "controller",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Pick-me-up",
+          "purpose": "After a kill or assist, activate for 50 overheal and speed; take the next fight faster."
+        },
+        {
+          "key": "Q",
+          "name": "Meddle",
+          "purpose": "Thrown decay orb (4m radius); throw on the corner a teammate swings."
+        },
+        {
+          "key": "E",
+          "name": "Ruse",
+          "purpose": "2 map-placed smokes, castable while dead (1 charge, 6s duration when dead); smoke on the execute and after death."
+        },
+        {
+          "key": "X",
+          "name": "Not Dead Yet",
+          "purpose": "Self-revive after death; must get a kill or assist quickly or die again."
+        }
+      ],
+      "job_in_round": "On attack Clove smokes the defender angles on the execute, throws Meddle on a held corner as teammates swing, and keeps one smoke for after death. On defense they smoke the choke, play a semi-aggressive angle, and use the ult only when a kill is realistically available right after reviving.",
+      "good_play_looks_like": [
+        "Ruse placed as the team commits, with one charge held back for after death",
+        "Meddle thrown on a corner a teammate swings during the decay",
+        "Pick-me-up activated right after a kill to take the next fight",
+        "Not Dead Yet used when an enemy is nearby and a kill is likely, not in an empty site",
+        "Smokes for the team from the back, not entry with a Vandal"
+      ],
+      "common_mistakes": [
+        "Dies with both Ruse charges lit while the team enters an unsmoked site",
+        "Plays as a duelist entry and dies first, leaving no smokes for the round",
+        "Not Dead Yet used with no enemy nearby, dying again for nothing",
+        "Meddle thrown on empty ground at round start",
+        "Never uses the post-death smoke, or uses it at the wrong site",
+        "Pick-me-up never activated after kills"
+      ],
+      "ability_checks": [
+        "Ruse (E) charges lit at entry death means no smoke was placed for the team",
+        "Ruse available on the death screen but unused means the free post-death smoke was wasted",
+        "Pick-me-up (C) available after a kill and not activated is a free buff wasted",
+        "Not Dead Yet (X) used without a kill following is a wasted ult"
+      ],
+      "tips": [
+        "Smoke on the commit, keep one for after you die",
+        "Meddle the corner, then a teammate swings",
+        "Ult only when a kill is right there",
+        "You are the smoker, not the entry"
+      ]
+    },
+    {
+      "id": "miks",
+      "name": "Miks",
+      "role": "controller",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "M-pulse",
+          "purpose": "2 throwables; alt-fire toggles Concuss (stun a corner) or Heal (top up the team after site is taken)."
+        },
+        {
+          "key": "Q",
+          "name": "Harmonize",
+          "purpose": "Combat stim and speed for you and one ally (8s, refreshes on kill); give it to the entry, not a passive teammate."
+        },
+        {
+          "key": "E",
+          "name": "Waveform",
+          "purpose": "2 map-placed smokes (about 17s); block defender angles on the execute or retake."
+        },
+        {
+          "key": "X",
+          "name": "Bassquake",
+          "purpose": "Forward wave that knocks back, Deafens and Slows (8s); break a held site or open a retake, adjustable mid-cast."
+        }
+      ],
+      "job_in_round": "Miks (released 12.05) is a support controller: on attack he smokes with Waveform, Harmonizes the entry, and concusses the corner they swing, then heals after the site is taken. On defense he smokes the choke, uses concuss to stall, heals the anchor, and Bassquakes to open a retake.",
+      "good_play_looks_like": [
+        "Waveform smokes placed as the team commits, on the angles defenders actually hold",
+        "Harmonize cast on the duelist or top fragger right before the entry",
+        "M-pulse in Concuss mode thrown on the held corner as a teammate swings",
+        "M-pulse switched to Heal only once the site is taken and nobody is taking first contact",
+        "Bassquake cast with the team ready to walk in behind it"
+      ],
+      "common_mistakes": [
+        "Dies with both Waveform charges lit while the team enters an unsmoked site",
+        "Harmonize given to a teammate holding a safe angle instead of the entry",
+        "M-pulse heal thrown while the team is still taking first contact",
+        "Bassquake used solo from spawn with nobody swinging behind it",
+        "Plays too far from the team so heals and stims never reach anyone",
+        "Smokes held too long and dies with charges in hand"
+      ],
+      "ability_checks": [
+        "Waveform (E) charges lit at entry death means the site was not smoked",
+        "Harmonize (Q) lit through an entire execute means the free stim was skipped",
+        "M-pulse (C) charges lit when the team is low after taking site means no heal was given",
+        "Bassquake (X) ready across rounds with no use is a wasted retake tool"
+      ],
+      "tips": [
+        "Smoke on the commit, not on the walk-up",
+        "Stim the entry, not the anchor",
+        "Concuss first, heal after the fight",
+        "Ult when the team is walking with you"
+      ]
+    },
+    {
+      "id": "sage",
+      "name": "Sage",
+      "role": "sentinel",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Barrier Orb",
+          "purpose": "Wall (300 credits) to block a choke, boost a teammate, or protect the plant/defuse."
+        },
+        {
+          "key": "Q",
+          "name": "Slow Orb",
+          "purpose": "2 slow fields (7s); stall a push or a retake through a choke."
+        },
+        {
+          "key": "E",
+          "name": "Healing Orb",
+          "purpose": "100 HP over 5s to an ally or self (45s cooldown); heal after fights, never during them."
+        },
+        {
+          "key": "X",
+          "name": "Resurrection",
+          "purpose": "Revive a teammate at full HP; use when the area is safe or the revived player can immediately act."
+        }
+      ],
+      "job_in_round": "On attack Sage walls off a flank or the plant, slows the retake path, and heals the entry after the first fight. On defense she anchors a site with wall and slows to delay the push, heals the anchor, and resurrects a teammate for a retake.",
+      "good_play_looks_like": [
+        "Wall placed to stop a push at a choke or to block vision on the plant, not in an open field",
+        "Slow Orbs thrown when enemies are actually pushing through the choke",
+        "Healing Orb used on a teammate from cover after the fight",
+        "Resurrection cast in a safe spot with the revived player able to contribute",
+        "Wall used to boost a teammate to an off-angle on defense"
+      ],
+      "common_mistakes": [
+        "Wall placed at round start where it is broken before anyone pushes",
+        "Slow Orbs thrown on empty ground at the start of the round",
+        "Dies with Healing Orb lit after a fight while a teammate sat at low HP",
+        "Resurrects a teammate into an active crossfire and both die",
+        "Never heals herself between fights",
+        "Wall blocks her own team's rotation or line of sight"
+      ],
+      "ability_checks": [
+        "Healing Orb (E) lit at death with a low-HP teammate nearby means the heal was skipped",
+        "Both Slow Orb (Q) charges lit while the enemy pushes through the choke means no stall",
+        "Barrier Orb (C) lit during a plant in the open means no cover was made",
+        "Resurrection (X) ready across rounds with dead teammates in safe spots is wasted"
+      ],
+      "tips": [
+        "Wall on the push, not on the buy",
+        "Slow when they are actually coming through",
+        "Heal from cover, after the fight",
+        "Res where the revived player can shoot back"
+      ]
+    },
+    {
+      "id": "cypher",
+      "name": "Cypher",
+      "role": "sentinel",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Trapwire",
+          "purpose": "2 wires: 0.7s windup, then tags, slows 50% and reveals; place low or off-standard to catch flanks and lurks."
+        },
+        {
+          "key": "Q",
+          "name": "Cyber Cage",
+          "purpose": "2 activatable smokes; block a choke or a peek, activate once enemies are committed."
+        },
+        {
+          "key": "E",
+          "name": "Spycam",
+          "purpose": "Camera with a dart; revealed within 8m when inactive, so place it high and out of foot traffic."
+        },
+        {
+          "key": "X",
+          "name": "Neural Theft",
+          "purpose": "Reveal all enemies from a corpse; use before a push or retake to see rotations."
+        }
+      ],
+      "job_in_round": "On attack Cypher wires the flank behind the team, places a cam to watch the retake path, and uses cages to block a defuse angle. On defense he sets up a site with wires and cam so he can hold it alone, calls what the cam shows, and moves setups round to round.",
+      "good_play_looks_like": [
+        "Trapwires placed at unusual heights and spots, moved between rounds",
+        "Spycam placed high or off the walking path so it survives the 8m reveal",
+        "Cyber Cage activated once the enemy is actually inside it",
+        "Wire placed on the flank on attack so the team can push forward safely",
+        "Neural Theft used before a push or retake, not after the round is decided"
+      ],
+      "common_mistakes": [
+        "Same head-height wire in the same spot every round, broken in the first 3s",
+        "Cam placed at ground level near a choke and shot immediately",
+        "Watches the cam standing in the open and dies mid-view",
+        "Dies with Trapwire charges lit on attack with no flank cover",
+        "Cages thrown at round start at nothing",
+        "Neural Theft never used across a half"
+      ],
+      "ability_checks": [
+        "Trapwire (C) charges lit at death, on either side, means no flank/site coverage was placed",
+        "Spycam (E) lit throughout a round means no info tool was deployed",
+        "Cyber Cage (Q) charges lit during a defuse or push through a choke means no block was used",
+        "Neural Theft (X) ready across rounds with a corpse available is wasted info"
+      ],
+      "tips": [
+        "Move your wires every couple of rounds",
+        "Cam high, out of the walking path",
+        "Cage when they are in it, not before",
+        "Watch the cam from cover"
+      ]
+    },
+    {
+      "id": "killjoy",
+      "name": "Killjoy",
+      "role": "sentinel",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Nanoswarm",
+          "purpose": "2 hidden damage grenades (5s); deny a plant/defuse or punish a choke."
+        },
+        {
+          "key": "Q",
+          "name": "Alarmbot",
+          "purpose": "Hidden bot (20 HP) that Vulnerables; place at the edge of an entry so it is hard to shoot early."
+        },
+        {
+          "key": "E",
+          "name": "Turret",
+          "purpose": "Auto-firing turret; place elevated or off-angle to spot and tag pushes; 2s reactivation."
+        },
+        {
+          "key": "X",
+          "name": "Lockdown",
+          "purpose": "Detains enemies in a large radius after a windup; clear a site for a retake or force attackers off a plant."
+        }
+      ],
+      "job_in_round": "On attack Killjoy places the turret to watch the flank, Nanoswarms for post-plant denial, and the Alarmbot on the retake path. On defense she anchors a site with turret and bot in non-standard spots, stays within range so they stay active, and Lockdowns to clear a taken site.",
+      "good_play_looks_like": [
+        "Turret placed elevated or unexpected, where it survives long enough to tag",
+        "Alarmbot at the edge or corner of an entry, not the middle of the doorway",
+        "Nanoswarms placed on the plant spot and activated on the defuse",
+        "Stays within utility range so nothing deactivates",
+        "Lockdown cast from safety with the team ready to retake"
+      ],
+      "common_mistakes": [
+        "Turret placed center-site at head height and destroyed instantly",
+        "Rotates away from the site and all utility deactivates",
+        "Dies with both Nanoswarms lit during a post-plant defuse",
+        "Alarmbot placed in the open where it is shot before triggering",
+        "Lockdown cast into an empty site or too late to matter",
+        "Never places anything on attack, leaving the flank open"
+      ],
+      "ability_checks": [
+        "Nanoswarm (C) charges lit during a post-plant means no denial was set",
+        "Turret (E) or Alarmbot (Q) lit at death on defense means the site was never set up",
+        "Utility greyed out on the HUD means she walked out of range and left it inactive",
+        "Lockdown (X) ready across rounds with the site lost is a wasted retake"
+      ],
+      "tips": [
+        "Turret high, bot on the edge",
+        "Swarms belong to the spike",
+        "Stay in range or your setup is off",
+        "Lockdown from cover, with the team ready"
+      ]
+    },
+    {
+      "id": "chamber",
+      "name": "Chamber",
+      "role": "sentinel",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Trademark",
+          "purpose": "1 trap with no range restriction that slows 50%; watch a flank or the retake path."
+        },
+        {
+          "key": "Q",
+          "name": "Headhunter",
+          "purpose": "Heavy pistol (100 per bullet) that one-taps heads; eco and save-round pick tool."
+        },
+        {
+          "key": "E",
+          "name": "Rendezvous",
+          "purpose": "Single anchor, 18m teleport radius; place it before the peek and teleport out after the first shot."
+        },
+        {
+          "key": "X",
+          "name": "Tour de Force",
+          "purpose": "Custom sniper that kills on upper-body hit and slows on kill; hold long angles on defense or a post-plant."
+        }
+      ],
+      "job_in_round": "On attack Chamber places Trademark on the flank, takes an aggressive early pick with Rendezvous placed, and plays Operator or Headhunter angles in post-plant. On defense he holds a long angle with the anchor placed within range, takes one shot, teleports out, and uses Trademark to watch the other entry.",
+      "good_play_looks_like": [
+        "Rendezvous placed behind cover within 18m before every aggressive peek",
+        "Takes one Op or Headhunter shot, teleports, and re-peeks from the new spot",
+        "Trademark placed on the flank or the retake path where it is not immediately shot",
+        "Tour de Force used to hold a long angle where the slow field on kill matters",
+        "Buys Headhunter bullets on eco rounds and takes controlled head-level peeks"
+      ],
+      "common_mistakes": [
+        "Dies with Rendezvous lit or the anchor placed out of the 18m range",
+        "Peeks aggressively with no anchor placed, then cannot escape",
+        "Trademark placed in the open where it is shot before anyone triggers it",
+        "Sprays Headhunter body shots and wastes 100-credit bullets",
+        "Tour de Force used to peek short angles where a rifle would do",
+        "Stays on the first angle after the anchor is destroyed or used"
+      ],
+      "ability_checks": [
+        "Rendezvous (E) lit at death, or anchor visible but out of range, means the escape was wasted",
+        "Trademark (C) lit throughout a round means no flank or site watch was placed",
+        "Headhunter (Q) bullets unused on an eco round is a missed pick tool",
+        "Tour de Force (X) ready across rounds with long angles available is wasted"
+      ],
+      "tips": [
+        "Anchor first, peek second",
+        "One shot, then teleport",
+        "Trademark the flank, hidden",
+        "Headhunter is for heads, not sprays"
+      ]
+    },
+    {
+      "id": "deadlock",
+      "name": "Deadlock",
+      "role": "sentinel",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Barrier Mesh",
+          "purpose": "Movement-blocking wall (300 credits); seal a choke with both edges touching walls, fortify to hold."
+        },
+        {
+          "key": "Q",
+          "name": "Sonic Sensor",
+          "purpose": "Concusses (2.5s) when noise is made in range; place on the spike or an active entry, not a quiet flank."
+        },
+        {
+          "key": "E",
+          "name": "GravNet",
+          "purpose": "Free grenade (50s cooldown) that crouches and slows; throw just before a teammate peeks."
+        },
+        {
+          "key": "X",
+          "name": "Annihilation",
+          "purpose": "Captures the first enemy hit and drags them; use on a retake or a 1v1 with a practised lineup."
+        }
+      ],
+      "job_in_round": "On attack Deadlock uses GravNet on a held corner as a teammate swings, walls the retake path, and places a sensor on the spike. On defense she seals a choke with Barrier Mesh, sensors the loud entries, and uses GravNet to stall or set up a kill; she is best on maps with a single main lane.",
+      "good_play_looks_like": [
+        "GravNet thrown on the corner about half a second before a teammate peeks",
+        "Barrier Mesh placed so both edges touch geometry and enemies cannot step around it",
+        "Sonic Sensor placed on the planted spike or a loud active entry",
+        "Annihilation used from a known lineup on a retake or clutch",
+        "Fortifies the wall when the plan is to hold the position"
+      ],
+      "common_mistakes": [
+        "Sonic Sensor placed on a quiet flank that walkers bypass without noise",
+        "GravNet thrown after the fight has already started, or dies with it lit",
+        "Barrier Mesh placed with a gap so attackers walk around it",
+        "Treats the wall as bullet cover and gets shot through it",
+        "Wall placed after teammates already pushed through the choke",
+        "Annihilation fired blind and hits nothing"
+      ],
+      "ability_checks": [
+        "GravNet (E) lit at death means the free nade was not used to set up or stall",
+        "Sonic Sensor (Q) charges lit during a post-plant means no defuse punishment",
+        "Barrier Mesh (C) lit while the enemy pushes through the main choke means no stall was placed",
+        "Annihilation (X) ready across rounds with retakes lost is a wasted clutch tool"
+      ],
+      "tips": [
+        "Net before the peek, not after",
+        "Sensors go where they make noise: the spike",
+        "Wall edge to edge or it is a doorway",
+        "The wall blocks feet, not bullets"
+      ]
+    },
+    {
+      "id": "vyse",
+      "name": "Vyse",
+      "role": "sentinel",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Razorvine",
+          "purpose": "2 invisible nests that slow and damage when activated; corner or post-plant denial."
+        },
+        {
+          "key": "Q",
+          "name": "Shear",
+          "purpose": "Hidden wall trap that isolates the enemy who crosses; place on an entry to cut a push in half."
+        },
+        {
+          "key": "E",
+          "name": "Arc Rose",
+          "purpose": "Stealthed placeable flash (2s), can be placed through walls; activate as a teammate swings; recall on 20s."
+        },
+        {
+          "key": "X",
+          "name": "Steel Garden",
+          "purpose": "Jams primary weapons in 28m after a 4.4s windup; pop on a stacked site during a retake or entry."
+        }
+      ],
+      "job_in_round": "On attack Vyse places Arc Rose through a wall and flashes the site as the team enters, then uses Razorvine and Shear for post-plant denial. On defense she sets up an entry with Shear and Razorvine to split a push, flashes for re-peeks, and Steel Gardens a retake.",
+      "good_play_looks_like": [
+        "Arc Rose placed through a wall onto the site, activated as a teammate swings",
+        "Shear on an entry so the first enemy through is cut off from the rest",
+        "Razorvine activated when enemies are actually in it, not on sight",
+        "Steel Garden popped from cover on a stacked position with the team ready to swing",
+        "Arc Rose recalled and re-placed for the retake instead of left on attack side"
+      ],
+      "common_mistakes": [
+        "Dies with Arc Rose lit and never placed or activated",
+        "Razorvine activated on empty ground or as soon as one enemy is spotted nearby",
+        "Shear placed where it isolates a teammate or is easily seen and shot",
+        "Copies highlight-clip setups without knowing the timing that makes them work",
+        "Steel Garden windup started in the open and dies before it fires",
+        "Never brings utility on attack, leaving the flank and post-plant unguarded"
+      ],
+      "ability_checks": [
+        "Arc Rose (E) lit at death means the free flash was never deployed",
+        "Razorvine (C) charges lit during a post-plant means no denial was placed",
+        "Shear (Q) lit while the enemy pushes through the main entry means no isolation setup",
+        "Steel Garden (X) ready across rounds with stacked sites to retake is wasted"
+      ],
+      "tips": [
+        "Rose through the wall, activate on the swing",
+        "Activate vines when they are in them",
+        "Shear the entry, isolate the first one in",
+        "Ult from cover, then the team swings"
+      ]
+    },
+    {
+      "id": "veto",
+      "name": "Veto",
+      "role": "sentinel",
+      "abilities": [
+        {
+          "key": "C",
+          "name": "Crosscut",
+          "purpose": "2 vortexes (200 each); place one, peek, then look at it and reactivate to teleport back (30m range)."
+        },
+        {
+          "key": "Q",
+          "name": "Chokehold",
+          "purpose": "Thrown trap that holds, Deafens and Decays for 4.5s; place in tight doorways or dark corners."
+        },
+        {
+          "key": "E",
+          "name": "Interceptor",
+          "purpose": "Free device; activate to destroy bouncing or shootable utility in its zone (9s); reclaim for a 20s cooldown."
+        },
+        {
+          "key": "X",
+          "name": "Evolution",
+          "purpose": "Combat stim, 40 HP/s regen and debuff immunity; push or retake through utility, but Ops and Chamber still kill you."
+        }
+      ],
+      "job_in_round": "Veto (released 11.07b) is an anti-utility sentinel: on defense he holds an entry with Chokehold and activates Interceptor as the execute's flashes and grenades come in. On attack he places a Crosscut before a peek, Interceptors the Sentinel setup on site, and uses Evolution to take space through utility.",
+      "good_play_looks_like": [
+        "Interceptor placed behind cover on the execute route and activated as the utility comes in, not before",
+        "Chokehold in a doorway or dark corner rather than open ground",
+        "Crosscut placed in a safe fallback before the aggressive peek, and used after the first shot",
+        "Evolution popped on a retake or a push through flashes and stuns",
+        "Reclaims Interceptor after use instead of letting it get shot (45s vs 20s cooldown)"
+      ],
+      "common_mistakes": [
+        "Interceptor activated too early or left inactive while the execute utility lands",
+        "Dies with Crosscut vortex placed but unused after a losing peek",
+        "Chokehold placed in open ground where it is spotted and shot",
+        "Forgets where the vortex is and cannot reactivate it mid-fight",
+        "Evolution used on a low-impact round or into an Operator angle",
+        "Never uses Interceptor on attack against Sentinel setups"
+      ],
+      "ability_checks": [
+        "Interceptor (E) lit or placed-but-inactive when the enemy execute utility landed means it was wasted",
+        "Crosscut (C) vortex active at death means the teleport back was not used",
+        "Chokehold (Q) lit throughout a defensive round means no entry was trapped",
+        "Evolution (X) ready across rounds with pushes to make is a wasted stim"
+      ],
+      "tips": [
+        "Interceptor when the utility is in the air, not before",
+        "Trap the doorway, not the open floor",
+        "Vortex first, peek second, back after the shot",
+        "Ult through utility, not through an Op"
+      ]
+    }
   ],
-  "sources": []
+  "sources": [
+    "https://playvalorant.com/en-us/agents/",
+    "https://playvalorant.com/en-us/agents/veto/",
+    "https://playvalorant.com/en-us/agents/miks/",
+    "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-13-05/",
+    "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-13-01/",
+    "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-13-00/",
+    "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-12-05/",
+    "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-12-03/",
+    "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-12-00/",
+    "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-11-11/",
+    "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-11-10/",
+    "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-11-08/",
+    "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-11-00/",
+    "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-10-10/",
+    "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-10-09/",
+    "https://wiki.playvalorant.com/en-us/Veto",
+    "https://wiki.playvalorant.com/en-us/Miks",
+    "https://wiki.playvalorant.com/en-us/Harmonize",
+    "https://wiki.playvalorant.com/en-us/Harbor",
+    "https://wiki.playvalorant.com/en-us/Iso",
+    "https://wiki.playvalorant.com/en-us/Tejo",
+    "https://wiki.playvalorant.com/en-us/Deadlock",
+    "https://wiki.playvalorant.com/en-us/Chamber",
+    "https://wiki.playvalorant.com/en-us/Jett",
+    "https://wiki.playvalorant.com/en-us/Sage",
+    "https://wiki.playvalorant.com/en-us/Reyna",
+    "https://wiki.playvalorant.com/en-us/Vyse",
+    "https://www.thespike.gg/valorant/agents/veto",
+    "https://www.thespike.gg/valorant/news/valorant-agent-miks-all-abilities/7762",
+    "https://www.hotspawn.com/valorant/guide/veto-guide",
+    "https://www.hotspawn.com/valorant/news/valorant-patch-11-10",
+    "https://www.switchbladegaming.com/valorant/veto-guide/",
+    "https://www.switchbladegaming.com/valorant/skye-guide/",
+    "https://www.switchbladegaming.com/valorant/cypher-guide/",
+    "https://www.switchbladegaming.com/valorant/deadlock-guide/",
+    "https://www.switchbladegaming.com/valorant/jett-guide/",
+    "https://www.switchbladegaming.com/valorant/gekko-guide/",
+    "https://1v9.gg/blog/valorant-miks-agent-guide",
+    "https://1v9.gg/blog/valorant-deadlock-tips-tricks",
+    "https://www.talkesport.com/news/valorant/miks-valorant-guide-abilities-combos-tips/",
+    "https://www.dexerto.com/valorant/valorant-12-05-patch-notes-update-buff-nerfs-3336454/",
+    "https://www.thegamer.com/valorant-deadlock-tips-tricks/",
+    "https://www.thegamer.com/valorant-tips-tricks-vyse/",
+    "https://esports.gg/news/valorant/all-valorant-agents/",
+    "https://esports.gg/news/valorant/waylay-valorant-guide-how-to-play-the-dazzling-thai-agent/",
+    "https://mobalytics.gg/valorant/agent/waylay/guide",
+    "https://mobalytics.gg/blog/valorant/valorant-5-advanced-tips-immortal-reyna-player/",
+    "https://blitz.gg/articles/veto-valorant-guide",
+    "https://dignitas.gg/articles/things-that-lineup-tutorials-won-t-tell-you-about-sova-featuring-dignitas-showliana",
+    "https://www.redbull.com/ca-en/how-to-master-gekko-skills-tips-guide-valorant",
+    "https://www.pcgamesn.com/valorant/killjoy",
+    "https://upforge.gg/blog/omen-agent-guide-valorant",
+    "https://upforge.gg/blog/tejo-agent-guide-valorant",
+    "https://www.exitlag.com/news/harbor-rework-in-valorant/",
+    "https://aimlabs.com/articles/aimlabs/new-miks-video-guide-how-to-disrupt-enable-and-carry-in-valorant/"
+  ]
 }

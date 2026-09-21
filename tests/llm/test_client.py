@@ -43,3 +43,9 @@ def test_send_review_raises_before_transport_when_at_cap() -> None:
     with pytest.raises(CapExceeded, match="30"):
         send_review(req, transport, calls_today=30, cap=30)
     assert transport.calls == []
+
+
+def test_zero_cap_means_unlimited() -> None:
+    transport = FakeTransport("{}")
+    req = build_chat_request("m", "s", "p", [], None, 1.0)
+    assert send_review(req, transport, calls_today=9999, cap=0).content == "{}"

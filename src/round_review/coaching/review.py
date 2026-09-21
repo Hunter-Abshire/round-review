@@ -60,6 +60,9 @@ class WindowResult:
     warnings: tuple[str, ...]
     situation: Situation | None = None
     context: PlayerContext = field(default_factory=PlayerContext)
+    # True only when the coach reply could not be parsed. An abstained window (buy phase,
+    # spectating) has no findings and a warning, but is a successful review of that window.
+    parse_failed: bool = False
 
 
 def review_window(

@@ -11,7 +11,7 @@ from typing import Literal, get_args
 
 from round_review.errors import LedgerError
 
-Status = Literal["ok", "failed", "skipped"]
+Status = Literal["ok", "partial", "failed", "skipped"]
 STATUSES: tuple[str, ...] = get_args(Status)
 
 

@@ -35,7 +35,7 @@ from round_review.report.json_report import write_report_json
 from round_review.report.markdown import Report, write_report
 from round_review.video.frames import extract_frames, extract_single_frame
 from round_review.video.probe import CommandRunner, Recording, SubprocessRunner, probe
-from round_review.video.windows import select_windows
+from round_review.video.windows import plan_windows
 
 log = logging.getLogger(__name__)
 
@@ -156,62 +156,87 @@ def review_file(
 
     try:
         recording = probe(path, deps.probe_runner)
-        windows = select_windows(
-            recording.duration_s, cfg.window_s, cfg.windows_per_file, cfg.edge_skip_s
+        windows = plan_windows(
+            recording.duration_s,
+            window_s=cfg.window_s,
+            coverage=cfg.coverage,  # type: ignore[arg-type]
+            windows_per_file=cfg.windows_per_file,
+            edge_skip_s=cfg.edge_skip_s,
+            max_windows=cfg.max_windows,
+            max_span_s=cfg.max_span_s,
         )
-        log.info("%s: %.1fs, reviewing %d window(s)", path.name, recording.duration_s, len(windows))
-        if on_progress:
-            on_progress(0, len(windows))
-        for window in windows:
+    except VideoError as exc:
+        _record(deps, key, path, "failed", 0, None, exc)
+        raise
+
+    log.info("%s: %.1fs, reviewing %d window(s)", path.name, recording.duration_s, len(windows))
+    if on_progress:
+        on_progress(0, len(windows))
+
+    # A full review is dozens of windows, so a failure part-way through must not throw away
+    # the windows already reviewed: stop, keep the results, and record the review as partial.
+    stopped: RoundReviewError | None = None
+    for window in windows:
+        try:
             samples = extract_frames(
                 recording, window, deps.ffmpeg_runner, cfg.fps, cfg.frame_width, frames_dir
             )
-            try:
-                result = review_window(
-                    window,
-                    samples,
-                    deps.transport,
-                    cfg.model,
-                    history_calls + calls,
-                    cfg.daily_call_cap,
-                    cfg.request_timeout_s,
-                    context,
-                    knowledge,
-                    cfg.situation_pass,
-                )
-            except ParseError as exc:
-                unparseable_windows += 1
-                calls += exc.model_calls
-                warnings.append(str(exc))
-                results.append(
-                    WindowResult(window, tuple(samples), (), exc.model_calls, (str(exc),))
-                )
-                if on_progress:
-                    on_progress(len(results), len(windows))
-                continue
-            calls += result.model_calls
-            result, evidence_warnings = _attach_exact_evidence(result, recording, deps, frames_dir)
-            warnings.extend(evidence_warnings)
-            results.append(result)
+            result = review_window(
+                window,
+                samples,
+                deps.transport,
+                cfg.model,
+                history_calls + calls,
+                cfg.daily_call_cap,
+                cfg.request_timeout_s,
+                context,
+                knowledge,
+                cfg.situation_pass,
+            )
+        except ParseError as exc:
+            # One unreadable window is a warning; every window unreadable fails the file.
+            unparseable_windows += 1
+            calls += exc.model_calls
+            warnings.append(str(exc))
+            results.append(
+                WindowResult(window, (), (), exc.model_calls, (str(exc),), parse_failed=True)
+            )
             if on_progress:
                 on_progress(len(results), len(windows))
+            continue
+        except CapExceeded as exc:
+            stopped = exc
+            break
+        except OllamaError as exc:
+            calls += 1  # the failed call was sent
+            stopped = exc
+            break
+        except VideoError as exc:
+            stopped = exc
+            break
+        calls += result.model_calls
+        result, evidence_warnings = _attach_exact_evidence(result, recording, deps, frames_dir)
+        warnings.extend(evidence_warnings)
+        results.append(result)
+        if on_progress:
+            on_progress(len(results), len(windows))
 
-        if windows and unparseable_windows == len(windows):
-            raise ParseError(f"{path.name}: all {len(windows)} windows unparseable", model_calls=0)
-    except CapExceeded as exc:
-        # One failed attempt still costs nothing at the transport, but calls so far do count.
-        _record(deps, key, path, "skipped", calls, None, exc)
-        raise
-    except OllamaError as exc:
-        # The failed call was sent; count it so a flapping server cannot bypass the cap.
-        _record(deps, key, path, "failed", calls + 1, None, exc)
-        raise
-    except (VideoError, ParseError) as exc:
-        _record(deps, key, path, "failed", calls, None, exc)
-        raise
+    if stopped is not None:
+        if not results:
+            status: Status = "skipped" if isinstance(stopped, CapExceeded) else "failed"
+            _record(deps, key, path, status, calls, None, stopped)
+            raise stopped
+        warnings.append(
+            f"review stopped after {len(results)} of {len(windows)} windows "
+            f"({type(stopped).__name__}: {stopped}); this report is partial"
+        )
+    elif windows and unparseable_windows == len(windows):
+        unreadable = ParseError(f"{path.name}: all {len(windows)} windows unparseable")
+        _record(deps, key, path, "failed", calls, None, unreadable)
+        raise unreadable
 
     report = Report(recording, deps.clock(), cfg.model, tuple(results), tuple(warnings))
     report_path = write_report(report, out_dir)
     write_report_json(report, out_dir)
-    _record(deps, key, path, "ok", calls, report_path, None)
+    _record(deps, key, path, "partial" if stopped else "ok", calls, report_path, None)
     return report

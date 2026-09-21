@@ -43,3 +43,7 @@ class AlreadyProcessed(RoundReviewError):
 
 class KnowledgeError(RoundReviewError):
     """A bundled knowledge file (checklist, agents, maps) is malformed."""
+
+
+class LabelsError(RoundReviewError):
+    """A scene-validation labels file is missing, malformed, or has nothing labelled."""

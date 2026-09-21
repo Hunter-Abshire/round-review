@@ -28,11 +28,16 @@ class Config:
     model: str = "qwen3-vl:8b"
     num_ctx: int = DEFAULT_NUM_CTX
     window_s: float = 12.0
+    # "full" tiles the whole recording; "sampled" takes `windows_per_file` spread evenly.
+    coverage: str = "full"
     windows_per_file: int = 3
+    # 0 = unlimited. `max_span_s` reviews only the first N seconds of gameplay.
+    max_windows: int = 0
+    max_span_s: float = 0.0
     edge_skip_s: float = 30.0
     fps: float = 1.0
     frame_width: int = 1280
-    daily_call_cap: int = 60
+    daily_call_cap: int = 0
     poll_s: float = 20.0
     quiet_polls: int = 3
     min_age_s: float = 120.0
@@ -50,7 +55,6 @@ POSITIVE_KEYS: frozenset[str] = frozenset(
         "windows_per_file",
         "fps",
         "frame_width",
-        "daily_call_cap",
         "poll_s",
         "quiet_polls",
         "min_age_s",
@@ -59,7 +63,10 @@ POSITIVE_KEYS: frozenset[str] = frozenset(
         "num_ctx",
     }
 )
+# 0 is allowed and means "unlimited"; negative never is.
+NON_NEGATIVE_KEYS: frozenset[str] = frozenset({"daily_call_cap", "max_windows", "max_span_s"})
 PATH_KEYS: frozenset[str] = frozenset({"recordings_dir", "reports_dir", "ledger_path"})
+COVERAGE_MODES: frozenset[str] = frozenset({"full", "sampled"})
 
 
 def default_data_dir() -> Path:
@@ -161,5 +168,16 @@ def load_config(
             assert isinstance(number, int | float)
             if number <= 0:
                 raise ConfigError(f"{key} must be > 0, got {number}")
+
+    for key in NON_NEGATIVE_KEYS:
+        if key in values:
+            number = values[key]
+            assert isinstance(number, int | float)
+            if number < 0:
+                raise ConfigError(f"{key} must be >= 0 (0 means unlimited), got {number}")
+
+    coverage = values.get("coverage")
+    if coverage is not None and coverage not in COVERAGE_MODES:
+        raise ConfigError(f"coverage must be one of {sorted(COVERAGE_MODES)}, got {coverage!r}")
 
     return Config(**values)  # type: ignore[arg-type]

@@ -183,3 +183,28 @@ def test_phase_inappropriate_check_is_rejected_even_if_category_is_mislabeled(sa
     result = review(FakeTransport(SITUATION, json.dumps({"findings": [finding]})), samples)
     assert result.findings == ()
     assert any("phase" in w for w in result.warnings)
+
+
+def test_abstention_is_not_a_parse_failure(samples: list[FrameSample]) -> None:
+    buy_phase = json.loads(SITUATION)
+    buy_phase["phase"] = "pre_round"
+    transport = FakeTransport(json.dumps(buy_phase))
+    result = review(transport, samples)
+    assert result.findings == ()
+    assert result.parse_failed is False
+    assert any("coaching skipped" in w for w in result.warnings)
+    assert len(transport.calls) == 1  # no coach call spent on buy phase
+
+
+def test_unparseable_coach_output_sets_parse_failed_on_the_raised_error(
+    samples: list[FrameSample],
+) -> None:
+    transport = FakeTransport(SITUATION, "nope", "still nope")
+    with pytest.raises(ParseError) as info:
+        review(transport, samples)
+    assert info.value.model_calls == 3
+
+
+def test_successful_review_is_not_marked_parse_failed(samples: list[FrameSample]) -> None:
+    result = review(FakeTransport(SITUATION, GOOD), samples)
+    assert result.parse_failed is False

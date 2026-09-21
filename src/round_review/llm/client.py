@@ -24,7 +24,8 @@ def send_review(
     request: ChatRequest, transport: Transport, calls_today: int, cap: int
 ) -> ChatResponse:
     """Call the model unless the daily cap is already reached. The cap check runs first
-    so a capped day never touches the network."""
-    if calls_today >= cap:
+    so a capped day never touches the network. A cap of 0 means unlimited: local inference
+    has no per-call cost, and a full-video review needs dozens of calls."""
+    if cap > 0 and calls_today >= cap:
         raise CapExceeded(f"daily model-call cap reached ({calls_today}/{cap})")
     return transport.chat(request)

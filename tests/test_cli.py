@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -155,3 +156,156 @@ def test_serve_binds_loopback_and_uses_config_port(
     assert seen["port"] == cfg.api_port
     result = CliRunner().invoke(cli.main, ["serve", "--port", "9999"])
     assert result.exit_code == 0 and seen["port"] == 9999
+
+
+@pytest.fixture
+def scene_video(tmp_path: Path) -> Path:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"\x00" * 64)
+    return video
+
+
+def test_review_accepts_coverage_overrides(
+    monkeypatch: pytest.MonkeyPatch, patched: dict[str, object], cfg: Config, scene_video: Path
+) -> None:
+    seen: dict[str, object] = {}
+
+    def fake_review(
+        path: Path,
+        deps: Deps,
+        context: PlayerContext | None = None,
+        force: bool = False,
+        **kw: object,
+    ) -> Report:
+        seen["coverage"] = deps.config.coverage
+        seen["max_span_s"] = deps.config.max_span_s
+        seen["max_windows"] = deps.config.max_windows
+        rec = Recording(path, 1.0, 30.0, 1, 1, 1, 0.0)
+        return Report(rec, datetime(2026, 9, 21, tzinfo=UTC), cfg.model, (), ())
+
+    monkeypatch.setattr(cli, "review_file", fake_review)
+    result = CliRunner().invoke(
+        cli.main,
+        [
+            "review",
+            str(scene_video),
+            "--coverage",
+            "sampled",
+            "--first",
+            "60",
+            "--max-windows",
+            "8",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert seen == {"coverage": "sampled", "max_span_s": 60.0, "max_windows": 8}
+
+
+def test_scenes_scaffold_writes_a_labels_file(
+    monkeypatch: pytest.MonkeyPatch, patched: dict[str, object], scene_video: Path, tmp_path: Path
+) -> None:
+    from round_review.validation.scenes import SceneCase
+
+    calls: dict[str, object] = {}
+
+    def fake_scaffold(
+        recording: object, every_s: float, ffmpeg: object, width: int, frames_dir: Path
+    ) -> list[SceneCase]:
+        calls["every_s"] = every_s
+        calls["frames_dir"] = frames_dir
+        return [SceneCase(scene_video, 0.0, "", notes="look at f.jpg")]
+
+    monkeypatch.setattr(
+        cli, "probe", lambda path, runner: Recording(path, 300.0, 60.0, 1, 1, 1, 0.0)
+    )
+    monkeypatch.setattr(cli, "scaffold_cases", fake_scaffold)
+    out = tmp_path / "labels.json"
+    result = CliRunner().invoke(
+        cli.main, ["scenes", "scaffold", str(scene_video), "--every", "45", "--out", str(out)]
+    )
+    assert result.exit_code == 0, result.output
+    assert calls["every_s"] == 45.0
+    assert out.exists()
+    assert "expected_phase" in out.read_text()
+    assert "1 frame" in result.output or "1 case" in result.output
+
+
+def test_scenes_validate_prints_the_report_and_writes_json(
+    monkeypatch: pytest.MonkeyPatch, patched: dict[str, object], scene_video: Path, tmp_path: Path
+) -> None:
+    from round_review.validation.scenes import SceneCase, SceneOutcome, SceneReport
+
+    case = SceneCase(scene_video, 10.0, "early")
+    report = SceneReport(
+        "qwen3-vl:8b", 1, (SceneOutcome(case, None, "OllamaError: refused", None),)
+    )
+    monkeypatch.setattr(cli, "load_cases", lambda path: [case])
+    monkeypatch.setattr(cli, "run_cases", lambda *a, **k: report)
+    labels = tmp_path / "labels.json"
+    labels.write_text("{}")
+    out_json = tmp_path / "scenes.json"
+    result = CliRunner().invoke(
+        cli.main, ["scenes", "validate", str(labels), "--json-out", str(out_json)]
+    )
+    assert result.exit_code == 0, result.output
+    assert "Scene recognition" in result.output
+    assert json.loads(out_json.read_text())["model"] == "qwen3-vl:8b"
+
+
+def test_scenes_validate_can_gate_on_accuracy(
+    monkeypatch: pytest.MonkeyPatch, patched: dict[str, object], scene_video: Path, tmp_path: Path
+) -> None:
+    from round_review.validation.scenes import SceneCase, SceneOutcome, SceneReport
+
+    case = SceneCase(scene_video, 10.0, "early")
+    report = SceneReport("m", 1, (SceneOutcome(case, None, "unreadable", None),))
+    monkeypatch.setattr(cli, "load_cases", lambda path: [case])
+    monkeypatch.setattr(cli, "run_cases", lambda *a, **k: report)
+    labels = tmp_path / "labels.json"
+    labels.write_text("{}")
+    result = CliRunner().invoke(
+        cli.main, ["scenes", "validate", str(labels), "--min-accuracy", "0.8"]
+    )
+    assert result.exit_code == 1
+    assert "below" in result.output
+
+
+def test_scenes_validate_reports_bad_labels(
+    monkeypatch: pytest.MonkeyPatch, patched: dict[str, object], tmp_path: Path
+) -> None:
+    from round_review.errors import LabelsError
+
+    def boom(path: Path) -> list[object]:
+        raise LabelsError("no labelled cases")
+
+    monkeypatch.setattr(cli, "load_cases", boom)
+    labels = tmp_path / "labels.json"
+    labels.write_text("{}")
+    result = CliRunner().invoke(cli.main, ["scenes", "validate", str(labels)])
+    assert result.exit_code == 1
+    assert "LabelsError: no labelled cases" in result.output
+
+
+def test_scenes_describe_prints_the_situation_json(
+    monkeypatch: pytest.MonkeyPatch, patched: dict[str, object], scene_video: Path
+) -> None:
+    from round_review.coaching.situation import Situation
+    from round_review.validation.scenes import SceneCase, SceneOutcome, SceneReport
+
+    situation = Situation(
+        "Jett", "Ascent", "attack", "early", "Vandal", (), None, None, 0, (), "Live round."
+    )
+    report = SceneReport(
+        "m",
+        1,
+        (SceneOutcome(SceneCase(scene_video, 12.0, "early"), situation, None, Path("/f/x.jpg")),),
+    )
+    monkeypatch.setattr(
+        cli, "probe", lambda path, runner: Recording(path, 300.0, 60.0, 1, 1, 1, 0.0)
+    )
+    monkeypatch.setattr(cli, "run_cases", lambda *a, **k: report)
+    result = CliRunner().invoke(cli.main, ["scenes", "describe", str(scene_video), "--at", "12"])
+    assert result.exit_code == 0, result.output
+    assert "early" in result.output
+    assert "Live round." in result.output
+    assert "/f/x.jpg" in result.output

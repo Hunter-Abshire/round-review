@@ -97,19 +97,25 @@ def video(tmp_path: Path) -> Path:
 
 
 def make_deps(tmp_path: Path, transport: FakeTransport, **overrides: object) -> Deps:
-    cfg = Config(
-        reports_dir=tmp_path / "reports",
-        ledger_path=tmp_path / "ledger.jsonl",
-        window_s=12.0,
-        windows_per_file=3,
-        edge_skip_s=30.0,
-        daily_call_cap=int(overrides.get("cap", 30)),  # type: ignore[call-overload]
-        situation_pass=False,
-    )
+    probe_runner = overrides.pop("probe", FakeProbe())
+    ffmpeg_runner = overrides.pop("ffmpeg", FakeFfmpeg())
+    if "cap" in overrides:
+        overrides["daily_call_cap"] = int(overrides.pop("cap"))  # type: ignore[call-overload]
+    settings: dict[str, object] = {
+        "reports_dir": tmp_path / "reports",
+        "ledger_path": tmp_path / "ledger.jsonl",
+        "window_s": 12.0,
+        "coverage": "sampled",
+        "windows_per_file": 3,
+        "edge_skip_s": 30.0,
+        "daily_call_cap": 30,
+        "situation_pass": False,
+    }
+    settings.update(overrides)
     return Deps(
-        config=cfg,
-        probe_runner=overrides.get("probe", FakeProbe()),  # type: ignore[arg-type]
-        ffmpeg_runner=overrides.get("ffmpeg", FakeFfmpeg()),  # type: ignore[arg-type]
+        config=Config(**settings),  # type: ignore[arg-type]
+        probe_runner=probe_runner,  # type: ignore[arg-type]
+        ffmpeg_runner=ffmpeg_runner,  # type: ignore[arg-type]
         transport=transport,
         clock=lambda: FIXED_NOW,
     )
@@ -198,28 +204,6 @@ def test_ffmpeg_failure_recorded_as_failed(video: Path, tmp_path: Path) -> None:
         review_file(video, deps)
     (entry,) = read_ledger(deps.config.ledger_path)
     assert entry.status == "failed"
-
-
-def test_ollama_failure_recorded_as_failed_with_calls_so_far(video: Path, tmp_path: Path) -> None:
-    transport = FakeTransport(good(35.0), OllamaError("HTTP 500"))
-    deps = make_deps(tmp_path, transport)
-    with pytest.raises(OllamaError):
-        review_file(video, deps)
-    (entry,) = read_ledger(deps.config.ledger_path)
-    assert entry.status == "failed"
-    assert entry.model_calls == 2  # the failed call is counted too
-    assert entry.error is not None and "OllamaError" in entry.error
-
-
-def test_cap_exceeded_recorded_as_skipped(video: Path, tmp_path: Path) -> None:
-    transport = FakeTransport(good(35.0), good(65.0))
-    deps = make_deps(tmp_path, transport, cap=2)
-    with pytest.raises(CapExceeded):
-        review_file(video, deps)
-    (entry,) = read_ledger(deps.config.ledger_path)
-    assert entry.status == "skipped"
-    assert entry.model_calls == 2
-    assert len(transport.calls) == 2
 
 
 def test_cap_counts_ledger_history(video: Path, tmp_path: Path) -> None:
@@ -329,6 +313,7 @@ def test_situation_pass_doubles_calls_and_records_situation(video: Path, tmp_pat
         config=Config(
             reports_dir=deps.config.reports_dir,
             ledger_path=deps.config.ledger_path,
+            coverage="sampled",
             situation_pass=True,
         ),
         probe_runner=deps.probe_runner,
@@ -358,3 +343,78 @@ def test_exact_frame_failure_keeps_sample_frame_with_warning(video: Path, tmp_pa
         f.evidence_frame is not None and f.evidence_frame.name.startswith("w") for f in findings
     )
     assert any("evidence" in w.lower() for w in report.warnings)
+
+
+def test_full_coverage_tiles_the_recording(video: Path, tmp_path: Path) -> None:
+    # PROBE_JSON duration 123.456, edge skip 30 -> usable 30..93.456 -> five 12s tiles
+    transport = FakeTransport(*[good(35.0)] * 6)
+    deps = make_deps(tmp_path, transport, coverage="full")
+    report = review_file(video, deps)
+    assert len(report.results) == 5
+    assert all(r.window.source == "tiled" for r in report.results)
+    covered = sum(r.window.end_s - r.window.start_s for r in report.results)
+    assert covered / 123.456 > 0.45
+
+
+def test_first_minute_only(video: Path, tmp_path: Path) -> None:
+    transport = FakeTransport(*[good(35.0)] * 6)
+    deps = make_deps(tmp_path, transport, coverage="full", max_span_s=24.0)
+    report = review_file(video, deps)
+    assert len(report.results) == 2
+    assert report.results[-1].window.end_s == pytest.approx(54.0)
+
+
+def test_cap_mid_review_saves_a_partial_report(video: Path, tmp_path: Path) -> None:
+    transport = FakeTransport(good(35.0), good(45.0))
+    deps = make_deps(tmp_path, transport, coverage="full", cap=2)
+    report = review_file(video, deps)
+    assert len(report.results) == 2  # stopped early, kept the work
+    assert any("cap" in w.lower() for w in report.warnings)
+    assert any("partial" in w.lower() for w in report.warnings)
+    (entry,) = read_ledger(deps.config.ledger_path)
+    assert entry.status == "partial"
+    assert entry.model_calls == 2
+    assert len(transport.calls) == 2
+    assert entry.report_path is not None and Path(entry.report_path).exists()
+
+
+def test_ollama_failure_mid_review_saves_a_partial_report(video: Path, tmp_path: Path) -> None:
+    transport = FakeTransport(good(35.0), OllamaError("HTTP 500"))
+    deps = make_deps(tmp_path, transport, coverage="full")
+    report = review_file(video, deps)
+    assert len(report.results) == 1
+    assert any("OllamaError" in w for w in report.warnings)
+    (entry,) = read_ledger(deps.config.ledger_path)
+    assert entry.status == "partial"
+    assert entry.model_calls == 2  # the failed call is counted too
+
+
+def test_failure_on_the_first_window_still_fails_the_file(video: Path, tmp_path: Path) -> None:
+    deps = make_deps(tmp_path, FakeTransport(OllamaError("refused")))
+    with pytest.raises(OllamaError):
+        review_file(video, deps)
+    (entry,) = read_ledger(deps.config.ledger_path)
+    assert entry.status == "failed"
+
+
+def test_all_windows_abstaining_is_a_successful_empty_review(video: Path, tmp_path: Path) -> None:
+    from tests.coaching.test_review import SITUATION
+
+    buy = json.loads(SITUATION)
+    buy["phase"] = "pre_round"
+    transport = FakeTransport(*[json.dumps(buy)] * 6)
+    deps = make_deps(tmp_path, transport, situation_pass=True)
+    report = review_file(video, deps)
+    assert sum(len(r.findings) for r in report.results) == 0
+    (entry,) = read_ledger(deps.config.ledger_path)
+    assert entry.status == "ok"
+    assert all(any("coaching skipped" in w for w in result.warnings) for result in report.results)
+
+
+def test_progress_reports_the_tiled_window_count(video: Path, tmp_path: Path) -> None:
+    transport = FakeTransport(*[good(35.0)] * 6)
+    deps = make_deps(tmp_path, transport, coverage="full")
+    seen: list[tuple[int, int]] = []
+    review_file(video, deps, on_progress=lambda done, total: seen.append((done, total)))
+    assert seen[0] == (0, 5)
+    assert seen[-1] == (5, 5)

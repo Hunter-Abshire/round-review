@@ -219,8 +219,30 @@ export const renderTimeline = (root: HTMLElement, props: TimelineProps): void =>
 
 // ------------------------------------------------------------------------------- coverage
 
+/** The pipeline's own diagnosis of an empty review, if it made one. */
+const DIAGNOSIS_MARKER = 'misreading the screen';
+
+export const diagnosisOf = (report: Report): string | null =>
+  report.warnings.find(w => w.includes(DIAGNOSIS_MARKER)) ?? null;
+
 export const renderCoverageSummary = (root: HTMLElement, report: Report): void => {
   root.replaceChildren();
+
+  // A partial or misread review is the first thing to know, not a note to go digging for.
+  if (report.partial && report.stopped_reason) {
+    const banner = el('div', 'notice partial');
+    banner.dataset['partial'] = 'true';
+    banner.append(el('strong', undefined, 'Partial review. '));
+    banner.append(document.createTextNode(report.stopped_reason));
+    root.append(banner);
+  }
+  const diagnosis = diagnosisOf(report);
+  if (diagnosis) {
+    const banner = el('div', 'notice diagnosis', diagnosis);
+    banner.dataset['diagnosis'] = 'true';
+    root.append(banner);
+  }
+
   const reviewed = report.windows.reduce((total, w) => total + (w.end_s - w.start_s), 0);
   const duration = report.recording.duration_s;
   const percent = duration > 0 ? Math.round((100 * reviewed) / duration) : 0;
@@ -234,7 +256,9 @@ export const renderCoverageSummary = (root: HTMLElement, report: Report): void =
         : `Reviewed ${formatDuration(reviewed)} of ${formatDuration(duration)} (${percent}%) · ${windows} windows · ${report.model}`,
     ),
   );
-  const notes = [...report.warnings, ...report.windows.flatMap(w => w.warnings)];
+  const notes = [...report.warnings, ...report.windows.flatMap(w => w.warnings)].filter(
+    note => note !== diagnosis,
+  );
   if (notes.length > 0) {
     const details = el('details', 'notes');
     details.append(el('summary', undefined, `Review notes (${notes.length})`));
@@ -250,11 +274,16 @@ export const renderFindingList = (
   markers: Marker[],
   selectedId: string | null,
   onSelect: (id: string) => void,
+  emptyReason?: string | null,
 ): void => {
   root.replaceChildren();
   if (markers.length === 0) {
     root.append(
-      el('p', 'empty', 'No findings in the reviewed windows. Check the review notes for why.'),
+      el(
+        'p',
+        'empty',
+        emptyReason ?? 'No findings in the reviewed windows. Check the review notes for why.',
+      ),
     );
     return;
   }

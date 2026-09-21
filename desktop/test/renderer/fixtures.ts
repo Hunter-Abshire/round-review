@@ -34,6 +34,8 @@ export const report = (overrides: Partial<Report> = {}): Report => ({
   },
   generated_at: '2026-09-21T15:30:00+00:00',
   model: 'qwen3-vl:8b',
+  partial: false,
+  stopped_reason: null,
   windows: [
     {
       index: 0,
@@ -42,6 +44,7 @@ export const report = (overrides: Partial<Report> = {}): Report => ({
       model_calls: 1,
       context: EMPTY_CONTEXT,
       situation: null,
+      abstained_reason: null,
       findings: [finding()],
       warnings: [],
     },
@@ -64,6 +67,7 @@ export const report = (overrides: Partial<Report> = {}): Report => ({
         timeline: [{ t: 300, event: 'walking A main' }],
         summary: 'Entering A main with dash up.',
       },
+      abstained_reason: null,
       findings: [finding({ timestamp_s: 305, category: 'utility' }), finding({ timestamp_s: 310 })],
       warnings: ['window warning'],
     },

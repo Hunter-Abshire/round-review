@@ -1,6 +1,7 @@
 // Renderer entry point. Bundled by esbuild into dist/renderer/app.js; no Node access here.
 import { createApi, type Api } from './api';
 import {
+  diagnosisOf,
   renderClipList,
   renderContextBar,
   renderCoverageSummary,
@@ -92,7 +93,13 @@ const run = (api: Api): void => {
         video.currentTime = seconds;
       },
     });
-    renderFindingList(findingList, state.markers, state.selectedMarkerId, select);
+    renderFindingList(
+      findingList,
+      state.markers,
+      state.selectedMarkerId,
+      select,
+      diagnosisOf(report),
+    );
     const window_ = marker ? report.windows.find(w => w.index === marker.windowIndex) : undefined;
     renderFindingCard(card, {
       marker,

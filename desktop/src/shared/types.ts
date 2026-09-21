@@ -150,6 +150,7 @@ export interface ReportWindow {
   model_calls: number;
   context: PlayerContext;
   situation: Situation | null;
+  abstained_reason: string | null;
   findings: Finding[];
   warnings: string[];
 }
@@ -165,6 +166,8 @@ export interface Report {
   };
   generated_at: string;
   model: string;
+  partial: boolean;
+  stopped_reason: string | null;
   windows: ReportWindow[];
   warnings: string[];
 }

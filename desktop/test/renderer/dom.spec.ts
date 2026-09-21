@@ -318,3 +318,53 @@ describe('renderContextBar', () => {
     ]);
   });
 });
+
+describe('renderCoverageSummary, partial and misread reviews', () => {
+  it('leads with a partial banner naming why the review stopped', () => {
+    const root = document.createElement('div');
+    renderCoverageSummary(
+      root,
+      report({
+        partial: true,
+        stopped_reason: 'CapExceeded: daily model-call cap reached (30/30)',
+      }),
+    );
+    const banner = root.querySelector('[data-partial]')!;
+    expect(banner.textContent).toContain('Partial review');
+    expect(banner.textContent).toContain('daily model-call cap reached (30/30)');
+    // it comes before the coverage line, not buried in the notes
+    expect(root.firstElementChild).toBe(banner);
+  });
+
+  it('raises a diagnosis above the notes when the model misread the screen', () => {
+    const root = document.createElement('div');
+    renderCoverageSummary(
+      root,
+      report({
+        warnings: [
+          '8 of 8 reviewed windows were skipped before coaching (6 buy phase, 2 round phase unreadable), so this review has little or nothing to say. That usually means the model is misreading the screen rather than that the play was clean. Check it with `round-review scenes validate` before trusting this report, and try a larger model.',
+        ],
+      }),
+    );
+    const diagnosis = root.querySelector('[data-diagnosis]')!;
+    expect(diagnosis.textContent).toContain('misreading the screen');
+    expect(diagnosis.textContent).toContain('6 buy phase');
+    // and it is not repeated in the notes list
+    expect(root.querySelector('details')?.textContent).not.toContain('misreading the screen');
+  });
+
+  it('shows no banners for an ordinary complete review', () => {
+    const root = document.createElement('div');
+    renderCoverageSummary(root, report());
+    expect(root.querySelector('[data-partial]')).toBeNull();
+    expect(root.querySelector('[data-diagnosis]')).toBeNull();
+  });
+});
+
+describe('renderFindingList, empty reviews', () => {
+  it('explains an empty review that abstained rather than just saying none', () => {
+    const root = document.createElement('div');
+    renderFindingList(root, [], null, () => undefined, 'the model skipped every window');
+    expect(root.textContent).toContain('the model skipped every window');
+  });
+});

@@ -103,7 +103,43 @@ sequenceDiagram
     end
 ```
 
-## 3. Desktop: Analyze a clip and view markers
+## 3. Two-pass window review
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant P as pipeline.review_file
+    participant R as coaching.review.review_window
+    participant K as coaching.knowledge
+    participant T as Transport (Ollama)
+    participant S as coaching.situation
+    participant Pa as coaching.parse
+    participant Fr as video.frames
+
+    P->>R: review_window(window, samples, context, knowledge, situation_pass)
+    opt situation_pass
+        R->>T: chat(SITUATION_SYSTEM_PROMPT + captions + images, SITUATION_SCHEMA)
+        T-->>R: JSON (agent, map, side, phase, HUD state, timeline, summary)
+        R->>S: parse_situation
+        alt parses
+            R->>R: context = merge(user context, detected)
+        else unparseable
+            R->>R: warning, continue without situation
+        end
+    end
+    R->>K: relevant_categories(phase), find_agent, find_map, render_rank_focus
+    R->>T: chat(system = persona + rules + filtered checklist; user = context + briefs + situation + captions, FINDING_SCHEMA)
+    T-->>R: JSON findings with check_id
+    R->>Pa: parse_findings(text, window, samples, known check ids)
+    Pa-->>R: findings (unknown check_id -> "other" + warning)
+    R-->>P: WindowResult(findings, situation, context, model_calls)
+    loop each finding
+        P->>Fr: extract_single_frame(recording, timestamp_s) -> frames/eWW_NN.jpg
+        Fr-->>P: exact evidence frame (or VideoError -> keep sampled frame + warning)
+    end
+```
+
+## 4. Desktop: Analyze a clip and view markers
 
 ```mermaid
 sequenceDiagram
@@ -120,8 +156,8 @@ sequenceDiagram
     R->>API: GET /api/clips
     API-->>R: [{name, key, status: new|queued|running|done|failed|skipped}]
     Player->>R: click Analyze on clip
-    R->>API: POST /api/jobs {path}
-    API->>Q: submit(path, key)
+    R->>API: POST /api/jobs {path, context: {rank, agent, map, side, focus}}
+    API->>Q: submit(path, key, context)
     API-->>R: 202 {id, status: queued}
     Q->>P: review_file(path, deps, on_progress)
     loop every 2 s until done/failed

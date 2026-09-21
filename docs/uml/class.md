@@ -51,6 +51,7 @@ classDiagram
 
     class Finding {
         +float timestamp_s
+        +str check_id
         +str category
         +str observation
         +str visible_evidence
@@ -68,6 +69,8 @@ classDiagram
         +tuple~Finding~ findings
         +int model_calls
         +tuple~str~ warnings
+        +Situation situation
+        +PlayerContext context
     }
 
     class Report {
@@ -146,6 +149,71 @@ classDiagram
         +wait_idle(timeout) bool
     }
 
+    class PlayerContext {
+        +str rank
+        +str agent
+        +str map
+        +str side
+        +str focus
+        +str notes
+        +describe() str
+    }
+
+    class Situation {
+        +str agent
+        +str map
+        +str side
+        +str phase
+        +str weapon
+        +tuple~str~ abilities_available
+        +int credits
+        +int teammates_alive
+        +int enemies_visible
+        +tuple timeline
+        +str summary
+        +to_context() PlayerContext
+    }
+
+    class CoachingKnowledge {
+        +Checklist checklist
+        +Mapping~AgentBrief~ agents
+        +Mapping~MapBrief~ maps
+    }
+    class Checklist {
+        +tuple~Category~ categories
+        +Mapping rank_expectations
+        +check_ids() frozenset
+    }
+    class Category {
+        +str id
+        +str name
+        +str principle
+        +tuple~Check~ checks
+    }
+    class Check {
+        +str id
+        +str check
+        +str common_mistake
+        +str fix
+        +bool visible_in_frames
+    }
+    class AgentBrief {
+        +str id
+        +str name
+        +str role
+        +tuple abilities
+        +str job_in_round
+        +tuple~str~ common_mistakes
+        +tuple~str~ ability_checks
+    }
+    class MapBrief {
+        +str id
+        +str name
+        +tuple~str~ sites
+        +tuple~str~ key_callouts
+        +tuple~str~ common_mistakes
+    }
+
     class Deps {
         +Config config
         +FfprobeRunner probe_runner
@@ -162,6 +230,7 @@ classDiagram
     class CapExceeded
     class LedgerError
     class AlreadyProcessed
+    class KnowledgeError
 
     Transport <|.. UrllibTransport
     FfprobeRunner <|.. SubprocessRunner
@@ -178,6 +247,16 @@ classDiagram
     WindowResult o-- FrameSample
     WindowResult o-- Finding
     Finding --> FrameSample : evidence_frame
+    WindowResult o-- Situation
+    WindowResult o-- PlayerContext
+    CoachingKnowledge o-- Checklist
+    CoachingKnowledge o-- AgentBrief
+    CoachingKnowledge o-- MapBrief
+    Checklist o-- Category
+    Category o-- Check
+    Finding ..> Check : check_id
+    Situation ..> PlayerContext : to_context
+    RoundReviewError <|-- KnowledgeError
     Transport ..> ChatRequest
     Transport ..> ChatResponse
     RoundReviewError <|-- ConfigError
@@ -197,12 +276,15 @@ classDiagram
 | `ledger` | `LedgerEntry` | `read_ledger`, `append_entry`, `is_processed`, `calls_today`, `recording_key` |
 | `video.probe` | `Recording`, `FfprobeRunner` | `probe(path, runner)`, `parse_probe_json` |
 | `video.windows` | `Window` | `select_windows(duration_s, window_s, count, edge_skip_s)` |
-| `video.frames` | `FrameSample`, `FfmpegRunner` | `build_extract_args`, `extract_frames`, `encode_frame_b64` |
+| `video.frames` | `FrameSample`, `FfmpegRunner` | `build_extract_args`, `extract_frames`, `extract_single_frame`, `encode_frame_b64` |
 | `llm.transport` | `ChatRequest`, `ChatResponse`, `Transport`, `UrllibTransport` | `UrllibTransport.chat` |
 | `llm.client` | | `build_chat_request`, `send_review(request, transport, calls_today, cap)` |
-| `coaching.prompt` | `SYSTEM_PROMPT`, `FINDING_SCHEMA` | `build_user_prompt(window, samples)` |
+| `coaching.knowledge` | `CoachingKnowledge`, `Checklist`, `AgentBrief`, `MapBrief` | `load_knowledge`, `find_agent`, `find_map`, `render_checklist(categories)`, `render_agent_brief`, `render_map_brief`, `render_rank_focus`, `relevant_categories(phase)` |
+| `coaching.context` | `PlayerContext` | `context_from_mapping`, `merge_context` |
+| `coaching.situation` | `Situation` | `parse_situation` |
+| `coaching.prompt` | `FINDING_SCHEMA`, `SITUATION_SCHEMA` | `build_system_prompt(knowledge, phase)`, `build_situation_prompt`, `build_coach_prompt` |
 | `coaching.parse` | `Finding` | `parse_findings(text, window)`, `extract_json(text)` |
-| `coaching.review` | `WindowResult` | `review_window(window, samples, deps, calls_so_far)` |
+| `coaching.review` | `WindowResult` | `review_window(..., context, knowledge, situation_pass)`: pass 1 situation, pass 2 coach with one retry |
 | `report.markdown` | `Report` | `render_report`, `write_report` |
 | `pipeline` | `Deps` | `review_file(path, deps, on_progress)`, `make_default_deps(config)`, `key_for(path)`, `report_dir_for(config, path)` |
 | `report.json_report` | | `report_to_dict`, `write_report_json`, `load_report_json` |

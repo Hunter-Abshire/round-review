@@ -1,6 +1,6 @@
 # round-review requirements
 
-Version 0.2 (desktop UI). Last updated 2026-09-20.
+Version 0.3 (coaching knowledge). Last updated 2026-09-20.
 
 ## Purpose
 
@@ -35,6 +35,11 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | FR-12 | Reviews requested from the UI run on a single background worker, one at a time, in submission order. Submitting a clip that is already queued or running returns the existing job. |
 | FR-13 | Desktop app (Electron) starts the Python API as a sidecar, shows the clip list with status, lets the player click Analyze, shows progress, and opens a finished review. |
 | FR-14 | The review view plays the clip in an HTML5 video element with a marker track underneath: one marker per finding at its timestamp. Clicking a marker seeks the video and shows that finding (observation, what you could see, what you couldn't have known, assumptions, alternative, confidence, evidence frame). |
+| FR-15 | A bundled coaching knowledge base (`src/round_review/coaching/knowledge/`): a review checklist of concrete, frame-observable checks grouped by category with ids; a brief per agent (role, abilities, job in round, common mistakes, HUD ability checks); a brief per map (sites, callouts, defaults, setups, power positions, common mistakes, utility notes). Loaded and validated at startup; malformed data is a `KnowledgeError`. |
+| FR-16 | Each window is reviewed in two passes. Pass 1 (situation) asks the model to describe only what is visible: agent, map, side, phase, weapon, abilities available, credits, teammates alive, enemies visible, a per-frame timeline and a summary. Pass 2 (coach) receives the player context, rank priorities, the agent and map briefs, the situation read and the checklist, and must cite a checklist id on every finding. Pass 1 can be disabled (`situation_pass = false`) to halve model calls. |
+| FR-17 | Player context (rank, agent, map, side, focus, notes) can be supplied by the player via CLI options or the desktop context bar. Values the player supplies win; the situation pass fills in the rest. Blank means auto-detect. |
+| FR-18 | Every finding's evidence frame is re-cut from the recording at the finding's exact timestamp, not the nearest sampled frame. If that cut fails the sampled frame is kept and a warning is recorded. |
+| FR-19 | The checklist sent to the coach pass is filtered by the detected round phase (no post-plant checks pre-round, and so on) so the prompt fits next to the images. Unknown phase sends everything. |
 | FR-15 | Structured requests send `think: false`. If a completed response (`done=true`, `done_reason=stop`) has empty content and a whole JSON object with the schema's required root keys in `message.thinking`, log a compatibility warning and pass it through normal finding validation. Never substitute prose, incomplete output, or thinking when content is present. |
 
 ## Anti-hindsight requirements
@@ -45,7 +50,8 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | AH-2 | Every finding must separately state `visible_evidence`, `information_available_to_player`, and `information_revealed_later`. |
 | AH-3 | Every finding lists `assumption_flags`: anything the model guessed rather than saw (enemy positions, cooldowns, economy). |
 | AH-4 | If a finding's alternative depends on later-revealed information, the parser downgrades confidence and the report shows a warning. |
-| AH-5 | Findings whose timestamp lies outside their window are rejected. At most 3 findings per window. |
+| AH-5 | Findings whose timestamp lies outside their window are rejected. At most 4 findings per window. |
+| AH-6 | A finding that cites an unknown checklist id is kept but relabelled `other` with a warning, so invented principles are visible in the report. |
 
 ## Non-functional requirements
 
@@ -86,7 +92,9 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | `windows_per_file` | 3 | |
 | `fps` | 1.0 | Frames per second sampled inside a window |
 | `frame_width` | 1280 | |
-| `daily_call_cap` | 30 | |
+| `daily_call_cap` | 60 | Two calls per window with the situation pass on |
+| `situation_pass` | true | Run the describe-first pass before coaching |
+| `num_ctx` | 16384 | Ollama context window; the coach prompt is ~2-5k tokens plus images |
 | `poll_s` | 20 | Watcher poll interval |
 | `quiet_polls` | 3 | Consecutive unchanged polls before a file is stable |
 | `min_age_s` | 120 | Minimum mtime age before a file is stable |

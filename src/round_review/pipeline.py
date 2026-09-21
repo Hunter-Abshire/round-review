@@ -12,8 +12,8 @@ from round_review.coaching.context import PlayerContext, merge_context
 from round_review.coaching.knowledge import load_knowledge
 from round_review.coaching.parse import Finding
 from round_review.coaching.review import WindowResult, review_window
-from round_review.diagnosis import abstention_warning
 from round_review.config import Config
+from round_review.diagnosis import abstention_warning
 from round_review.errors import (
     AlreadyProcessed,
     CapExceeded,

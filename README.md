@@ -69,6 +69,23 @@ round-review ledger list
 
 `review` exits non-zero with the error class name (`OllamaError: ...`, `VideoError: ...`) on failure. A file already in the ledger is refused unless you pass `--force`. Add `--coverage sampled`, `--first 60` or `--max-windows 10` to bound a review.
 
+## Teach it to read the clock (do this once)
+
+A vision model will sometimes call live play "buy phase", and a review then skips every
+window and tells you nothing. The round timer settles it without a model: above 45 seconds
+the round must be live, because neither the buy phase nor the post-plant spike timer ever
+shows more than that. Teach the digits once from your own footage and every review gains a
+veto over that misread.
+
+```
+round-review hud crop <clip> --at 45                  # is the box on the timer?
+round-review hud learn <clip> --at 45 --reads 1:39    # repeat until nothing is missing
+round-review hud read <clip> --at 45                  # confirm, and see what it proves
+```
+
+If the crop is not showing the timer, adjust `hud_timer_region` (x,y,w,h as fractions of
+the frame) and try again. Set `hud_check = false` to turn the whole thing off.
+
 ## Check the model can read the screen
 
 A vision model that misreads the scene produces useless coaching, so measure that first:
@@ -81,7 +98,8 @@ round-review scenes validate scene-labels.json --model qwen3-vl:4b --frames 3 --
 ```
 
 This spends no coaching calls. It prints accuracy per phase, the most common confusions,
-and every failing case with the frame that produced it.
+and every failing case with the frame that produced it. Once the clock reader is trained it
+also scores the model with and without the clock, so you can see how much the veto buys you.
 
 ## Desktop app
 

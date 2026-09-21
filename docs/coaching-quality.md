@@ -80,13 +80,48 @@ Two safeguards were added in response, neither of which fixes the underlying mis
 - Reports carry `partial` and `stopped_reason`, so a review truncated by a cap or a
   failure is obvious rather than indistinguishable from a complete one.
 
+## Deterministic HUD reading (implemented 2026-09-21)
+
+The model cannot be argued out of a misread, so the round clock is now read without it.
+ffmpeg crops the timer region to a small grayscale raster; the glyphs are segmented and
+matched against templates learned from the player's own footage, because Valorant's timer
+font is not a system font. No imaging dependency was added.
+
+One inference is drawn from the clock, and only one, because it is the only one the clock
+supports on its own: **a clock above 45 seconds means the round is live and the spike is
+not down**, since neither the buy phase nor the post-plant spike timer ever shows more.
+That is exactly the claim a misread turns into a skipped window, so a long clock overrides
+a model phase of `pre_round`, `post_plant`, `retake` or unreadable. `spectating` is never
+overridden: the clock on screen belongs to whoever is being watched.
+
+Verified against a generated video with a known clock: without the veto the review skipped
+every window as buy phase and produced nothing; with it, the same model on the same footage
+produced findings and the report recorded the override. That is the failure from the runs
+above, fixed.
+
+Calibrate it once per setup:
+
+```
+round-review hud crop <clip> --at 45          # check the box is on the timer
+round-review hud learn <clip> --at 45 --reads 1:39   # repeat until no digits are missing
+round-review hud read <clip> --at 45          # confirm, and see what it proves
+round-review scenes validate scene-labels.json       # scores the model and the HUD side by side
+```
+
+`scenes validate` now reports accuracy with and without the clock and counts corrections,
+including any that made the answer worse, so the veto itself is measurable rather than
+assumed.
+
 ## Next implementation priorities
 
 1. Build the labelled validation set with `scenes scaffold` and run `scenes validate`
    against `qwen3-vl:8b` and `qwen3-vl:4b`, at one and three frames per case. Treat the
    accuracy numbers as the gate for everything below; do not assume either change
    improves accuracy.
-2. Replace evenly spaced selection with encounter timestamps. Prefer recorded
+2. Extend deterministic reading past the clock if the clock alone proves insufficient: the
+   spike-planted indicator and the alive-player rows sit at fixed positions too, and would
+   separate post-plant from retake without the model.
+3. Replace evenly spaced selection with encounter timestamps. Prefer recorded
    player kill/death/damage events where accessible; otherwise use a validated local
    detector or player-selected timestamps. The MP4 folder currently has no event
    sidecars; an Outplayed event reader is not implemented.

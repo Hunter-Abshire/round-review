@@ -237,6 +237,36 @@ classDiagram
         +collapsed_to() str
     }
 
+    class Region {
+        +float x
+        +float y
+        +float width
+        +float height
+        +in_pixels(w, h) tuple
+    }
+    class HudRead {
+        +str clock_text
+        +float clock_s
+        +float confidence
+        +int glyph_count
+        +Path crop_path
+        +str error
+    }
+    class PhaseVerdict {
+        +str phase
+        +bool overridden
+        +str reason
+    }
+    class DigitTemplates {
+        +Mapping characters_to_samples
+        +missing() list
+        +learn(samples) DigitTemplates
+    }
+    class Glyph {
+        +tuple~str~ grid
+        +float aspect
+    }
+
     class JobOptions {
         +bool force
         +str coverage
@@ -262,6 +292,7 @@ classDiagram
     class AlreadyProcessed
     class KnowledgeError
     class LabelsError
+    class HudError
 
     Transport <|.. UrllibTransport
     FfprobeRunner <|.. SubprocessRunner
@@ -276,6 +307,11 @@ classDiagram
     SceneOutcome o-- SceneCase
     SceneOutcome ..> Situation
     RoundReviewError <|-- LabelsError
+    RoundReviewError <|-- HudError
+    DigitTemplates o-- Glyph
+    HudRead ..> PhaseVerdict : constrain_phase
+    WindowResult ..> HudRead
+    SceneOutcome o-- HudRead
     JobQueue ..> Deps : run callable
     Report o-- Recording
     Report o-- WindowResult
@@ -326,7 +362,11 @@ classDiagram
 | `report.json_report` | | `report_to_dict`, `write_report_json`, `load_report_json` |
 | `server.jobs` | `Job`, `JobOptions`, `JobQueue` | single worker thread; `submit` dedups queued/running paths and carries per-job force/coverage |
 | `server.app` | | `create_app(config, jobs, probe_runner)`: `/api/clips` (with durations and window estimates), `/api/jobs` (force + coverage), `/api/settings`, `/api/knowledge`, `/api/reports/{key}`, `/api/media/...` |
-| `validation.scenes` | `SceneCase`, `SceneOutcome`, `SceneReport` | `scaffold_cases`, `load_cases`, `run_cases`, `render_scene_report`: scene recognition scored on its own |
+| `validation.scenes` | `SceneCase`, `SceneOutcome`, `SceneReport` | `scaffold_cases`, `load_cases`, `run_cases`, `render_scene_report`: scene recognition scored on its own, model and HUD side by side |
+| `vision.raster` | `Gray`, `Glyph`, `GlyphBox` | `parse_pgm`, `crop`, `binarize`, `segment_glyphs`, `normalize_glyph`: pure-Python image ops on ffmpeg's gray crops |
+| `vision.digits` | `DigitTemplates` | `similarity`, `match_glyph`, `read_text`, `parse_clock`; templates learned from the player's footage |
+| `vision.hud` | `Region`, `HudRead`, `PhaseVerdict` | `parse_region`, `build_crop_args`, `read_hud`, `learn_from_crop`, `constrain_phase`: the clock, and what it proves |
+| `diagnosis` | | `abstention_warning`: why a review produced nothing |
 | `watcher` | `FileSnapshot`, `WatchState` | `poll_once`, `is_stable`, `watch_loop` |
 | `cli` | | `main` (click group) |
 | `errors` | exception hierarchy | |

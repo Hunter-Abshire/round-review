@@ -142,7 +142,43 @@ sequenceDiagram
     end
 ```
 
-## 4. Scene-recognition validation
+## 4. Deterministic HUD veto
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant P as pipeline
+    participant Hud as vision.hud
+    participant FF as ffmpeg
+    participant Ras as vision.raster
+    participant Dig as vision.digits
+    participant R as coaching.review
+    participant T as Transport (Ollama)
+
+    Note over P,Hud: once per window, no model call
+    P->>Hud: read_hud(recording, window midpoint, region, templates)
+    Hud->>FF: crop the timer box, upscale 4x, format=gray -> timer.pgm
+    FF-->>Hud: tiny grayscale raster
+    Hud->>Ras: parse_pgm, segment_glyphs, normalize_glyph
+    Ras-->>Hud: glyphs
+    Hud->>Dig: read_text(glyphs, learned templates)
+    Dig-->>Hud: "1:39" -> 99s, confidence
+    Hud-->>P: HudRead
+    P->>R: review_window(..., hud=HudRead)
+    R->>T: situation pass
+    T-->>R: phase = "pre_round"
+    R->>Hud: constrain_phase("pre_round", HudRead)
+    alt clock above the buy-phase maximum
+        Hud-->>R: override to early/mid, with the reason
+        R->>R: correct the situation, record the override, do NOT abstain
+        R->>T: coach pass
+    else clock at or below it, or unreadable, or spectating
+        Hud-->>R: no change
+        R->>R: abstain as before
+    end
+```
+
+## 5. Scene-recognition validation
 
 ```mermaid
 sequenceDiagram
@@ -178,7 +214,7 @@ sequenceDiagram
     CLI-->>Player: table + warning if the model always said one phase
 ```
 
-## 5. Desktop: Analyze a clip and view markers
+## 6. Desktop: Analyze a clip and view markers
 
 ```mermaid
 sequenceDiagram
@@ -227,5 +263,6 @@ sequenceDiagram
 | `LedgerError` | ledger | n/a | non-zero | loop aborts; a corrupt ledger must be fixed by hand |
 | `CapExceeded` / `OllamaError` / `VideoError` after >=1 window | pipeline | partial, report written | 0 | the review stops, keeps its findings, and the clip can be re-analyzed |
 | `LabelsError` | validation.scenes | n/a | non-zero | scene validation only |
+| `HudError` | vision | never fails a review | non-zero from the `hud` commands | an unreadable HUD is simply no evidence |
 | `ConfigError` | config | n/a | non-zero | never starts |
 | `AlreadyProcessed` | pipeline | n/a (existing entry) | non-zero unless `--force` | never raised; the watcher filters known files first |

@@ -43,13 +43,14 @@ def build_report(out_dir: Path, findings: bool = True) -> Report:
         "Entering A main with dash up.",
     )
     result = WindowResult(
-        window,
-        samples,
-        (finding,) if findings else (),
-        1,
-        ("window warning",),
-        situation,
-        PlayerContext(rank="Gold 2", agent="Jett", map="Ascent", side="attack"),
+        window=window,
+        samples=samples,
+        findings=(finding,) if findings else (),
+        strengths=(),
+        model_calls=1,
+        warnings=("window warning",),
+        situation=situation,
+        context=PlayerContext(rank="Gold 2", agent="Jett", map="Ascent", side="attack"),
     )
     return Report(
         recording=rec,

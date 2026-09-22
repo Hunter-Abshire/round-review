@@ -9,7 +9,7 @@ from dataclasses import dataclass, field, replace
 from round_review.coaching.context import PlayerContext, merge_context
 from round_review.coaching.frames import select_situation_frames
 from round_review.coaching.knowledge import CoachingKnowledge, relevant_categories
-from round_review.coaching.parse import Finding, parse_findings
+from round_review.coaching.parse import Finding, Strength, parse_findings, parse_strengths
 from round_review.coaching.prompt import (
     FINDING_SCHEMA,
     RETRY_NUDGE,
@@ -58,6 +58,7 @@ class WindowResult:
     window: Window
     samples: tuple[FrameSample, ...]
     findings: tuple[Finding, ...]
+    strengths: tuple[Strength, ...]
     model_calls: int
     warnings: tuple[str, ...]
     situation: Situation | None = None
@@ -143,6 +144,7 @@ def review_window(
                 window,
                 tuple(samples),
                 (),
+                (),
                 calls,
                 tuple(warnings),
                 situation,
@@ -162,6 +164,10 @@ def review_window(
         calls += 1
         try:
             findings, parse_warnings = parse_findings(response.content, window, samples, check_ids)
+            strengths, strength_warnings = parse_strengths(
+                response.content, window, samples, check_ids
+            )
+            parse_warnings.extend(strength_warnings)
         except ParseError as exc:
             last_error = exc
             log.warning(
@@ -176,6 +182,7 @@ def review_window(
             window,
             tuple(samples),
             tuple(findings),
+            tuple(strengths),
             calls,
             tuple(warnings + parse_warnings),
             situation,

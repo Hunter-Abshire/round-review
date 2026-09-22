@@ -311,3 +311,33 @@ def test_the_coach_pass_can_be_given_its_own_frame_budget(samples: list[FrameSam
     assert len(transport.calls[0].images_b64) == 1
     assert len(transport.calls[1].images_b64) == 2
     assert "2 frames" in transport.calls[1].prompt
+
+
+GOOD_WITH_STRENGTH = json.dumps(
+    {
+        "findings": json.loads(GOOD)["findings"],
+        "strengths": [
+            {
+                "timestamp_s": 62.0,
+                "check_id": "utility.has_purpose",
+                "category": "utility",
+                "observation": "Threw the smoke to cover the plant rather than to cross a gap.",
+                "visible_evidence": "At t=62.0s the smoke lands on the default plant spot.",
+                "why_it_worked": "It denied the retake angle while the spike went down.",
+                "confidence": 0.75,
+            }
+        ],
+    }
+)
+
+
+def test_strengths_come_back_with_the_findings(samples: list[FrameSample]) -> None:
+    result = review(FakeTransport(SITUATION, GOOD_WITH_STRENGTH), samples)
+    assert len(result.findings) == 1
+    (strength,) = result.strengths
+    assert strength.category == "utility"
+    assert strength.evidence_frame is not None
+
+
+def test_a_window_with_no_strengths_is_fine(samples: list[FrameSample]) -> None:
+    assert review(FakeTransport(SITUATION, GOOD), samples).strengths == ()

@@ -98,3 +98,29 @@ def test_system_prompt_drops_irrelevant_categories_for_known_phase() -> None:
     assert "[crosshair." in text and "[postplant." not in text and "[retake." not in text
     full = build_system_prompt(knowledge, phase=None)
     assert "[postplant." in full
+
+
+def test_the_schema_allows_strengths_but_does_not_demand_them() -> None:
+    assert "strengths" in FINDING_SCHEMA["properties"]
+    # not required: a window with nothing worth praising must be able to say so
+    assert "strengths" not in FINDING_SCHEMA["required"]
+    item = FINDING_SCHEMA["properties"]["strengths"]["items"]
+    for key in (
+        "timestamp_s",
+        "check_id",
+        "category",
+        "observation",
+        "visible_evidence",
+        "why_it_worked",
+        "confidence",
+    ):
+        assert key in item["required"], key
+    assert FINDING_SCHEMA["properties"]["strengths"]["maxItems"] == 2
+
+
+def test_the_coach_prompt_asks_for_specific_praise_not_filler() -> None:
+    knowledge = load_knowledge()
+    text = build_coach_prompt(WINDOW, SAMPLES, PlayerContext(), None, knowledge)
+    lower = text.lower()
+    assert "strength" in lower
+    assert "vague" in lower or "filler" in lower or "generic" in lower

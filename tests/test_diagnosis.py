@@ -10,7 +10,15 @@ def window(index: int) -> Window:
 
 
 def abstained(index: int, reason: str) -> WindowResult:
-    return WindowResult(window(index), (), (), 1, (), None, abstained_reason=reason)
+    return WindowResult(
+        window=window(index),
+        samples=(),
+        findings=(),
+        strengths=(),
+        model_calls=1,
+        warnings=(),
+        abstained_reason=reason,
+    )
 
 
 def coached(index: int, findings: int = 1) -> WindowResult:
@@ -32,7 +40,14 @@ def coached(index: int, findings: int = 1) -> WindowResult:
         )
         for _ in range(findings)
     )
-    return WindowResult(window(index), (), made, 2, ())
+    return WindowResult(
+        window=window(index),
+        samples=(),
+        findings=made,
+        strengths=(),
+        model_calls=2,
+        warnings=(),
+    )
 
 
 def test_no_warning_when_the_review_produced_findings() -> None:
@@ -40,7 +55,10 @@ def test_no_warning_when_the_review_produced_findings() -> None:
 
 
 def test_no_warning_when_nothing_abstained() -> None:
-    assert abstention_warning([WindowResult(window(0), (), (), 2, ())]) is None
+    coached_nothing = WindowResult(
+        window=window(0), samples=(), findings=(), strengths=(), model_calls=2, warnings=()
+    )
+    assert abstention_warning([coached_nothing]) is None
 
 
 def test_no_warning_for_an_empty_review() -> None:

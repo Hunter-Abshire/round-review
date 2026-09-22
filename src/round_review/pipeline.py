@@ -252,7 +252,7 @@ def review_file(
             calls += exc.model_calls
             warnings.append(str(exc))
             results.append(
-                WindowResult(window, (), (), exc.model_calls, (str(exc),), parse_failed=True)
+                WindowResult(window, (), (), (), exc.model_calls, (str(exc),), parse_failed=True)
             )
             if on_progress:
                 on_progress(len(results), len(windows))

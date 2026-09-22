@@ -41,6 +41,7 @@ CATEGORIES: tuple[str, ...] = (
 )
 
 MAX_FINDINGS_PER_WINDOW = 4
+MAX_STRENGTHS_PER_WINDOW = 2
 
 PERSONA = (
     "You are an experienced Valorant coach who has reviewed thousands of ranked VODs from Iron "
@@ -75,6 +76,12 @@ or repeat several versions of the same aim criticism at one moment.
 purposeful utility, and objective timing when the frames support them. Do not invent
 sound cues, comms, enemy locations, or actions between sampled frames. For a new or
 unranked player explain the reason and the next action in plain language.
+
+10. Also report up to two strengths: things the player did right that are worth keeping.
+A strength must name the specific behaviour and why it worked, in the same evidence-bound
+way as a finding. Generic praise is worse than none, so never write "good job", "nice
+aim" or any other vague or filler compliment, and report no strengths at all rather than
+inventing one. Being alive, winning the fight, or the enemy playing badly are not strengths.
 
 Respond with JSON only, matching the schema you are given. No prose outside the JSON."""
 
@@ -116,7 +123,32 @@ FINDING_SCHEMA: dict[str, Any] = {
                     "confidence",
                 ],
             },
-        }
+        },
+        "strengths": {
+            "type": "array",
+            "maxItems": MAX_STRENGTHS_PER_WINDOW,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "timestamp_s": {"type": "number"},
+                    "check_id": {"type": "string"},
+                    "category": {"type": "string", "enum": list(CATEGORIES)},
+                    "observation": {"type": "string"},
+                    "visible_evidence": {"type": "string"},
+                    "why_it_worked": {"type": "string"},
+                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                },
+                "required": [
+                    "timestamp_s",
+                    "check_id",
+                    "category",
+                    "observation",
+                    "visible_evidence",
+                    "why_it_worked",
+                    "confidence",
+                ],
+            },
+        },
     },
     "required": ["findings"],
 }
@@ -248,6 +280,10 @@ def build_coach_prompt(
         f"specific to this agent and map, and your confidence from 0 to 1. At most "
         f"{MAX_FINDINGS_PER_WINDOW} findings; pick the ones that would change the round. "
         "Return an empty findings list when this is only preparation, safe travel, or the "
-        "evidence is insufficient. Copy the relevant frame timestamp exactly."
+        "evidence is insufficient. Copy the relevant frame timestamp exactly.\n\n"
+        f"Then, separately, report up to {MAX_STRENGTHS_PER_WINDOW} strengths: deliberate "
+        "good decisions in these frames worth reinforcing, each with the checklist id it "
+        "satisfies, what you saw, and why it worked. Leave the strengths list empty unless "
+        "something specific deserves it; generic or filler praise is not wanted."
     )
     return "\n\n".join(sections)

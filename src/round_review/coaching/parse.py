@@ -18,6 +18,24 @@ HINDSIGHT_CONFIDENCE_CEILING = 0.5
 HINDSIGHT_TRIGGER = 0.7
 PLACEHOLDER_LATER_INFO: frozenset[str] = frozenset({"", "none", "n/a", "na", "nothing", "-"})
 
+MAX_STRENGTHS_PER_WINDOW = 2
+
+# Praise has to name the behaviour to reinforce it. Anything this short is filler.
+MIN_PRAISE_CHARACTERS = 25
+VAGUE_PRAISE: frozenset[str] = frozenset(
+    {"good job", "nice", "nice job", "well played", "solid round", "great", "good", "well done"}
+)
+
+STRENGTH_FIELDS: tuple[str, ...] = (
+    "timestamp_s",
+    "check_id",
+    "category",
+    "observation",
+    "visible_evidence",
+    "why_it_worked",
+    "confidence",
+)
+
 REQUIRED_FIELDS: tuple[str, ...] = (
     "timestamp_s",
     "check_id",
@@ -43,6 +61,21 @@ class Finding:
     information_revealed_later: str
     assumption_flags: tuple[str, ...]
     suggested_alternative: str
+    confidence: float
+    evidence_frame: Path | None
+
+
+@dataclass(frozen=True, slots=True)
+class Strength:
+    """Something the player did right, worth reinforcing. Kept separate from findings so
+    criticism and praise never dilute each other."""
+
+    timestamp_s: float
+    check_id: str
+    category: str
+    observation: str
+    visible_evidence: str
+    why_it_worked: str
     confidence: float
     evidence_frame: Path | None
 
@@ -166,3 +199,85 @@ def parse_findings(
         )
         findings = findings[:MAX_FINDINGS_PER_WINDOW]
     return findings, warnings
+
+
+def _is_vague(text: str) -> bool:
+    stripped = text.strip().rstrip(".!").lower()
+    return stripped in VAGUE_PRAISE or len(text.strip()) < MIN_PRAISE_CHARACTERS
+
+
+def parse_strengths(
+    text: str,
+    window: Window,
+    samples: Sequence[FrameSample],
+    check_ids: frozenset[str] | None = None,
+) -> tuple[list[Strength], list[str]]:
+    """Parse the optional `strengths` array. A malformed strength is a warning, never an
+    error: praise is a bonus and must not be able to cost the player their findings."""
+    try:
+        payload = json.loads(extract_json(text))
+    except json.JSONDecodeError as exc:
+        raise ParseError(f"model reply is not valid JSON: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ParseError("model reply is not an object")
+    raw_strengths = payload.get("strengths") or []
+    if not isinstance(raw_strengths, list):
+        return [], ["strengths was not a list; ignored"]
+
+    strengths: list[Strength] = []
+    warnings: list[str] = []
+    for raw in raw_strengths:
+        if not isinstance(raw, dict):
+            warnings.append("dropped a strength that was not an object")
+            continue
+        missing = [k for k in STRENGTH_FIELDS if k not in raw]
+        if missing:
+            warnings.append(f"dropped a strength missing {', '.join(missing)}")
+            continue
+        try:
+            timestamp = float(raw["timestamp_s"])
+            confidence = min(1.0, max(0.0, float(raw["confidence"])))
+        except (TypeError, ValueError) as exc:
+            warnings.append(f"dropped a strength with a malformed number: {exc}")
+            continue
+        if not (window.start_s <= timestamp <= window.end_s):
+            warnings.append(
+                f"dropped strength at t={timestamp:.1f}s: outside window "
+                f"{window.start_s:.1f}-{window.end_s:.1f}s"
+            )
+            continue
+        observation = str(raw["observation"])
+        if _is_vague(observation):
+            warnings.append(
+                f"dropped strength at t={timestamp:.1f}s: {observation!r} is too vague to "
+                "reinforce anything"
+            )
+            continue
+        check_id = str(raw["check_id"]).strip()
+        if check_ids is not None and check_id not in check_ids:
+            warnings.append(
+                f"strength at t={timestamp:.1f}s cited unknown check {check_id!r}; set to other"
+            )
+            check_id = "other"
+        category = str(raw["category"])
+        if category not in CATEGORIES:
+            category = "other"
+        strengths.append(
+            Strength(
+                timestamp_s=timestamp,
+                check_id=check_id,
+                category=category,
+                observation=observation,
+                visible_evidence=str(raw["visible_evidence"]),
+                why_it_worked=str(raw["why_it_worked"]),
+                confidence=confidence,
+                evidence_frame=_nearest_frame(timestamp, samples),
+            )
+        )
+
+    if len(strengths) > MAX_STRENGTHS_PER_WINDOW:
+        warnings.append(
+            f"model returned {len(strengths)} strengths; truncated to {MAX_STRENGTHS_PER_WINDOW}"
+        )
+        strengths = strengths[:MAX_STRENGTHS_PER_WINDOW]
+    return strengths, warnings

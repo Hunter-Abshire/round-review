@@ -91,13 +91,15 @@ def review_window(
     buy_phase_max_s: float = 45.0,
     hud_min_confidence: float = 0.8,
     situation_frames: int = 3,
+    coach_frames: int = 0,
 ) -> WindowResult:
     """Pass 1 (optional) asks the model to describe what is on screen; a failed pass 1 is a
     warning. Pass 2 coaches against the checklist and retries once with a JSON-only nudge;
     a second failure raises ParseError carrying the number of calls spent. Every call counts
     against the daily cap."""
     context = context or PlayerContext()
-    images = [encode_frame_b64(s.path) for s in samples]
+    coach_samples = select_situation_frames(samples, coach_frames)
+    images = [encode_frame_b64(s.path) for s in coach_samples]
     warnings: list[str] = []
     calls = 0
     situation: Situation | None = None
@@ -150,7 +152,7 @@ def review_window(
             )
 
     system = build_system_prompt(knowledge, situation.phase if situation else None)
-    prompt = build_coach_prompt(window, samples, context, situation, knowledge)
+    prompt = build_coach_prompt(window, coach_samples, context, situation, knowledge)
     check_ids = knowledge.checklist.check_ids()
     last_error: ParseError | None = None
     for attempt in range(2):

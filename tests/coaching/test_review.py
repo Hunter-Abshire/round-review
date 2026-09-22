@@ -303,3 +303,11 @@ def test_the_situation_prompt_describes_the_frames_it_was_given(
     prompt = transport.calls[0].prompt
     assert "2 frames" in prompt
     assert prompt.count("t=") == 2 + 2  # two captions plus the window bounds
+
+
+def test_the_coach_pass_can_be_given_its_own_frame_budget(samples: list[FrameSample]) -> None:
+    transport = FakeTransport(SITUATION, GOOD)
+    review(transport, samples, situation_frames=1, coach_frames=2)
+    assert len(transport.calls[0].images_b64) == 1
+    assert len(transport.calls[1].images_b64) == 2
+    assert "2 frames" in transport.calls[1].prompt

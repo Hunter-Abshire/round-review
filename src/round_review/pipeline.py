@@ -244,6 +244,7 @@ def review_file(
                 buy_phase_max_s=cfg.buy_phase_max_s,
                 hud_min_confidence=cfg.hud_min_confidence,
                 situation_frames=cfg.situation_frames,
+                coach_frames=cfg.coach_frames,
             )
         except ParseError as exc:
             # One unreadable window is a warning; every window unreadable fails the file.

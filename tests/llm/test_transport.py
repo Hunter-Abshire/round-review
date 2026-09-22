@@ -173,3 +173,11 @@ def test_keep_alive_is_omitted_when_unset() -> None:
     seen, opener = capture_opener(OK_PAYLOAD)
     UrllibTransport("http://x", opener=opener, keep_alive="").chat(make_request())
     assert "keep_alive" not in json.loads(seen[0][0].data)
+
+
+def test_a_timeout_says_which_setting_controls_it() -> None:
+    def opener(req: Any, timeout: float) -> Any:
+        raise TimeoutError()
+
+    with pytest.raises(OllamaError, match="request_timeout_s"):
+        UrllibTransport("http://x", opener=opener).chat(make_request())

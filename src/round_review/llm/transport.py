@@ -119,7 +119,11 @@ class UrllibTransport:
         except urllib.error.URLError as exc:
             raise OllamaError(f"cannot reach Ollama at {url}: {exc.reason}") from exc
         except TimeoutError as exc:
-            raise OllamaError(f"Ollama request timed out after {request.timeout_s}s") from exc
+            raise OllamaError(
+                f"Ollama request timed out after {request.timeout_s:.0f}s; raise "
+                "request_timeout_s in config.toml, or lower coach_frames or frame_width "
+                "so each call carries less"
+            ) from exc
         try:
             payload = json.loads(raw)
             return ChatResponse(

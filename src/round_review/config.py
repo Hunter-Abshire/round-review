@@ -41,13 +41,18 @@ class Config:
     poll_s: float = 20.0
     quiet_polls: int = 3
     min_age_s: float = 120.0
-    request_timeout_s: float = 300.0
+    # One coach call carries every frame of a window, which on a larger model can run for
+    # many minutes. Too short a timeout throws away a window that was nearly finished.
+    request_timeout_s: float = 900.0
     api_port: int = 8765
     # Two model calls per window (situation read, then coaching). Off = coaching only.
     situation_pass: bool = True
     # How many frames the situation pass carries. It runs for every window, including the
     # ones it then skips, so its images dominate the cost of a review. 0 = every frame.
     situation_frames: int = 3
+    # Frames the coach pass carries. 0 = every extracted frame, which is the most detail and
+    # the slowest call; lower it if calls are timing out.
+    coach_frames: int = 0
     # Keep the model loaded between calls; a review is dozens of calls back to back.
     ollama_keep_alive: str = "30m"
     # Give up after this many windows in a row are skipped before coaching. A model that
@@ -85,7 +90,14 @@ POSITIVE_KEYS: frozenset[str] = frozenset(
 )
 # 0 is allowed and means "unlimited"; negative never is.
 NON_NEGATIVE_KEYS: frozenset[str] = frozenset(
-    {"daily_call_cap", "max_windows", "max_span_s", "situation_frames", "abstain_streak_limit"}
+    {
+        "daily_call_cap",
+        "max_windows",
+        "max_span_s",
+        "situation_frames",
+        "abstain_streak_limit",
+        "coach_frames",
+    }
 )
 PATH_KEYS: frozenset[str] = frozenset(
     {"recordings_dir", "reports_dir", "ledger_path", "hud_templates_path"}

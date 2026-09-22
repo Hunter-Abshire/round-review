@@ -19,7 +19,7 @@ def test_defaults_when_file_missing(tmp_path: Path) -> None:
     assert cfg.poll_s == 20.0
     assert cfg.quiet_polls == 3
     assert cfg.min_age_s == 120.0
-    assert cfg.request_timeout_s == 300.0
+    assert cfg.request_timeout_s == 900.0
     assert cfg.num_ctx == 16384
     assert cfg.ffmpeg_path == "ffmpeg"
     assert cfg.ffprobe_path == "ffprobe"
@@ -169,3 +169,10 @@ def test_invalid_hud_threshold_is_rejected(tmp_path: Path, threshold: int) -> No
     path.write_text(f"hud_threshold = {threshold}\n")
     with pytest.raises(ConfigError, match="hud_threshold"):
         load_config(path, env={}, data_dir=tmp_path)
+
+
+def test_request_timeout_allows_for_a_slow_coach_call(tmp_path: Path) -> None:
+    cfg = load_config(tmp_path / "x.toml", env={}, data_dir=tmp_path)
+    # a coach call on an 8b model with a dozen frames can run for many minutes
+    assert cfg.request_timeout_s == 900.0
+    assert cfg.coach_frames == 0  # 0 = every extracted frame

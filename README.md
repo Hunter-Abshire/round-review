@@ -166,6 +166,51 @@ round-review hud read "C:/path/to/clip.mp4" --at 45
 It should print the clock, a confidence near 100%, and "live round, so any buy phase or
 post-plant call is wrong".
 
+Then check that the rounds come out right:
+
+```powershell
+round-review hud rounds "C:/path/to/clip.mp4"
+```
+
+It should list about as many rounds as the match had. Once it does, set
+`coverage = "rounds"` in your config and reviews will spend their budget on the openings
+and endings of rounds instead of tiling the whole recording evenly.
+
+### 6b. Optional: the rest of the HUD
+
+Everything below is off until you measure it, and the app works fine without any of it.
+Each one buys something specific.
+
+Find each region the same way you found the timer, with `hud crop --region`, then put it
+in your config:
+
+| Setting | What it buys |
+| --- | --- |
+| `hud_health_region` | Death detection, so reviews look at the seconds before you died |
+| `hud_credits_region` | Economy coaching that knows what you actually had |
+| `hud_ability_regions` | Utility coaching that knows what was actually up |
+
+`hud_ability_regions` takes one `x,y,w,h` per ability slot, separated by semicolons.
+
+Check them:
+
+```powershell
+round-review hud state "C:/path/to/clip.mp4" --at 45 --at 120
+round-review hud deaths "C:/path/to/clip.mp4"
+```
+
+`hud deaths` should list roughly the deaths you remember. If it invents them, the health
+region is off by a few pixels. Fix that before trusting death-anchored reviews.
+
+With the ability regions set you can also teach it your agents, which stops the model
+guessing from the portrait:
+
+```powershell
+round-review hud learn-agent "C:/path/to/clip.mp4" --at 45 --agent Veto
+```
+
+Run it once per agent you play, on a frame where nothing has been spent yet.
+
 ### 7. Check the model can read your screen
 
 Now measure the thing that actually determines whether the coaching is worth anything.

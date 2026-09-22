@@ -5,6 +5,7 @@ import {
   type Knowledge,
   type PlayerContext,
   type Answer,
+  type ConfigDocument,
   type Report,
   type ReviewOptions,
   type Settings,
@@ -17,7 +18,7 @@ import {
   type Marker,
 } from './timeline';
 
-export const VIEW = { list: 'list', review: 'review' } as const;
+export const VIEW = { list: 'list', review: 'review', settings: 'settings' } as const;
 export type View = (typeof VIEW)[keyof typeof VIEW];
 
 export const PRESET = { full: 'full', first_minute: 'first_minute', sampled: 'sampled' } as const;
@@ -69,6 +70,12 @@ export interface State {
   ask: AskState;
   answers: Answer[];
   askJobId: string | null;
+  config: ConfigDocument | null;
+  configEdits: Record<string, unknown>;
+  configSaving: boolean;
+  showAdvanced: boolean;
+  // The view to come back to when settings close.
+  previousView: View;
 }
 
 export type ContextField = keyof PlayerContext;
@@ -90,6 +97,14 @@ export type Action =
   | { type: 'ask_submitted'; jobId: string }
   | { type: 'answer_received'; answer: Answer }
   | { type: 'ask_failed' }
+  | { type: 'settings_opened' }
+  | { type: 'config_loaded'; config: ConfigDocument }
+  | { type: 'config_edited'; name: string; value: unknown }
+  | { type: 'config_saving' }
+  | { type: 'config_saved'; config: ConfigDocument }
+  | { type: 'config_save_failed' }
+  | { type: 'advanced_toggled' }
+  | { type: 'settings_closed' }
   | { type: 'error'; message: string };
 
 export const initialState: State = {
@@ -112,6 +127,11 @@ export const initialState: State = {
   ask: { start_s: 0, end_s: 0, pending: false, maxSpanS: 60 },
   answers: [],
   askJobId: null,
+  config: null,
+  configEdits: {},
+  configSaving: false,
+  showAdvanced: false,
+  previousView: VIEW.list,
 };
 
 const ACTIVE_JOB = new Set<string>(['queued', 'running']);
@@ -224,6 +244,32 @@ export const reduce = (state: State, action: Action): State => {
       };
     case 'ask_failed':
       return { ...state, askJobId: null, ask: { ...state.ask, pending: false } };
+    case 'settings_opened':
+      return {
+        ...state,
+        previousView: state.view === VIEW.settings ? state.previousView : state.view,
+        view: VIEW.settings,
+      };
+    case 'config_loaded':
+      return { ...state, config: action.config };
+    case 'config_edited': {
+      const field = state.config?.fields.find(f => f.name === action.name);
+      const edits = { ...state.configEdits };
+      // Setting a value back to what is saved is not an edit.
+      if (field && field.value === action.value) delete edits[action.name];
+      else edits[action.name] = action.value;
+      return { ...state, configEdits: edits };
+    }
+    case 'config_saving':
+      return { ...state, configSaving: true };
+    case 'config_saved':
+      return { ...state, config: action.config, configEdits: {}, configSaving: false };
+    case 'config_save_failed':
+      return { ...state, configSaving: false };
+    case 'advanced_toggled':
+      return { ...state, showAdvanced: !state.showAdvanced };
+    case 'settings_closed':
+      return { ...state, view: state.previousView, configEdits: {} };
     case 'error':
       return { ...state, error: action.message };
   }

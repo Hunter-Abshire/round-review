@@ -1,6 +1,6 @@
 import { initialState, reduce, type State } from '../../src/renderer/state';
 import { EMPTY_CONTEXT } from '../../src/shared/types';
-import { answer as answerFixture, clip, job, report, settings } from './fixtures';
+import { answer as answerFixture, clip, configDocument, job, report, settings } from './fixtures';
 
 const withClips = (): State =>
   reduce(initialState, {
@@ -201,5 +201,60 @@ describe('asking about a moment', () => {
     let s = reduce(initialState, { type: 'answer_received', answer: answerFixture() });
     s = reduce(s, { type: 'back_to_list' });
     expect(s.answers).toEqual([]);
+  });
+});
+
+describe('settings', () => {
+  it('opens over whatever you were looking at and comes back to it', () => {
+    let s = reduce(initialState, { type: 'report_loaded', key: 'k', report: report() });
+    expect(s.view).toBe('review');
+    s = reduce(s, { type: 'settings_opened' });
+    expect(s.view).toBe('settings');
+    s = reduce(s, { type: 'settings_closed' });
+    expect(s.view).toBe('review');
+  });
+
+  it('opening settings twice still returns to the original view', () => {
+    let s = reduce(initialState, { type: 'settings_opened' });
+    s = reduce(s, { type: 'settings_opened' });
+    expect(reduce(s, { type: 'settings_closed' }).view).toBe('list');
+  });
+
+  it('tracks edits and forgets them when closed without saving', () => {
+    let s = reduce(initialState, { type: 'config_loaded', config: configDocument() });
+    s = reduce(s, { type: 'config_edited', name: 'coverage', value: 'sampled' });
+    expect(s.configEdits).toEqual({ coverage: 'sampled' });
+    s = reduce(s, { type: 'settings_closed' });
+    expect(s.configEdits).toEqual({});
+  });
+
+  it('setting a value back to what is saved is not an edit', () => {
+    let s = reduce(initialState, { type: 'config_loaded', config: configDocument() });
+    s = reduce(s, { type: 'config_edited', name: 'coverage', value: 'sampled' });
+    s = reduce(s, { type: 'config_edited', name: 'coverage', value: 'full' });
+    expect(s.configEdits).toEqual({});
+  });
+
+  it('clears the edits once they are saved', () => {
+    let s = reduce(initialState, { type: 'config_loaded', config: configDocument() });
+    s = reduce(s, { type: 'config_edited', name: 'coverage', value: 'sampled' });
+    s = reduce(s, { type: 'config_saving' });
+    expect(s.configSaving).toBe(true);
+    s = reduce(s, { type: 'config_saved', config: configDocument() });
+    expect(s.configEdits).toEqual({});
+    expect(s.configSaving).toBe(false);
+  });
+
+  it('keeps the edits when saving fails, so nothing is lost', () => {
+    let s = reduce(initialState, { type: 'config_loaded', config: configDocument() });
+    s = reduce(s, { type: 'config_edited', name: 'coverage', value: 'sampled' });
+    s = reduce(s, { type: 'config_saving' });
+    s = reduce(s, { type: 'config_save_failed' });
+    expect(s.configSaving).toBe(false);
+    expect(s.configEdits).toEqual({ coverage: 'sampled' });
+  });
+
+  it('toggles advanced settings', () => {
+    expect(reduce(initialState, { type: 'advanced_toggled' }).showAdvanced).toBe(true);
   });
 });

@@ -1,6 +1,7 @@
-import { app, BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow, Menu, dialog } from 'electron';
 import type { ChildProcess } from 'node:child_process';
 import path from 'node:path';
+import { buildMenuTemplate } from './menu';
 import { buildSidecarCommand, findFreePort, startSidecar, waitForHealth } from './sidecar';
 
 let sidecar: ChildProcess | null = null;
@@ -20,6 +21,11 @@ const createWindow = (apiBaseUrl: string): void => {
       additionalArguments: [`--api-base-url=${apiBaseUrl}`],
     },
   });
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate(
+      buildMenuTemplate(() => window.webContents.send('open-settings'), process.platform),
+    ),
+  );
   void window.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 };
 

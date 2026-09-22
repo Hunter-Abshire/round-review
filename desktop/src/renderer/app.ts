@@ -12,6 +12,7 @@ import {
   renderFindingList,
   renderHudHint,
   renderPresetPicker,
+  renderSettings,
   renderTimeline,
 } from './dom';
 import { initialState, reduce, type Action, type Preset, type State } from './state';
@@ -19,7 +20,7 @@ import { nearestMarker } from './timeline';
 
 declare global {
   interface Window {
-    roundReview: { apiBaseUrl: string };
+    roundReview: { apiBaseUrl: string; onOpenSettings?: (callback: () => void) => void };
   }
 }
 
@@ -47,6 +48,7 @@ const run = (api: Api): void => {
   const coverage = byId('coverage');
   const findingList = byId('finding-list');
   const coach = byId('coach');
+  const settingsView = byId('settings-view');
   const askBox = byId('ask');
   const answers = byId('answers');
   const card = byId('finding');
@@ -133,13 +135,56 @@ const run = (api: Api): void => {
     });
   };
 
+  const renderSettingsView = (): void => {
+    renderSettings(
+      settingsView,
+      {
+        document: state.config ?? undefined,
+        edits: state.configEdits,
+        saving: state.configSaving,
+        showAdvanced: state.showAdvanced,
+      },
+      {
+        onChange: (name, value) => dispatch({ type: 'config_edited', name, value }),
+        onSave: () => void saveConfig(),
+        onClose: () => dispatch({ type: 'settings_closed' }),
+        onToggleAdvanced: () => dispatch({ type: 'advanced_toggled' }),
+      },
+    );
+  };
+
+  const openSettings = async (): Promise<void> => {
+    dispatch({ type: 'settings_opened' });
+    try {
+      dispatch({ type: 'config_loaded', config: await api.getConfig() });
+    } catch (err) {
+      fail(err);
+    }
+  };
+
+  const saveConfig = async (): Promise<void> => {
+    dispatch({ type: 'config_saving' });
+    try {
+      await api.saveConfig(state.configEdits);
+      const [config, settings] = await Promise.all([api.getConfig(), api.getSettings()]);
+      dispatch({ type: 'config_saved', config });
+      dispatch({ type: 'settings_loaded', settings });
+      void refreshClips(); // window estimates depend on the coverage settings
+    } catch (err) {
+      dispatch({ type: 'config_save_failed' });
+      fail(err);
+    }
+  };
+
   const render = (): void => {
     banner.textContent = state.error ?? state.warning ?? '';
     banner.hidden = banner.textContent === '';
     banner.classList.toggle('error', state.error !== null);
     listView.hidden = state.view !== 'list';
     reviewView.hidden = state.view !== 'review';
-    if (state.view === 'list') renderList();
+    settingsView.hidden = state.view !== 'settings';
+    if (state.view === 'settings') renderSettingsView();
+    else if (state.view === 'list') renderList();
     else renderReview();
   };
 
@@ -245,6 +290,8 @@ const run = (api: Api): void => {
     void refreshClips();
   });
   byId('refresh').addEventListener('click', () => void refreshClips());
+  byId('settings-button').addEventListener('click', () => void openSettings());
+  window.roundReview.onOpenSettings?.(() => void openSettings());
   byId('prev-finding').addEventListener('click', () => step(-1));
   byId('next-finding').addEventListener('click', () => step(1));
 

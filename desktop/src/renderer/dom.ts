@@ -1,6 +1,8 @@
 import type {
   Answer,
   Clip,
+  ConfigDocument,
+  ConfigField,
   Habit,
   Knowledge,
   PlayerContext,
@@ -757,4 +759,171 @@ export const renderAnswers = (
 ): void => {
   root.replaceChildren();
   for (const answer of [...answers].reverse()) root.append(answerCard(answer, onSeek));
+};
+
+// ----------------------------------------------------------------------------- settings
+
+export interface SettingsView {
+  document?: ConfigDocument;
+  edits?: Record<string, unknown>;
+  saving?: boolean;
+  showAdvanced?: boolean;
+}
+
+export interface SettingsHandlers {
+  onChange: (name: string, value: unknown) => void;
+  onSave: () => void;
+  onClose: () => void;
+  onToggleAdvanced: () => void;
+}
+
+const currentValue = (field: ConfigField, edits: Record<string, unknown>): unknown =>
+  Object.prototype.hasOwnProperty.call(edits, field.name) ? edits[field.name] : field.value;
+
+const control = (
+  field: ConfigField,
+  value: unknown,
+  onChange: (name: string, value: unknown) => void,
+): HTMLElement => {
+  const locked = field.overridden_by_env !== null;
+
+  if (field.kind === 'choice') {
+    const node = el('select', 'setting-control');
+    node.dataset['setting'] = field.name;
+    node.disabled = locked;
+    // The saved value may not be in the list, e.g. a model that is no longer pulled.
+    const options = field.choices.includes(String(value ?? ''))
+      ? field.choices
+      : [String(value ?? ''), ...field.choices];
+    for (const choice of options) {
+      const option = el('option', undefined, choice || '(unset)');
+      option.value = choice;
+      node.append(option);
+    }
+    node.value = String(value ?? '');
+    node.addEventListener('change', () => onChange(field.name, node.value));
+    return node;
+  }
+
+  if (field.kind === 'bool') {
+    const node = el('input', 'setting-check');
+    node.type = 'checkbox';
+    node.dataset['setting'] = field.name;
+    node.disabled = locked;
+    node.checked = value === true;
+    node.addEventListener('change', () => onChange(field.name, node.checked));
+    return node;
+  }
+
+  const node = el('input', 'setting-control');
+  node.dataset['setting'] = field.name;
+  node.disabled = locked;
+  node.value = value === null || value === undefined ? '' : String(value);
+  if (field.kind === 'int' || field.kind === 'float') {
+    node.type = 'number';
+    node.step = field.kind === 'int' ? '1' : 'any';
+    if (field.minimum !== null) node.min = String(field.minimum);
+    if (field.maximum !== null) node.max = String(field.maximum);
+    node.addEventListener('change', () =>
+      onChange(field.name, node.value === '' ? null : Number(node.value)),
+    );
+  } else {
+    node.type = 'text';
+    if (field.kind === 'path') node.placeholder = 'C:/path/to/folder';
+    node.addEventListener('change', () => onChange(field.name, node.value || null));
+  }
+  return node;
+};
+
+const settingRow = (
+  field: ConfigField,
+  edits: Record<string, unknown>,
+  onChange: (name: string, value: unknown) => void,
+): HTMLElement => {
+  const row = el('div', 'setting');
+  const head = el('div', 'setting-head');
+  const label = el('label', 'setting-label', field.label);
+  head.append(label);
+  if (Object.prototype.hasOwnProperty.call(edits, field.name)) {
+    const unsaved = el('span', 'unsaved', 'unsaved');
+    unsaved.dataset['unsaved'] = 'true';
+    head.append(unsaved);
+  }
+  row.append(head);
+
+  const line = el('div', 'setting-line');
+  line.append(control(field, currentValue(field, edits), onChange));
+  if (field.unit) line.append(el('span', 'setting-unit', field.unit));
+  row.append(line);
+  row.append(el('p', 'setting-help', field.help));
+
+  if (field.overridden_by_env) {
+    const warning = el(
+      'p',
+      'setting-env',
+      `${field.overridden_by_env} is set in your environment and wins over this file, so changing it here would do nothing.`,
+    );
+    warning.dataset['envOverride'] = 'true';
+    warning.setAttribute('data-env-override', 'true');
+    row.append(warning);
+  }
+  return row;
+};
+
+/** The settings screen: every setting the app knows about, grouped and explained. */
+export const renderSettings = (
+  root: HTMLElement,
+  view: SettingsView,
+  handlers: SettingsHandlers,
+): void => {
+  root.replaceChildren();
+  const document_ = view.document;
+  if (!document_) {
+    root.append(el('p', 'empty', 'Loading settings…'));
+    return;
+  }
+  const edits = view.edits ?? {};
+  const dirty = Object.keys(edits).length > 0;
+
+  const bar = el('div', 'settings-bar');
+  bar.append(el('h2', undefined, 'Settings'));
+  const spacer = el('span', 'spacer');
+  bar.append(spacer);
+
+  const advanced = el('label', 'settings-advanced');
+  const toggle = el('input');
+  toggle.type = 'checkbox';
+  toggle.checked = view.showAdvanced === true;
+  toggle.addEventListener('change', () => handlers.onToggleAdvanced());
+  advanced.append(toggle, document.createTextNode(' Show advanced'));
+  bar.append(advanced);
+
+  const save = el('button', 'btn', view.saving ? 'Saving…' : 'Save');
+  save.dataset['action'] = 'save';
+  save.disabled = !dirty || view.saving === true;
+  save.addEventListener('click', () => handlers.onSave());
+  bar.append(save);
+
+  const close = el('button', 'btn ghost', 'Close');
+  close.dataset['action'] = 'close';
+  close.addEventListener('click', () => handlers.onClose());
+  bar.append(close);
+  root.append(bar);
+
+  for (const group of document_.groups) {
+    const fields = document_.fields.filter(
+      f => f.group === group && (view.showAdvanced === true || !f.advanced),
+    );
+    if (fields.length === 0) continue;
+    const heading = el('h3', 'settings-group', group);
+    heading.dataset['group'] = group;
+    root.append(heading);
+    const wrap = el('div', 'settings-grid');
+    for (const field of fields) wrap.append(settingRow(field, edits, handlers.onChange));
+    root.append(wrap);
+  }
+
+  root.append(
+    el('p', 'settings-path', `Saved to ${document_.path}. You can edit that file by hand too.`),
+  );
 };

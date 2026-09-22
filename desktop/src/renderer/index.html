@@ -15,7 +15,10 @@
         <span class="brand-mark" aria-hidden="true"></span>
         <span class="brand-name">round<span class="brand-accent">review</span></span>
       </div>
-      <button id="refresh" class="btn ghost">Refresh</button>
+      <div class="topbar-actions">
+        <button id="settings-button" class="btn ghost" title="Settings (Ctrl+,)">Settings</button>
+        <button id="refresh" class="btn ghost">Refresh</button>
+      </div>
     </header>
 
     <p id="banner" class="banner" hidden></p>
@@ -35,6 +38,8 @@
         <div id="hud-hint" class="hud-hint" hidden></div>
         <div id="clips" class="clips"></div>
       </section>
+
+      <section id="settings-view" class="view settings" hidden></section>
 
       <section id="review-view" class="view" hidden>
         <div class="review-bar">

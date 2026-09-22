@@ -256,3 +256,36 @@ export interface Report {
   windows: ReportWindow[];
   warnings: string[];
 }
+
+export const FIELD_KIND = {
+  bool: 'bool',
+  int: 'int',
+  float: 'float',
+  text: 'text',
+  path: 'path',
+  choice: 'choice',
+} as const;
+export type FieldKind = (typeof FIELD_KIND)[keyof typeof FIELD_KIND];
+
+/** One setting, described well enough to render without knowing what it means. */
+export interface ConfigField {
+  name: string;
+  group: string;
+  label: string;
+  help: string;
+  kind: FieldKind;
+  choices: string[];
+  minimum: number | null;
+  maximum: number | null;
+  unit: string;
+  advanced: boolean;
+  value: string | number | boolean | null;
+  default: string | number | boolean | null;
+  overridden_by_env: string | null;
+}
+
+export interface ConfigDocument {
+  path: string;
+  groups: string[];
+  fields: ConfigField[];
+}

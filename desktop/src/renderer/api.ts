@@ -1,5 +1,6 @@
 import type {
   Clip,
+  ConfigDocument,
   Job,
   Knowledge,
   PlayerContext,
@@ -31,6 +32,8 @@ export interface Api {
   ) => Promise<Job>;
   getKnowledge: () => Promise<Knowledge>;
   getSettings: () => Promise<Settings>;
+  getConfig: () => Promise<ConfigDocument>;
+  saveConfig: (values: Record<string, unknown>) => Promise<{ saved: boolean }>;
   ask: (
     path: string,
     startS: number,
@@ -77,6 +80,13 @@ export const createApi = (baseUrl: string, fetchFn: FetchLike): Api => {
       }),
     getKnowledge: () => request<Knowledge>('/api/knowledge'),
     getSettings: () => request<Settings>('/api/settings'),
+    getConfig: () => request<ConfigDocument>('/api/config'),
+    saveConfig: values =>
+      request<{ saved: boolean }>('/api/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values }),
+      }),
     ask: (path, startS, endS, question, context) =>
       request<Job>('/api/ask', {
         method: 'POST',

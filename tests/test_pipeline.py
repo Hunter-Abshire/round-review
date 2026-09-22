@@ -716,3 +716,56 @@ def test_no_such_warning_when_the_rounds_were_found(video: Path, tmp_path: Path)
     deps = make_deps(tmp_path, FakeTransport(good(35.0), good(65.0), good(85.0)))
     report = review_file(video, deps)
     assert not any("could not be read anywhere" in w for w in report.warnings)
+
+
+def test_a_known_agent_teaches_the_icons_for_next_time(
+    video: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Published icon art does not transfer: matched against footage it ranked Phoenix
+    above Veto on Veto's own clip. Footage against footage scores 0.998. So the only
+    reliable teacher is the player's own recording, and a review where the agent is known
+    is exactly that."""
+    import round_review.pipeline as pipeline_module
+    from round_review.vision.agent_icons import AgentTemplates
+
+    store = tmp_path / "agent-icons.json"
+    learned: list[str] = []
+
+    def fake_kit(*_a: object, **_k: object) -> tuple[object, ...]:
+        return ("icon",) * 4
+
+    monkeypatch.setattr(pipeline_module, "read_kit", fake_kit)
+    monkeypatch.setattr(
+        AgentTemplates, "learn", lambda self, agent, kit: learned.append(agent) or self
+    )
+    deps = make_deps(
+        tmp_path,
+        FakeTransport(good(35.0), good(65.0), good(85.0)),
+        hud_agent_templates_path=store,
+    )
+    review_file(video, deps, context=PlayerContext(agent="Veto"))
+    # Three moments, so three samples of the same kit: icons dim as charges are spent
+    # and a dimmed icon is still that agent's icon.
+    assert learned == ["Veto"] * 3
+
+
+def test_nothing_is_learned_when_the_agent_was_only_guessed(
+    video: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Learning from a detected agent would train the templates on the model's own
+    mistakes, which is how a wrong answer becomes permanent."""
+    import round_review.pipeline as pipeline_module
+    from round_review.vision.agent_icons import AgentTemplates
+
+    learned: list[str] = []
+    monkeypatch.setattr(pipeline_module, "read_kit", lambda *a, **k: ("icon",) * 4)
+    monkeypatch.setattr(
+        AgentTemplates, "learn", lambda self, agent, kit: learned.append(agent) or self
+    )
+    deps = make_deps(
+        tmp_path,
+        FakeTransport(good(35.0), good(65.0), good(85.0)),
+        hud_agent_templates_path=tmp_path / "agent-icons.json",
+    )
+    review_file(video, deps)  # no agent given
+    assert learned == []

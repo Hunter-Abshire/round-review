@@ -74,6 +74,7 @@ from round_review.vision.agent_icons import (
     AgentTemplates,
     crop_ability_icons,
     identify_from_frames,
+    read_kit,
 )
 from round_review.vision.calibrate import auto_threshold
 from round_review.vision.digits import DigitTemplates, load_templates
@@ -435,6 +436,44 @@ def _resolve_threshold(
     return found
 
 
+def _learn_agent_icons(
+    recording: Recording,
+    deps: Deps,
+    agent: str,
+    windows: Sequence[Window],
+    out_dir: Path,
+    threshold: int,
+) -> None:
+    """Remember what this agent's ability icons look like, from a clip whose agent is known.
+
+    Never learns from a detected agent: that would train the templates on the model's own
+    mistakes and make a wrong answer permanent.
+    """
+    cfg = deps.config
+    if not cfg.hud_check:
+        return
+    path = cfg.hud_agent_templates_path or default_data_dir() / "hud-agent-icons.json"
+    try:
+        abilities = parse_regions(cfg.hud_ability_regions)
+    except RoundReviewError:
+        return
+    if not abilities:
+        return
+    templates = AgentTemplates.load(path)
+    if agent in templates.agents_to_kits:
+        return  # already known; more samples of the same thing buy nothing
+    middles = [(w.start_s + w.end_s) / 2 for w in windows]
+    for moment in middles[:3]:
+        kit = read_kit(
+            recording, moment, abilities, deps.ffmpeg_runner, out_dir / "agent-learn", threshold
+        )
+        if kit:
+            templates = templates.learn(agent, kit)
+    if agent in templates.agents_to_kits:
+        templates.save(path)
+        log.info("learned %s's ability icons from this clip", agent)
+
+
 def _in_live_play(spans: tuple[RoundSpan, ...], timestamp_s: float) -> bool:
     """Whether a moment falls between a barrier drop and the next buy phase.
 
@@ -574,6 +613,7 @@ def review_file(
         raise
 
     # Before any model call: the icons name the agent, and a told agent still wins.
+    told_agent = context.agent
     if context.agent is None:
         detected = _identify_agent(recording, deps, windows, out_dir, threshold)
         if detected:
@@ -706,6 +746,12 @@ def review_file(
     identity = identity_index(key, results)
     if identity:
         write_identity(identities_file(cfg), identity)
+    # A review where the player told us the agent is free training data. Published icon art
+    # does not transfer (matched against footage it ranked Phoenix above Veto on a Veto
+    # clip); footage against footage scores 0.998. So this is the only reliable teacher, and
+    # it means the app learns every agent the player actually plays without being asked.
+    if told_agent:
+        _learn_agent_icons(recording, deps, told_agent, windows, out_dir, threshold)
     if counts:
         append_match(
             history_path,

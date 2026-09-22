@@ -435,6 +435,21 @@ def _resolve_threshold(
     return found
 
 
+def _in_live_play(spans: tuple[RoundSpan, ...], timestamp_s: float) -> bool:
+    """Whether a moment falls between a barrier drop and the next buy phase.
+
+    Deaths are found by watching the health number, which reads the spectated player's
+    health once you are dead, so the scan produces some that never happened. One outside
+    live play is certainly one of those.
+    """
+    if not spans:
+        return True  # nothing to check against; keep what the scan found
+    return any(
+        span.start_s <= timestamp_s < (span.end_s if span.live_end_s is None else span.live_end_s)
+        for span in spans
+    )
+
+
 def _in_live_round(spans: tuple[RoundSpan, ...], window: Window) -> bool:
     """Whether this window sits between a barrier drop and the next buy phase.
 
@@ -538,7 +553,7 @@ def review_file(
             max_windows=cfg.max_windows,
             max_span_s=cfg.max_span_s,
             spans=spans,
-            deaths=deaths,
+            deaths=tuple(d for d in deaths if _in_live_play(spans, d)),
         )
         # Even a tiled review benefits from round labels, so map any window the scan covers.
         if spans:
@@ -613,6 +628,10 @@ def review_file(
             stopped = exc
             break
         calls += result.model_calls
+        # Carry what the first windows established into the later ones. Without this each
+        # window re-guessed the map and the side, and one review called the same match both
+        # attack and defence in two findings twenty seconds apart.
+        context = merge_context(context, result.context)
         result, evidence_warnings = _attach_exact_evidence(result, recording, deps, frames_dir)
         warnings.extend(evidence_warnings)
         results.append(result)

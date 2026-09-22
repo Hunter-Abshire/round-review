@@ -660,3 +660,39 @@ def test_a_review_that_identified_nothing_writes_no_identity(video: Path, tmp_pa
     deps = make_deps(tmp_path, FakeTransport(good(35.0), good(65.0), good(85.0)))
     review_file(video, deps)
     assert read_identities(identities_file(deps.config)) == {}
+
+
+def test_a_death_outside_live_play_is_discarded() -> None:
+    """Health reads the spectated player's once you are dead, so the scan invents some.
+    One landing after the round ended is certainly invented."""
+    from round_review.pipeline import _in_live_play
+    from round_review.vision.timeline import RoundSpan
+
+    spans = (RoundSpan(1, 24.0, 138.0, live_end_s=110.0),)
+    assert _in_live_play(spans, 60.0)
+    assert not _in_live_play(spans, 120.0)  # the buy phase after the round
+    assert not _in_live_play(spans, 300.0)  # after everything
+
+
+def test_with_no_rounds_found_every_death_is_kept() -> None:
+    from round_review.pipeline import _in_live_play
+
+    assert _in_live_play((), 60.0)
+
+
+def test_context_established_early_carries_into_later_windows(video: Path, tmp_path: Path) -> None:
+    """One review called the same match attack at t=31s and defence at t=149s, because each
+    window re-guessed from scratch."""
+    from tests.coaching.test_review import SITUATION
+
+    first = json.loads(SITUATION)
+    first.update(side="defense", map="Ascent")
+    later = json.loads(SITUATION)
+    later.update(side="attack", map="Bind")
+    transport = FakeTransport(
+        json.dumps(first), good(35.0), json.dumps(later), good(65.0), json.dumps(later), good(85.0)
+    )
+    deps = make_deps(tmp_path, transport, situation_pass=True)
+    report = review_file(video, deps)
+    assert [r.context.side for r in report.results] == ["defense"] * len(report.results)
+    assert {r.context.map for r in report.results} == {"Ascent"}

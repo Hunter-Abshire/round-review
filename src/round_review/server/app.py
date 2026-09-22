@@ -18,6 +18,7 @@ from round_review.coaching.knowledge import load_knowledge
 from round_review.config import COVERAGE_MODES, Config
 from round_review.errors import LedgerError, RoundReviewError, VideoError
 from round_review.ledger import LedgerEntry, read_ledger
+from round_review.pacing import estimate_seconds, format_duration
 from round_review.pipeline import key_for, report_dir_for
 from round_review.report.json_report import JSON_REPORT_FILENAME, load_report_json
 from round_review.server.jobs import Job, JobOptions, JobQueue
@@ -158,6 +159,22 @@ def create_app(
                 continue
             status, job_id, error = _clip_status(jobs, entries, key)
             duration_s = duration_of(path, key)
+            windows = (
+                estimate_window_count(
+                    duration_s,
+                    window_s=config.window_s,
+                    coverage=config.coverage,  # type: ignore[arg-type]
+                    windows_per_file=config.windows_per_file,
+                    edge_skip_s=config.edge_skip_s,
+                    max_windows=config.max_windows,
+                    max_span_s=config.max_span_s,
+                )
+                if duration_s
+                else None
+            )
+            # Estimated from what past reviews on this machine actually took, not from
+            # hardware: a full review can be hours, and that should not be a surprise.
+            estimated = estimate_seconds(windows or 0, entries)
             items.append(
                 {
                     "name": path.name,
@@ -166,19 +183,9 @@ def create_app(
                     "size_bytes": st.st_size,
                     "mtime": st.st_mtime,
                     "duration_s": duration_s,
-                    "estimated_windows": (
-                        estimate_window_count(
-                            duration_s,
-                            window_s=config.window_s,
-                            coverage=config.coverage,  # type: ignore[arg-type]
-                            windows_per_file=config.windows_per_file,
-                            edge_skip_s=config.edge_skip_s,
-                            max_windows=config.max_windows,
-                            max_span_s=config.max_span_s,
-                        )
-                        if duration_s
-                        else None
-                    ),
+                    "estimated_windows": windows,
+                    "estimated_seconds": estimated,
+                    "estimated_time": format_duration(estimated) if estimated else None,
                     "status": status,
                     "job_id": job_id,
                     "error": error,

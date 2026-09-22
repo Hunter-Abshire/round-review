@@ -84,6 +84,8 @@ export const clip = (overrides: Partial<Clip> = {}): Clip => ({
   mtime: 0,
   duration_s: 600,
   estimated_windows: 47,
+  estimated_seconds: 5640,
+  estimated_time: 'about 1 hour 34 minutes',
   status: 'new',
   job_id: null,
   error: null,

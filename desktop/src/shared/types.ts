@@ -20,6 +20,8 @@ export interface Clip {
   mtime: number;
   duration_s: number | null;
   estimated_windows: number | null;
+  estimated_seconds: number | null;
+  estimated_time: string | null;
   status: ClipStatus;
   job_id: string | null;
   error: string | null;

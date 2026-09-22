@@ -330,3 +330,36 @@ def test_settings_reports_a_trained_hud_as_ready(cfg: Config, tmp_path: Path) ->
         body = c.get("/api/settings").json()
     assert body["hud_ready"] is True
     assert body["hud_missing_characters"] == []
+
+
+def test_clips_estimate_the_review_time_from_past_reviews(
+    client: TestClient, cfg: Config, clip: Path
+) -> None:
+    # a past review of 20 windows that took 10 minutes: 30s a window
+    append_entry(
+        cfg.ledger_path,
+        LedgerEntry(
+            "other", "/v/old.mp4", NOW, 40, "/r/x.md", "ok", None, windows=20, duration_s=600.0
+        ),
+    )
+    (item,) = client.get("/api/clips").json()["clips"]
+    assert item["estimated_windows"] == 5
+    assert item["estimated_seconds"] == pytest.approx(150.0)
+    assert item["estimated_time"] == "about 2 minutes"  # 150s
+
+
+def test_clips_have_no_estimate_before_anything_has_been_timed(
+    client: TestClient, clip: Path
+) -> None:
+    (item,) = client.get("/api/clips").json()["clips"]
+    assert item["estimated_seconds"] is None
+    assert item["estimated_time"] is None
+
+
+def test_a_long_review_is_estimated_in_hours(client: TestClient, cfg: Config, clip: Path) -> None:
+    append_entry(
+        cfg.ledger_path,
+        LedgerEntry("o", "/v/o.mp4", NOW, 2, None, "ok", None, windows=1, duration_s=1800.0),
+    )
+    (item,) = client.get("/api/clips").json()["clips"]
+    assert item["estimated_time"] == "about 2 hours 30 minutes"  # 5 windows at 30 min each

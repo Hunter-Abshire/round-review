@@ -711,3 +711,7 @@ video {
   font-size: 12px;
   color: var(--muted);
 }
+
+.card-plan.long {
+  color: var(--warn);
+}

@@ -17,6 +17,7 @@ def test_error_hierarchy() -> None:
         errors.AlreadyProcessed,
         errors.KnowledgeError,
         errors.LabelsError,
+        errors.ReviewAbandoned,
         errors.HudError,
     ):
         assert issubclass(cls, errors.RoundReviewError)

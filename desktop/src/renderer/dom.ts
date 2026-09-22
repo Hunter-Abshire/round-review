@@ -6,7 +6,13 @@ import type {
   ReviewOptions,
   Settings,
 } from '../shared/types';
-import { formatBytes, formatDuration, formatRelativeTime, reviewSummary } from './format';
+import {
+  formatBytes,
+  formatDuration,
+  formatRelativeTime,
+  isLongReview,
+  reviewSummary,
+} from './format';
 import { formatClock, rulerTicks, type CoverageBand, type Marker } from './timeline';
 
 const el = <K extends keyof HTMLElementTagNameMap>(
@@ -111,7 +117,9 @@ export const renderClipList = (root: HTMLElement, props: ClipListProps): void =>
     card.append(el('p', 'card-meta', meta));
 
     if (NEVER_REVIEWED.has(clip.status) && props.settings) {
-      card.append(el('p', 'card-plan', reviewSummary(clip, props.options, props.settings)));
+      const plan = el('p', 'card-plan', reviewSummary(clip, props.options, props.settings));
+      if (isLongReview(clip, props.options)) plan.classList.add('long');
+      card.append(plan);
     }
     if (progress && BUSY.has(clip.status)) card.append(progressBar(progress));
     if (clip.error) card.append(el('p', 'card-error', clip.error));

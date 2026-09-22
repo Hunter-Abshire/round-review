@@ -32,6 +32,15 @@ export const formatRelativeTime = (epochSeconds: number, nowSeconds: number): st
   return `${Math.floor(delta / 86400)}d ago`;
 };
 
+/** An hour is where a review stops being something you wait for and starts being a plan. */
+const LONG_REVIEW_S = 3600;
+
+/** Whether this clip, with these options, is a review worth warning about before starting. */
+export const isLongReview = (clip: Clip, options: ReviewOptions): boolean => {
+  if (options.coverage === 'sampled' || options.max_span_s || options.max_windows) return false;
+  return (clip.estimated_seconds ?? 0) >= LONG_REVIEW_S;
+};
+
 /** One line describing what pressing Analyze will actually do to this clip. */
 export const reviewSummary = (clip: Clip, options: ReviewOptions, settings: Settings): string => {
   if (options.coverage === 'sampled') {
@@ -45,5 +54,7 @@ export const reviewSummary = (clip: Clip, options: ReviewOptions, settings: Sett
     return `${options.max_windows} windows spread across the whole clip`;
   }
   const windows = clip.estimated_windows;
-  return windows ? `whole clip, ${windows} windows of ${settings.window_s}s` : 'whole clip';
+  if (!windows) return 'whole clip';
+  const time = clip.estimated_time ? `, ${clip.estimated_time}` : '';
+  return `whole clip, ${windows} windows of ${settings.window_s}s${time}`;
 };

@@ -2,6 +2,7 @@ import {
   formatBytes,
   formatDuration,
   formatRelativeTime,
+  isLongReview,
   reviewSummary,
 } from '../../src/renderer/format';
 import { clip, settings } from './fixtures';
@@ -75,5 +76,35 @@ describe('reviewSummary', () => {
     );
     expect(text).toContain('whole clip');
     expect(text).not.toContain('undefined');
+  });
+});
+
+describe('reviewSummary with a measured estimate', () => {
+  const full = { coverage: 'full' as const, max_span_s: null, max_windows: null };
+
+  it('says how long it will take when past reviews have been timed', () => {
+    const text = reviewSummary(clip(), full, settings());
+    expect(text).toContain('47 windows');
+    expect(text).toContain('about 1 hour 34 minutes');
+  });
+
+  it('leaves the time out when nothing has been timed yet', () => {
+    const text = reviewSummary(
+      clip({ estimated_seconds: null, estimated_time: null }),
+      full,
+      settings(),
+    );
+    expect(text).toContain('47 windows');
+    expect(text).not.toContain('about');
+  });
+
+  it('warns on the clip card when a review will take over an hour', () => {
+    expect(isLongReview(clip(), full)).toBe(true);
+    expect(isLongReview(clip({ estimated_seconds: 600 }), full)).toBe(false);
+    expect(isLongReview(clip({ estimated_seconds: null }), full)).toBe(false);
+  });
+
+  it('does not warn about a bounded review', () => {
+    expect(isLongReview(clip(), { ...full, max_span_s: 60 })).toBe(false);
   });
 });

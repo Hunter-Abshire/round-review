@@ -20,6 +20,7 @@ from round_review.errors import (
     CapExceeded,
     OllamaError,
     ParseError,
+    ReviewAbandoned,
     RoundReviewError,
     VideoError,
 )
@@ -221,6 +222,7 @@ def review_file(
     # A full review is dozens of windows, so a failure part-way through must not throw away
     # the windows already reviewed: stop, keep the results, and record the review as partial.
     stopped: RoundReviewError | None = None
+    abstain_streak = 0
     for window in windows:
         try:
             samples = extract_frames(
@@ -269,6 +271,18 @@ def review_file(
         results.append(result)
         if on_progress:
             on_progress(len(results), len(windows))
+
+        # A model that cannot read the scene skips every window. Spending hours to find that
+        # out helps nobody, so stop and say what to check.
+        abstain_streak = abstain_streak + 1 if result.abstained else 0
+        if cfg.abstain_streak_limit and abstain_streak >= cfg.abstain_streak_limit:
+            stopped = ReviewAbandoned(
+                f"{abstain_streak} windows in a row were skipped before coaching, so the rest "
+                "of this recording is unlikely to be any different. Check what the model is "
+                "reading with `round-review scenes validate`, and set abstain_streak_limit = 0 "
+                "to review the whole thing anyway"
+            )
+            break
 
     diagnosis = abstention_warning(results)
     if diagnosis:

@@ -547,3 +547,59 @@ def test_a_failed_review_still_records_what_it_spent(video: Path, tmp_path: Path
     (entry,) = read_ledger(deps.config.ledger_path)
     assert entry.duration_s >= 0.0
     assert entry.windows == 0
+
+
+def _buy_phase_situation() -> str:
+    from tests.coaching.test_review import SITUATION
+
+    buy = json.loads(SITUATION)
+    buy["phase"] = "pre_round"
+    return json.dumps(buy)
+
+
+def test_a_review_that_keeps_skipping_gives_up_instead_of_running_for_hours(
+    video: Path, tmp_path: Path
+) -> None:
+    transport = FakeTransport(*[_buy_phase_situation()] * 10)
+    deps = make_deps(
+        tmp_path, transport, coverage="full", situation_pass=True, abstain_streak_limit=3
+    )
+    report = review_file(video, deps)
+
+    assert len(report.results) == 3  # stopped after three in a row, not all five
+    assert len(transport.calls) == 3
+    assert report.partial is True
+    assert "3 windows in a row" in (report.stopped_reason or "")
+    assert "scenes validate" in (report.stopped_reason or "")
+    (entry,) = read_ledger(deps.config.ledger_path)
+    assert entry.status == "partial"
+
+
+def test_the_streak_resets_when_a_window_is_actually_coached(video: Path, tmp_path: Path) -> None:
+    from tests.coaching.test_review import SITUATION
+
+    transport = FakeTransport(
+        _buy_phase_situation(),
+        _buy_phase_situation(),
+        SITUATION,
+        good(65.0),  # a real coached window resets the streak
+        _buy_phase_situation(),
+        _buy_phase_situation(),
+        _buy_phase_situation(),
+    )
+    deps = make_deps(
+        tmp_path, transport, coverage="full", situation_pass=True, abstain_streak_limit=3
+    )
+    report = review_file(video, deps)
+    assert len(report.results) == 5  # reached the last window
+    assert sum(len(r.findings) for r in report.results) == 1
+
+
+def test_giving_up_can_be_switched_off(video: Path, tmp_path: Path) -> None:
+    transport = FakeTransport(*[_buy_phase_situation()] * 10)
+    deps = make_deps(
+        tmp_path, transport, coverage="full", situation_pass=True, abstain_streak_limit=0
+    )
+    report = review_file(video, deps)
+    assert len(report.results) == 5  # every window, however pointless
+    assert report.partial is False

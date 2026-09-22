@@ -51,3 +51,7 @@ class LabelsError(RoundReviewError):
 
 class HudError(RoundReviewError):
     """A HUD raster could not be read, or its digit templates are unusable."""
+
+
+class ReviewAbandoned(RoundReviewError):
+    """The review gave up early because it was plainly producing nothing."""

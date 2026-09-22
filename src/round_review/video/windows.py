@@ -157,11 +157,15 @@ def round_windows(
         raise ValueError("window_s must be > 0")
     candidates: list[tuple[float, WindowSource, int | None]] = []
     for span in spans:
+        # The end of LIVE play, not the end of the span: a span runs barrier drop to barrier
+        # drop, so its last seconds are the next round's buy phase. Anchoring here used to
+        # spend half the review budget watching someone shop.
+        live_end = span.end_s if span.live_end_s is None else span.live_end_s
+        if live_end <= span.start_s:
+            continue  # all buy phase, which a recording starting mid-shop produces
         candidates.append((span.start_s, "round_start", span.index))
-        # A round shorter than two windows is one window; anything longer gets its ending,
-        # which is where the site is taken, lost, or the last player traded.
-        if span.end_s - span.start_s >= 2 * window_s:
-            candidates.append((span.end_s - window_s, "round_end", span.index))
+        if live_end - span.start_s >= 2 * window_s:
+            candidates.append((live_end - window_s, "round_end", span.index))
     # Weighted to the lead-in: the mistake that got the player killed happened before
     # the death, not after it.
     candidates.extend(

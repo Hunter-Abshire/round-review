@@ -103,3 +103,24 @@ class TestRoundWindows:
 
     def test_no_rounds_means_no_windows(self) -> None:
         assert round_windows((), window_s=12.0, duration_s=600.0) == []
+
+
+def test_the_round_ending_window_stops_at_the_end_of_live_play() -> None:
+    # span runs to 200s but live play stopped at 160s; the rest is the next buy phase
+    span = RoundSpan(1, 100.0, 200.0, live_end_s=160.0)
+    got = round_windows((span,), window_s=12.0, duration_s=600.0)
+    ends = [(w.start_s, w.end_s) for w in got if w.source == "round_end"]
+    assert ends == [(148.0, 160.0)]
+
+
+def test_a_span_with_no_live_end_recorded_falls_back_to_its_end() -> None:
+    span = RoundSpan(1, 100.0, 160.0, live_end_s=None)
+    got = round_windows((span,), window_s=12.0, duration_s=600.0)
+    ends = [(w.start_s, w.end_s) for w in got if w.source == "round_end"]
+    assert ends == [(148.0, 160.0)]
+
+
+def test_a_round_that_is_all_buy_phase_gets_no_windows() -> None:
+    # A recording that starts mid-shop has a first "round" with no live play in it at all.
+    span = RoundSpan(1, 0.0, 24.0, live_end_s=0.0)
+    assert round_windows((span,), window_s=12.0, duration_s=600.0) == []

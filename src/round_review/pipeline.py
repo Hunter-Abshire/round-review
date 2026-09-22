@@ -9,6 +9,7 @@ from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 
+from round_review.coaching.agent_vision import identify_agent_with_model
 from round_review.coaching.context import PlayerContext, merge_context
 from round_review.coaching.frames import select_situation_frames
 from round_review.coaching.history import MatchHabits, append_match, read_history, tag_habits
@@ -69,7 +70,11 @@ from round_review.report.markdown import Report, write_report
 from round_review.video.frames import encode_frame_b64, extract_frames, extract_single_frame
 from round_review.video.probe import CommandRunner, Recording, SubprocessRunner, probe
 from round_review.video.windows import Window, plan_windows
-from round_review.vision.agent_icons import AgentTemplates, identify_from_frames
+from round_review.vision.agent_icons import (
+    AgentTemplates,
+    crop_ability_icons,
+    identify_from_frames,
+)
 from round_review.vision.calibrate import auto_threshold
 from round_review.vision.digits import DigitTemplates, load_templates
 from round_review.vision.hud import (
@@ -258,6 +263,48 @@ def _identify_agent(
     )
     if name:
         log.info("ability icons identify the agent as %s (%.0f%%)", name, score * 100)
+        return name
+    return _ask_model_for_agent(recording, deps, moments, abilities, out_dir, threshold)
+
+
+def _ask_model_for_agent(
+    recording: Recording,
+    deps: Deps,
+    moments: Sequence[float],
+    abilities: Sequence[Region],
+    out_dir: Path,
+    threshold: int,
+) -> str | None:
+    """One narrow question about the icons, when no learned template matched them.
+
+    Costs a single call per clip and replaces the scene pass's per-window guessing, which
+    on real footage produced five different wrong agents across eight windows.
+    """
+    cfg = deps.config
+    crops = crop_ability_icons(
+        recording,
+        moments[len(moments) // 2] if moments else recording.duration_s / 2,
+        abilities,
+        deps.ffmpeg_runner,
+        out_dir / "agent-ask",
+    )
+    if not crops:
+        return None
+    names = tuple(sorted(a.name for a in load_knowledge().agents.values()))
+    try:
+        name, score = identify_agent_with_model(
+            deps.transport,
+            cfg.model,
+            [encode_frame_b64(path) for path in crops],
+            names,
+            cfg.request_timeout_s,
+            cfg.hud_agent_min_confidence,
+        )
+    except (RoundReviewError, OSError) as exc:
+        log.warning("could not ask the model which agent this is: %s", exc)
+        return None
+    if name:
+        log.info("the model reads the ability icons as %s (%.0f%%)", name, score * 100)
     return name
 
 

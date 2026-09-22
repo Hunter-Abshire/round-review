@@ -25,6 +25,10 @@ from round_review.vision.raster import normalize_glyph, parse_pgm, segment_glyph
 ROUND_TIMER_MIN_S = 90.0
 # How far the clock must jump upwards to count as a reset rather than a misread digit.
 RESET_JUMP_S = 20.0
+# The buy phase runs from 0:30, so a clock above this cannot be one. Deliberately not the
+# 45s buy-phase-maximum used for the phase veto: that one has to clear the spike timer
+# too, and here a 0:40 reading can only be the round timer still running.
+BUY_PHASE_LENGTH_S = 30.0
 # Two seconds is fine enough to place a barrier drop and coarse enough to stay cheap.
 DEFAULT_SCAN_INTERVAL_S = 2.0
 
@@ -43,6 +47,11 @@ class RoundSpan:
     index: int
     start_s: float
     end_s: float
+    # Where live play stopped. A span runs barrier drop to barrier drop, so its tail is the
+    # NEXT round's buy phase: anchoring anything at `end_s` reviews someone shopping.
+    # None means nobody worked it out; equal to `start_s` means the span is all buy phase,
+    # which happens when a recording starts mid-shop.
+    live_end_s: float | None = None
 
     def contains(self, timestamp_s: float) -> bool:
         return self.start_s <= timestamp_s < self.end_s or (
@@ -175,9 +184,35 @@ def segment_rounds(
     end = readable[-1].timestamp_s
     bounds = [*starts[1:], end]
     return tuple(
-        RoundSpan(i, start, max(start, stop))
+        RoundSpan(i, start, max(start, stop), _live_end(samples, start, max(start, stop)))
         for i, (start, stop) in enumerate(zip(starts, bounds, strict=True), start=1)
     )
+
+
+def _live_end(samples: tuple[ClockSample, ...], start_s: float, end_s: float) -> float:
+    """Where live play stopped inside a span: the moment the next buy phase started.
+
+    Walk back from the end over the run of readable clocks at or below the buy-phase
+    length, ignoring unreadable samples: the clock is only intermittently legible while the
+    shop is open, and post-plant it is replaced by the spike icon entirely. What actually
+    ends the walk is a reading that cannot belong to that countdown, either above 0:30 or
+    lower than the one after it.
+    """
+    # The sample at end_s is the next round's barrier drop and belongs to that round.
+    # The sample at end_s is the next round's barrier drop and belongs to that round.
+    inside = [s for s in samples if start_s <= s.timestamp_s < end_s and s.clock_s is not None]
+    live = end_s
+    previous: float | None = None
+    for sample in reversed(inside):
+        clock = sample.clock_s
+        assert clock is not None  # filtered above; narrows the type
+        # Going backwards through a countdown the numbers must rise. A drop means we have
+        # stepped off the buy phase into the end of the round before it.
+        if clock > BUY_PHASE_LENGTH_S or (previous is not None and clock < previous):
+            break
+        live = sample.timestamp_s
+        previous = clock
+    return live
 
 
 def round_at(spans: tuple[RoundSpan, ...], timestamp_s: float) -> RoundSpan | None:

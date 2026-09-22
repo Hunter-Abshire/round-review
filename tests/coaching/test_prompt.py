@@ -131,3 +131,28 @@ def test_the_prompt_says_that_crossing_the_map_is_not_holding_an_angle() -> None
     text = build_system_prompt(load_knowledge(), phase=None).lower()
     assert "rotating" in text or "crossing" in text
     assert "trade" in text
+
+
+def test_an_unknown_agent_forbids_naming_abilities() -> None:
+    """A wrong agent brief is worse than no brief, and advice naming somebody else's
+    ability is the most confident kind of wrong a coach can be."""
+    from round_review.coaching.context import PlayerContext
+    from round_review.coaching.knowledge import load_knowledge
+    from round_review.coaching.prompt import build_coach_prompt
+
+    knowledge = load_knowledge()
+    text = build_coach_prompt(WINDOW, SAMPLES, PlayerContext(rank="Gold 2"), None, knowledge)
+    assert "Agent brief" not in text
+    assert "which agent" in text.lower()
+    assert "do not name any ability" in text.lower()
+
+
+def test_a_known_agent_gets_its_brief_and_no_warning() -> None:
+    from round_review.coaching.context import PlayerContext
+    from round_review.coaching.knowledge import load_knowledge
+    from round_review.coaching.prompt import build_coach_prompt
+
+    knowledge = load_knowledge()
+    text = build_coach_prompt(WINDOW, SAMPLES, PlayerContext(agent="Veto"), None, knowledge)
+    assert "Agent brief: Veto" in text
+    assert "do not name any ability" not in text.lower()

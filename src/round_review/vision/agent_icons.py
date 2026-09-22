@@ -15,7 +15,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from round_review.errors import HudError
+from round_review.errors import HudError, RoundReviewError
 from round_review.video.probe import CommandRunner, Recording
 from round_review.vision.digits import similarity
 from round_review.vision.hud import Region
@@ -154,3 +154,45 @@ def identify_from_frames(
         return None, 0.0
     winner = max(votes, key=lambda name: (len(votes[name]), sum(votes[name])))
     return winner, sum(votes[winner]) / len(votes[winner])
+
+
+def crop_ability_icons(
+    recording: Recording,
+    timestamp_s: float,
+    ability_regions: Sequence[Region],
+    runner: CommandRunner,
+    out_dir: Path,
+) -> list[Path]:
+    """Cut each ability slot to its own image file, for showing to a model.
+
+    JPEG rather than the PGM the template matcher uses: this is going into a prompt, and a
+    grayscale bitmap of a stylised icon is much harder to recognise than the colour art.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    paths: list[Path] = []
+    for i, region in enumerate(ability_regions):
+        x, y, width, height = region.in_pixels(recording.width, recording.height)
+        out = out_dir / f"ability{i}.jpg"
+        try:
+            runner.run(
+                [
+                    "-loglevel",
+                    "error",
+                    "-y",
+                    "-ss",
+                    f"{timestamp_s:.3f}",
+                    "-i",
+                    str(recording.path),
+                    "-frames:v",
+                    "1",
+                    "-vf",
+                    (f"crop={width}:{height}:{x}:{y},scale={width * 4}:{height * 4}:flags=lanczos"),
+                    "-q:v",
+                    "2",
+                    str(out),
+                ]
+            )
+        except (RoundReviewError, OSError):
+            return []
+        paths.append(out)
+    return paths

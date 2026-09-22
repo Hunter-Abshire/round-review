@@ -516,3 +516,28 @@ def test_measured_hud_values_reach_the_coach_prompt(samples: list[FrameSample]) 
     prompt = transport.calls[1].prompt
     assert "health=48" in prompt and "credits=2400" in prompt
     assert "abilities up=1 of 2" in prompt
+
+
+def test_a_corrected_phase_is_stated_over_the_models_own_summary(
+    samples: list[FrameSample],
+) -> None:
+    """The clock overruled the model, but its summary still said "buy phase" and that text
+    went to the coach. One finding opened with "The player is in the Buy Phase" on a window
+    the clock had already proven was live."""
+    buy = json.loads(_situation(phase="pre_round"))
+    buy["summary"] = "The player is in the buy phase behind the barrier."
+    transport = FakeTransport(json.dumps(buy), GOOD)
+    result = review(transport, samples, hud=HudRead("1:34", 94.0, 1.0, 4))
+    prompt = transport.calls[1].prompt
+    assert result.hud_override
+    assert "1:34" in prompt
+    assert "not the buy phase" in prompt.lower() or "is live" in prompt.lower()
+
+
+def test_no_correction_is_announced_when_the_model_was_right(
+    samples: list[FrameSample],
+) -> None:
+    transport = FakeTransport(SITUATION, GOOD)
+    result = review(transport, samples, hud=HudRead("1:34", 94.0, 1.0, 4))
+    assert not result.hud_override
+    assert "corrected" not in transport.calls[1].prompt.lower()

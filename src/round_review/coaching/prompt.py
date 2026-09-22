@@ -315,6 +315,7 @@ def build_coach_prompt(
     situation: Situation | None,
     knowledge: CoachingKnowledge,
     state: HudState | None = None,
+    clock_correction: str | None = None,
 ) -> str:
     sections: list[str] = []
     described = context.describe()
@@ -331,11 +332,23 @@ def build_coach_prompt(
             f"{agent.name} has exactly these abilities: {kit}. Any other ability belongs to "
             "an agent the player is not using, so never suggest one."
         )
+    else:
+        # No brief at all beats the wrong brief. On real footage the scene pass named five
+        # different agents across eight windows of one clip, one of them a player's name.
+        sections.append(
+            "We do not know which agent the player is using, so no ability is known to be "
+            "available to them. Do not name any ability, and do not suggest using one. "
+            "Coach only what you can see: position, timing, angles, movement and trades."
+        )
     game_map = find_map(knowledge.maps, context.map)
     if game_map:
         sections.append(render_map_brief(game_map))
     if situation:
         sections.append(situation.describe())
+    # The clock already overruled the phase field, but the model's own summary still says
+    # what it thought, and that text is right here in the prompt. Say so plainly.
+    if clock_correction:
+        sections.append(clock_correction)
     # After the situation read, so a measured value overrides whatever the model said.
     measured = state.describe() if state else ""
     if measured:

@@ -173,6 +173,7 @@ def review_window(
     calls = 0
     situation: Situation | None = None
     hud_override = False
+    clock_correction: str | None = None
 
     if situation_pass:
         scene_samples = select_situation_frames(samples, situation_frames)
@@ -209,9 +210,18 @@ def review_window(
             # buy phase maximum proves the round is live, whatever the model called it.
             verdict = constrain_phase(situation.phase, hud, buy_phase_max_s, hud_min_confidence)
             if verdict.overridden:
+                claimed = situation.phase or "unreadable"
                 situation = replace(situation, phase=verdict.phase)
                 hud_override = True
                 warnings.append(f"HUD override: {verdict.reason}")
+                clock = hud.clock_text if hud else None
+                clock_correction = (
+                    f"Correction, read from the pixels: the round clock says {clock}, so this "
+                    f"is live play, not the buy phase. The scene read below called it "
+                    f"{claimed} and its summary may repeat that. It is wrong. Judge this as "
+                    f"a {verdict.phase} moment in a live round and ignore any claim that "
+                    "the barrier is up or that the round has not started."
+                )
 
         if situation is not None and situation.phase in (None, "pre_round", "spectating"):
             reason = {"pre_round": "buy phase", "spectating": "spectating another player"}.get(
@@ -232,7 +242,9 @@ def review_window(
             )
 
     system = build_system_prompt(knowledge, situation.phase if situation else None)
-    prompt = build_coach_prompt(window, coach_samples, context, situation, knowledge, state)
+    prompt = build_coach_prompt(
+        window, coach_samples, context, situation, knowledge, state, clock_correction
+    )
     check_ids = knowledge.checklist.check_ids()
     last_error: ParseError | None = None
     for attempt in range(2):

@@ -98,3 +98,78 @@ class TestRoundAt:
 
     def test_no_rounds_means_none(self) -> None:
         assert round_at((), 5.0) is None
+
+
+class TestLiveEnd:
+    """A round span runs barrier drop to barrier drop, so its tail is the NEXT round's buy
+    phase. Anchoring the round-ending window there reviewed people shopping."""
+
+    def test_the_trailing_buy_phase_is_not_part_of_live_play(self) -> None:
+        # round timer counting down, then the next buy phase counting 0:30 -> 0:00
+        spans = segment_rounds(
+            samples(
+                [
+                    (0.0, 100.0),
+                    (2.0, 80.0),
+                    (4.0, 40.0),
+                    (6.0, 30.0),
+                    (8.0, 20.0),
+                    (10.0, 10.0),
+                    (12.0, 100.0),
+                ]
+            )
+        )
+        # live play ended when the buy phase began, at t=6
+        assert spans[0].live_end_s == 6.0
+
+    def test_a_round_with_no_trailing_buy_phase_ends_where_it_ends(self) -> None:
+        spans = segment_rounds(samples([(0.0, 100.0), (2.0, 90.0), (4.0, 80.0)]))
+        assert spans[0].live_end_s == spans[0].end_s
+
+    def test_unreadable_post_plant_samples_still_count_as_live(self) -> None:
+        # the spike icon replaces the timer, so post-plant reads as nothing at all
+        spans = segment_rounds(
+            samples(
+                [
+                    (0.0, 100.0),
+                    (2.0, 60.0),
+                    (4.0, None),
+                    (6.0, None),
+                    (8.0, 25.0),
+                    (10.0, 5.0),
+                    (12.0, 100.0),
+                ]
+            )
+        )
+        assert spans[0].live_end_s == 8.0
+
+    def test_the_round_timer_passing_through_forty_seconds_is_not_a_buy_phase(self) -> None:
+        spans = segment_rounds(
+            samples(
+                [(0.0, 100.0), (2.0, 80.0), (4.0, 40.0), (6.0, 25.0), (8.0, 10.0), (10.0, 100.0)]
+            )
+        )
+        # 0:40 is above the 0:30 the buy phase starts from, so live play ran until t=6
+        assert spans[0].live_end_s == 6.0
+
+
+def test_a_buy_phase_that_only_reads_intermittently_is_still_found() -> None:
+    """Measured on real footage: the clock is legible in about half the buy-phase frames
+    while the shop is open, so a single unreadable sample must not end the walk back."""
+    got = segment_rounds(
+        samples(
+            [
+                (0.0, 100.0),
+                (2.0, 60.0),
+                (4.0, None),
+                (6.0, None),
+                (8.0, 26.0),
+                (10.0, None),
+                (12.0, 18.0),
+                (14.0, None),
+                (16.0, 2.0),
+                (18.0, 100.0),
+            ]
+        )
+    )
+    assert got[0].live_end_s == 8.0

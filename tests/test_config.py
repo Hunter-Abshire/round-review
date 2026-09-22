@@ -20,7 +20,7 @@ def test_defaults_when_file_missing(tmp_path: Path) -> None:
     assert cfg.quiet_polls == 3
     assert cfg.min_age_s == 120.0
     assert cfg.request_timeout_s == 900.0
-    assert cfg.num_ctx == 16384
+    assert cfg.num_ctx == 24576
     assert cfg.ffmpeg_path == "ffmpeg"
     assert cfg.ffprobe_path == "ffprobe"
     assert cfg.recordings_dir is None
@@ -175,4 +175,6 @@ def test_request_timeout_allows_for_a_slow_coach_call(tmp_path: Path) -> None:
     cfg = load_config(tmp_path / "x.toml", env={}, data_dir=tmp_path)
     # a coach call on an 8b model with a dozen frames can run for many minutes
     assert cfg.request_timeout_s == 900.0
-    assert cfg.coach_frames == 0  # 0 = every extracted frame
+    # 6, not every frame: twelve 1280px pictures do not fit the context (measured 17,300
+    # tokens against 24,576), and the review used to die on the first window.
+    assert cfg.coach_frames == 6

@@ -251,3 +251,33 @@ class TestOptionalRegions:
 
         with pytest.raises(HudError):
             parse_regions("0.1,0.2,0.05,0.05; nonsense")
+
+
+class TestLiveRoundOverride:
+    """Post-plant the spike icon replaces the timer, so there is no clock to argue with and
+    the model's "buy phase" call stood. But the round boundaries already prove the round is
+    live: the barrier dropped and the next buy phase has not started."""
+
+    def test_an_unreadable_clock_inside_a_live_round_is_still_live(self) -> None:
+        verdict = constrain_phase("pre_round", HudRead(None, None, 0.0, 0), live_round=True)
+        assert verdict.overridden and verdict.phase == "mid"
+        assert verdict.reason and "round" in verdict.reason
+
+    def test_no_hud_read_at_all_inside_a_live_round_is_still_live(self) -> None:
+        verdict = constrain_phase("pre_round", None, live_round=True)
+        assert verdict.overridden and verdict.phase == "mid"
+
+    def test_spectating_is_never_overridden_even_inside_a_live_round(self) -> None:
+        verdict = constrain_phase("spectating", None, live_round=True)
+        assert not verdict.overridden
+
+    def test_outside_a_live_round_nothing_changes(self) -> None:
+        assert not constrain_phase("pre_round", None, live_round=False).overridden
+
+    def test_a_readable_clock_still_wins_and_says_why(self) -> None:
+        verdict = constrain_phase("pre_round", HudRead("1:39", 99.0, 1.0, 4), live_round=True)
+        assert verdict.overridden and verdict.phase == "early"
+        assert verdict.reason and "1:39" in verdict.reason
+
+    def test_a_phase_the_clock_does_not_bound_is_left_alone(self) -> None:
+        assert not constrain_phase("mid", None, live_round=True).overridden

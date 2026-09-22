@@ -453,7 +453,7 @@ def test_a_decided_round_is_not_coached(samples: list[FrameSample]) -> None:
     # 5 alive against 1, nobody on screen: standing still is running the clock down, not
     # a positioning mistake.
     transport = FakeTransport(
-        _situation(teammates_alive=4, enemies_alive=1, enemies_visible=0),
+        _situation(phase="mid", teammates_alive=4, enemies_alive=1, enemies_visible=0),
         _findings(check_id="positioning.off_angle_static", category="positioning"),
     )
     result = review(transport, samples)
@@ -541,3 +541,77 @@ def test_no_correction_is_announced_when_the_model_was_right(
     result = review(transport, samples, hud=HudRead("1:34", 94.0, 1.0, 4))
     assert not result.hud_override
     assert "corrected" not in transport.calls[1].prompt.lower()
+
+
+def test_a_window_too_big_for_the_context_is_retried_with_fewer_frames(
+    samples: list[FrameSample],
+) -> None:
+    """Measured: twelve 1280px frames need about 17,300 tokens, over the 16,384 default.
+    Losing the whole review to that is worse than reviewing it on half the pictures."""
+    from round_review.errors import OllamaError
+
+    class Picky:
+        """Refuses any coach call carrying more than two images, the way Ollama refuses
+        a request bigger than num_ctx."""
+
+        def __init__(self) -> None:
+            self.calls: list[ChatRequest] = []
+
+        def chat(self, request: ChatRequest) -> ChatResponse:
+            self.calls.append(request)
+            if len(request.images_b64) > 2:
+                raise OllamaError(
+                    "Ollama HTTP 400: request (17310 tokens) exceeds the available "
+                    "context size (16384 tokens), try increasing it"
+                )
+            content = SITUATION if len(self.calls) == 1 else GOOD
+            return ChatResponse(content=content, prompt_eval_count=0, eval_count=0)
+
+    transport = Picky()
+    result = review(transport, samples, situation_pass=False)
+    assert len(result.findings) == 1
+    assert len(transport.calls[-1].images_b64) <= 2
+    assert any("context" in w.lower() for w in result.warnings)
+
+
+def test_an_ollama_error_that_is_not_about_context_still_fails(
+    samples: list[FrameSample],
+) -> None:
+    from round_review.errors import OllamaError
+
+    class Broken:
+        def chat(self, request: ChatRequest) -> ChatResponse:
+            raise OllamaError("connection refused")
+
+    with pytest.raises(OllamaError, match="connection refused"):
+        review(Broken(), samples, situation_pass=False)
+
+
+def test_the_advantage_gate_does_not_fire_in_the_opening_of_a_round(
+    samples: list[FrameSample],
+) -> None:
+    """Seven seconds after the barrier drops nobody is 4v1 up. Trusting the model's
+    scoreboard read there dropped two real findings in a measured review."""
+    transport = FakeTransport(
+        _situation(phase="early", teammates_alive=4, enemies_alive=1, enemies_visible=0),
+        _findings(check_id="positioning.off_angle_static", category="positioning"),
+    )
+    assert len(review(transport, samples).findings) == 1
+
+
+def test_the_advantage_gate_still_fires_later_in_a_round(samples: list[FrameSample]) -> None:
+    transport = FakeTransport(
+        _situation(phase="mid", teammates_alive=4, enemies_alive=1, enemies_visible=0),
+        _findings(check_id="positioning.off_angle_static", category="positioning"),
+    )
+    assert review(transport, samples).findings == ()
+
+
+def test_a_hidden_clock_inside_a_live_round_still_gets_coached(
+    samples: list[FrameSample],
+) -> None:
+    transport = FakeTransport(_situation(phase="pre_round"), GOOD)
+    result = review(transport, samples, hud=None, live_round=True)
+    assert result.hud_override
+    assert result.abstained_reason is None
+    assert "inside a live round" in transport.calls[1].prompt

@@ -193,6 +193,7 @@ def constrain_phase(
     read: HudRead | None,
     buy_phase_max_s: float = DEFAULT_BUY_PHASE_MAX_S,
     min_confidence: float = 0.8,
+    live_round: bool = False,
 ) -> PhaseVerdict:
     """Correct the model's phase where the clock proves it wrong, and leave it otherwise.
 
@@ -200,10 +201,27 @@ def constrain_phase(
     down". That is exactly the claim a misread turns into a skipped window, so it is the
     only override made here.
     """
-    if read is None or read.clock_s is None or read.confidence < min_confidence:
-        return PhaseVerdict(model_phase, False)
     if model_phase in NEVER_OVERRIDDEN:
         return PhaseVerdict(model_phase, False)
+    readable = read is not None and read.clock_s is not None and read.confidence >= min_confidence
+
+    # Post-plant the spike icon replaces the timer, so there is no clock to argue with and
+    # the model's "buy phase" call used to stand. The round boundaries settle it anyway:
+    # inside a live round the barrier has dropped and the next buy phase has not started.
+    if live_round and not readable:
+        if model_phase is not None and model_phase not in CLOCK_BOUNDED_PHASES:
+            return PhaseVerdict(model_phase, False)
+        claimed = model_phase or "unreadable"
+        return PhaseVerdict(
+            "mid",
+            True,
+            f"the round clock is not on screen, but this moment sits inside a live round "
+            f"between the barrier dropping and the next buy phase; corrected {claimed} to mid",
+        )
+
+    if not readable:
+        return PhaseVerdict(model_phase, False)
+    assert read is not None and read.clock_s is not None  # narrowed by `readable`
     if read.clock_s <= buy_phase_max_s:
         return PhaseVerdict(model_phase, False)
     if model_phase is not None and model_phase not in CLOCK_BOUNDED_PHASES:

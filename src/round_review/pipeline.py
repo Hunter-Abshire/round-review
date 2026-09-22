@@ -237,11 +237,6 @@ def _identify_agent(
     cfg = deps.config
     if not cfg.hud_check:
         return None
-    templates = AgentTemplates.load(
-        cfg.hud_agent_templates_path or default_data_dir() / "hud-agent-icons.json"
-    )
-    if not templates.agents_to_kits:
-        return None
     try:
         abilities = parse_regions(cfg.hud_ability_regions)
     except RoundReviewError as exc:
@@ -251,19 +246,27 @@ def _identify_agent(
         return None
     # A handful of moments spread across the clip, so one obscured frame cannot decide it.
     moments = [(w.start_s + w.end_s) / 2 for w in windows[:: max(1, len(windows) // 5)]][:5]
-    name, score = identify_from_frames(
-        recording,
-        moments,
-        abilities,
-        deps.ffmpeg_runner,
-        templates,
-        out_dir=out_dir / "agent-icons",
-        min_confidence=cfg.hud_agent_min_confidence,
-        threshold=threshold,
+
+    templates = AgentTemplates.load(
+        cfg.hud_agent_templates_path or default_data_dir() / "hud-agent-icons.json"
     )
-    if name:
-        log.info("ability icons identify the agent as %s (%.0f%%)", name, score * 100)
-        return name
+    if templates.agents_to_kits:
+        name, score = identify_from_frames(
+            recording,
+            moments,
+            abilities,
+            deps.ffmpeg_runner,
+            templates,
+            out_dir=out_dir / "agent-icons",
+            min_confidence=cfg.hud_agent_min_confidence,
+            threshold=threshold,
+        )
+        if name:
+            log.info("ability icons identify the agent as %s (%.0f%%)", name, score * 100)
+            return name
+    # No learned icons, or none matched. Ask the model the one narrow question instead.
+    if not cfg.ask_model_for_agent:
+        return None
     return _ask_model_for_agent(recording, deps, moments, abilities, out_dir, threshold)
 
 
@@ -432,6 +435,19 @@ def _resolve_threshold(
     return found
 
 
+def _in_live_round(spans: tuple[RoundSpan, ...], window: Window) -> bool:
+    """Whether this window sits between a barrier drop and the next buy phase.
+
+    That alone proves the round is live, which is the only thing that can overrule the
+    model post-plant: the spike icon replaces the timer, so there is no clock to cite.
+    """
+    middle = (window.start_s + window.end_s) / 2
+    return any(
+        span.start_s <= middle < (span.end_s if span.live_end_s is None else span.live_end_s)
+        for span in spans
+    )
+
+
 def _round_of(spans: tuple[RoundSpan, ...], window: Window) -> int | None:
     span = round_at(spans, window.start_s)
     return span.index if span else None
@@ -573,6 +589,7 @@ def review_file(
                 state=_read_window_state(
                     recording, window, deps, hud_templates, frames_dir, threshold
                 ),
+                live_round=_in_live_round(spans, window),
             )
         except ParseError as exc:
             # One unreadable window is a warning; every window unreadable fails the file.

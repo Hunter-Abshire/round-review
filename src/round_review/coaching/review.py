@@ -26,7 +26,7 @@ from round_review.coaching.prompt import (
     build_system_prompt,
 )
 from round_review.coaching.situation import Situation, parse_situation
-from round_review.errors import ParseError
+from round_review.errors import OllamaError, ParseError
 from round_review.llm.client import build_chat_request, send_review
 from round_review.llm.transport import Transport
 from round_review.video.frames import FrameSample, encode_frame_b64
@@ -57,8 +57,15 @@ def _needs_contact(finding: Finding) -> bool:
 
 
 def _decided_round(situation: Situation | None) -> bool:
-    """True when the player's side is far enough ahead that waiting wins the round."""
+    """True when the player's side is far enough ahead that waiting wins the round.
+
+    Never in the opening of a round: seven seconds after the barrier drops nobody has a
+    decisive advantage, and trusting the model's scoreboard read there cost two real
+    findings in a measured review.
+    """
     if situation is None or situation.enemies_visible:
+        return False
+    if situation.phase == "early":
         return False
     enemies = situation.enemies_alive
     mates = situation.teammates_alive
@@ -66,6 +73,21 @@ def _decided_round(situation: Situation | None) -> bool:
         return False
     # teammates_alive may or may not count the player, so compare on the pessimistic reading.
     return mates - enemies >= DECISIVE_ADVANTAGE
+
+
+# Ollama reports this as a 400 with the token counts in the body. Matching on the text is
+# unpleasant but the alternative is losing a whole review to one oversized window.
+CONTEXT_ERROR_MARKERS: tuple[str, ...] = ("exceeds the available context", "exceed_context_size")
+
+
+def _too_big_for_context(error: OllamaError) -> bool:
+    text = str(error).lower()
+    return any(marker.lower() in text for marker in CONTEXT_ERROR_MARKERS)
+
+
+def _halve(images: list[str]) -> list[str]:
+    """Keep every other picture, so the ones kept still span the window."""
+    return images[::2] if len(images) > 2 else images[:1]
 
 
 def _relevant_findings(
@@ -161,6 +183,7 @@ def review_window(
     situation_frames: int = 3,
     coach_frames: int = 0,
     state: HudState | None = None,
+    live_round: bool = False,
 ) -> WindowResult:
     """Pass 1 (optional) asks the model to describe what is on screen; a failed pass 1 is a
     warning. Pass 2 coaches against the checklist and retries once with a JSON-only nudge;
@@ -208,19 +231,27 @@ def review_window(
         if situation is not None:
             # The clock is ground truth the model cannot argue with: a round timer above the
             # buy phase maximum proves the round is live, whatever the model called it.
-            verdict = constrain_phase(situation.phase, hud, buy_phase_max_s, hud_min_confidence)
+            verdict = constrain_phase(
+                situation.phase, hud, buy_phase_max_s, hud_min_confidence, live_round
+            )
             if verdict.overridden:
                 claimed = situation.phase or "unreadable"
                 situation = replace(situation, phase=verdict.phase)
                 hud_override = True
                 warnings.append(f"HUD override: {verdict.reason}")
                 clock = hud.clock_text if hud else None
+                proof = (
+                    f"the round clock says {clock}"
+                    if clock
+                    else "this moment sits inside a live round, between the barrier dropping "
+                    "and the next buy phase"
+                )
                 clock_correction = (
-                    f"Correction, read from the pixels: the round clock says {clock}, so this "
-                    f"is live play, not the buy phase. The scene read below called it "
-                    f"{claimed} and its summary may repeat that. It is wrong. Judge this as "
-                    f"a {verdict.phase} moment in a live round and ignore any claim that "
-                    "the barrier is up or that the round has not started."
+                    f"Correction, measured rather than inferred: {proof}, so this is live "
+                    f"play, not the buy phase. The scene read below called it {claimed} and "
+                    f"its summary may repeat that. It is wrong. Judge this as a "
+                    f"{verdict.phase} moment in a live round and ignore any claim that the "
+                    "barrier is up or that the round has not started."
                 )
 
         if situation is not None and situation.phase in (None, "pre_round", "spectating"):
@@ -250,7 +281,22 @@ def review_window(
     for attempt in range(2):
         text = prompt if attempt == 0 else prompt + RETRY_NUDGE
         request = build_chat_request(model, system, text, images, FINDING_SCHEMA, timeout_s)
-        response = send_review(request, transport, calls_today + calls, cap)
+        try:
+            response = send_review(request, transport, calls_today + calls, cap)
+        except OllamaError as exc:
+            calls += 1
+            if not _too_big_for_context(exc) or len(images) <= 1:
+                raise
+            # Half the pictures is a worse review of this window. No review of it is worse
+            # still, and the whole file fails on the first window that does not fit.
+            images = _halve(images)
+            warnings.append(
+                f"window did not fit the model's context, retried on {len(images)} frame(s); "
+                "lower coach_frames or raise num_ctx to stop losing detail here"
+            )
+            log.warning("window %d exceeded num_ctx, retrying with fewer frames", window.index)
+            request = build_chat_request(model, system, text, images, FINDING_SCHEMA, timeout_s)
+            response = send_review(request, transport, calls_today + calls, cap)
         calls += 1
         try:
             findings, parse_warnings = parse_findings(response.content, window, samples, check_ids)

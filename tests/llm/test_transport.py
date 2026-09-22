@@ -66,7 +66,7 @@ def test_posts_expected_body_to_api_chat() -> None:
     assert body["model"] == "qwen3-vl:8b"
     assert body["stream"] is False
     assert body["format"] == {"type": "object"}
-    assert body["options"] == {"temperature": 0.2, "num_ctx": 16384}
+    assert body["options"] == {"temperature": 0.2, "num_ctx": 24576}
     assert body["think"] is False
     assert body["messages"][0] == {"role": "system", "content": "be a coach"}
     assert body["messages"][1]["role"] == "user"

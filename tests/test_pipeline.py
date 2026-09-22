@@ -132,6 +132,9 @@ def make_deps(tmp_path: Path, transport: FakeTransport, **overrides: object) -> 
         "edge_skip_s": 30.0,
         "daily_call_cap": 30,
         "situation_pass": False,
+        # Off by default here: it is one extra call per clip and every fixture below
+        # would have to budget a canned answer for it. Tested on its own instead.
+        "ask_model_for_agent": False,
     }
     settings.update(overrides)
     return Deps(
@@ -337,6 +340,7 @@ def test_situation_pass_doubles_calls_and_records_situation(video: Path, tmp_pat
             ledger_path=deps.config.ledger_path,
             coverage="sampled",
             situation_pass=True,
+            ask_model_for_agent=False,
         ),
         probe_runner=deps.probe_runner,
         ffmpeg_runner=deps.ffmpeg_runner,

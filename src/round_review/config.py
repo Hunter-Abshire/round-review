@@ -14,7 +14,10 @@ from round_review.errors import ConfigError, RoundReviewError
 
 APP_NAME = "round-review"
 ENV_PREFIX = "ROUND_REVIEW_"
-DEFAULT_NUM_CTX = 16384
+# Measured: a 12-second window at 1 fps and 1280px is about 17,300 tokens on the coach
+# pass, so the old 16,384 could not fit its own default frame count and every review
+# died on the first window. 24,576 fits six frames with room for the checklist.
+DEFAULT_NUM_CTX = 24576
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,7 +59,7 @@ class Config:
     situation_frames: int = 3
     # Frames the coach pass carries. 0 = every extracted frame, which is the most detail and
     # the slowest call; lower it if calls are timing out.
-    coach_frames: int = 0
+    coach_frames: int = 6
     # Frames a "what should I have done here" question carries, and the longest stretch of
     # footage one question may cover.
     question_frames: int = 6
@@ -108,6 +111,12 @@ class Config:
     # Ability-icon templates that name the agent. Learned with `hud learn-agent`.
     hud_agent_templates_path: Path | None = None
     hud_agent_min_confidence: float = 0.75
+    # Off, because it was measured and it does not work. Asked the narrow question with
+    # only the four ability icons and a closed list of names, qwen3.5:9b answered "Omen"
+    # at 0.9 confidence for a Veto kit. A confident wrong agent is worse than no agent,
+    # and the prompt already handles not knowing. `hud learn-agent` is the path that
+    # works; this stays as an option for anyone whose model does better.
+    ask_model_for_agent: bool = False
 
 
 def feedback_file(config: Config) -> Path:
@@ -374,7 +383,8 @@ FIELDS: tuple[FieldSpec, ...] = (
         "coach_frames",
         "Reading the scene",
         "Frames for coaching",
-        "Frames the coaching pass carries. 0 sends every frame of the window.",
+        "Frames the coaching pass carries, spread across it. 0 sends every frame, which "
+        "usually will not fit the context.",
         "int",
         minimum=0,
         maximum=60,
@@ -426,6 +436,15 @@ FIELDS: tuple[FieldSpec, ...] = (
         "One x,y,w,h region per ability slot, separated by semicolons. Empty turns it off.",
         "text",
         advanced=True,
+    ),
+    FieldSpec(
+        "ask_model_for_agent",
+        "Round clock",
+        "Ask the model which agent",
+        "One extra call per clip identifying the agent from its ability icons. Measured "
+        "wrong and confident on a small local model, so teaching the icons with "
+        "hud learn-agent is the path that works.",
+        "bool",
     ),
     FieldSpec(
         "hud_agent_min_confidence",

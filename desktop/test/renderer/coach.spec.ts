@@ -137,3 +137,22 @@ describe('renderFindingList grouped by category', () => {
     expect(positioning?.textContent).toContain('2');
   });
 });
+
+describe('focus card trends', () => {
+  it('says a persistent habit has come up every recent match', () => {
+    const root = document.createElement('div');
+    const base = summary();
+    renderCoachPanel(
+      root,
+      { ...base, focus: base.focus.map(h => ({ ...h, trend: 'persistent' as const })) },
+      () => undefined,
+    );
+    expect(root.textContent).toContain('every recent match');
+  });
+
+  it('shows no trend at all when there is no history', () => {
+    const root = document.createElement('div');
+    renderCoachPanel(root, summary(), () => undefined);
+    expect(root.querySelector('.trend')).toBeNull();
+  });
+});

@@ -22,6 +22,7 @@ def _habit_to_dict(habit: Habit, base_dir: Path, checklist: Checklist) -> dict[s
         "count": habit.count,
         "windows": list(habit.windows),
         "score": habit.score,
+        "trend": habit.trend,
         "mean_confidence": habit.mean_confidence,
         "timestamps": [f.timestamp_s for f in habit.instances],
         "observation": habit.lead.observation,

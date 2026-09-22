@@ -98,6 +98,11 @@ class Config:
     hud_agent_min_confidence: float = 0.75
 
 
+def habits_file(config: Config) -> Path:
+    """Where the cross-match habit history lives: beside the ledger, like identities."""
+    return config.ledger_path.parent / "habits.json"
+
+
 def identities_file(config: Config) -> Path:
     """Where clip identities live: the configured path, else beside the ledger."""
     return config.identities_path or config.ledger_path.parent / "identities.json"

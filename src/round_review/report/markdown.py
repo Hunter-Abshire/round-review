@@ -111,17 +111,35 @@ def _render_window(result: WindowResult, base_dir: Path, checklist: Checklist) -
     return lines
 
 
+# Said in the player's terms rather than as a tag: "you have been doing this for weeks" is
+# the sentence that makes a habit feel like a habit.
+TREND_SUFFIX: dict[str | None, str] = {
+    "new": ", new this match",
+    "repeat": ", seen before",
+    "improving": ", improving",
+    "persistent": ", every recent match",
+}
+TREND_NOTE: dict[str, str] = {
+    "repeat": "This came up in a recent match too.",
+    "improving": "This is happening less often than it used to. Keep going.",
+    "persistent": "This has come up in every one of your recent matches. It is the habit, "
+    "not the match.",
+}
+
+
 def _render_habit(index: int, habit: Habit, base_dir: Path) -> list[str]:
     """One focus item: what happened, where to look, and what to do instead."""
     times = "once" if habit.count == 1 else f"{habit.count} times"
     lines = [
         f"### {index}. {first_sentence(habit.lead.observation)}",
         "",
-        f"*{habit.category}, {times}*",
+        f"*{habit.category}, {times}{TREND_SUFFIX.get(habit.trend, '')}*",
         "",
     ]
     if habit.count > 1:
         lines += [f"The same habit showed up {times} in this recording.", ""]
+    if habit.trend and habit.trend != "new":
+        lines += [TREND_NOTE[habit.trend], ""]
     moments = ", ".join(_clock(f.timestamp_s) for f in habit.instances[:5])
     lines += [f"**Where to look:** {moments}", ""]
     lines += [f"**What you could see:** {habit.lead.visible_evidence}", ""]

@@ -4,6 +4,7 @@ import type {
   ConfigDocument,
   ConfigField,
   Habit,
+  HabitTrend,
   Knowledge,
   PlayerContext,
   Report,
@@ -508,6 +509,21 @@ const jumpRow = (timestamps: number[], onSeek: (timestampS: number) => void): HT
   return wrap;
 };
 
+// Said in the player's words. A tag like "PERSISTENT" reads as a database column; "every
+// recent match" reads as something a coach would actually tell you.
+const TREND_LABEL: Record<HabitTrend, string> = {
+  new: 'new',
+  repeat: 'seen before',
+  improving: 'improving',
+  persistent: 'every recent match',
+};
+const TREND_HELP: Record<HabitTrend, string> = {
+  new: 'This did not come up in your recent matches.',
+  repeat: 'This came up in a recent match too.',
+  improving: 'This is happening less often than it used to.',
+  persistent: 'This has come up in every one of your recent matches.',
+};
+
 const focusCard = (
   index: number,
   habit: Habit,
@@ -522,6 +538,11 @@ const focusCard = (
 
   const times = habit.count === 1 ? 'once' : `${habit.count} times`;
   card.append(el('p', 'focus-meta', `${habit.category} · ${times}`));
+  if (habit.trend) {
+    const trend = el('span', `trend trend-${habit.trend}`, TREND_LABEL[habit.trend]);
+    trend.title = TREND_HELP[habit.trend];
+    head.append(trend);
+  }
   card.append(jumpRow(habit.timestamps, onSeek));
   const fix = el('div', 'section fix');
   fix.append(el('span', 'section-label', 'Try instead'));

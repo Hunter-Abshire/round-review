@@ -216,3 +216,56 @@ class TestFirstSentence:
         from round_review.coaching.session import first_sentence
 
         assert first_sentence("Held a wide angle") == "Held a wide angle"
+
+
+# ---------------------------------------------------------------- cross-match trends
+
+
+def test_habits_carry_their_trend_when_history_is_given() -> None:
+    from round_review.coaching.session import build_session_summary as build
+
+    results = [result(0, [finding("positioning.one_line", "positioning", 1.0)])]
+    summary = build(results, None, trends={"positioning.one_line": "persistent"})
+    assert summary.focus[0].trend == "persistent"
+
+
+def test_a_habit_without_history_has_no_trend() -> None:
+    from round_review.coaching.session import build_session_summary as build
+
+    summary = build([result(0, [finding("positioning.one_line", "positioning", 1.0)])], None)
+    assert summary.focus[0].trend is None
+
+
+def test_a_persistent_habit_outranks_an_equal_new_one() -> None:
+    from round_review.coaching.session import build_session_summary as build
+
+    results = [
+        result(
+            0,
+            [
+                finding("positioning.one_line", "positioning", 1.0),
+                finding("peeking.wide_swing_known", "peeking", 2.0),
+            ],
+        )
+    ]
+    summary = build(
+        results,
+        None,
+        trends={"positioning.one_line": "new", "peeking.wide_swing_known": "persistent"},
+    )
+    assert summary.focus[0].check_id == "peeking.wide_swing_known"
+
+
+def test_the_habit_counts_for_history_come_out_of_the_summary() -> None:
+    from round_review.coaching.session import habit_counts
+
+    results = [
+        result(
+            0,
+            [
+                finding("positioning.one_line", "positioning", 1.0),
+                finding("positioning.one_line", "positioning", 2.0),
+            ],
+        )
+    ]
+    assert habit_counts(results) == {"positioning.one_line": 2}

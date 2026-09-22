@@ -156,6 +156,7 @@ export const habit = (overrides: Partial<Habit> = {}): Habit => ({
   count: 3,
   windows: [0, 1, 2],
   score: 18,
+  trend: null,
   mean_confidence: 0.8,
   timestamps: [34, 50, 70],
   observation: 'You re-peeked A Main from the same spot about a second after trading shots.',

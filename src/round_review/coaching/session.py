@@ -17,9 +17,10 @@ review products ship; docs/coaching-quality.md records the sources. The parts th
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
+from round_review.coaching.history import HabitTrend
 from round_review.coaching.knowledge import (
     Checklist,
     load_checklist,
@@ -86,6 +87,8 @@ class Habit:
     instances: tuple[Finding, ...]
     mean_confidence: float
     score: int
+    # How this check has behaved across recent matches, when there is history to compare.
+    trend: HabitTrend | None = None
 
     @property
     def lead(self) -> Finding:
@@ -112,6 +115,16 @@ class SessionSummary:
     windows_reviewed: int
 
 
+# Only a tie-breaker: a carried-over habit edges out a one-off with the same score.
+TREND_RANK: Mapping[HabitTrend | None, int] = {
+    "persistent": 3,
+    "repeat": 2,
+    "new": 1,
+    "improving": 0,
+    None: 1,
+}
+
+
 def recurrence_points(count: int, mean_confidence: float) -> int:
     """0-3, on the scale the coaching research uses: repetition is the strongest signal that
     something is a habit rather than an accident."""
@@ -136,7 +149,12 @@ def _score(category: str, count: int, mean_confidence: float) -> int:
     )
 
 
-def _habit(check_id: str, findings: Sequence[tuple[int, Finding]], checklist: Checklist) -> Habit:
+def _habit(
+    check_id: str,
+    findings: Sequence[tuple[int, Finding]],
+    checklist: Checklist,
+    trends: Mapping[str, HabitTrend] | None = None,
+) -> Habit:
     # The clearest instance leads, so the player has one moment to go and look at.
     ordered = sorted(findings, key=lambda pair: (-pair[1].confidence, pair[1].timestamp_s))
     instances = tuple(finding for _, finding in ordered)
@@ -152,6 +170,7 @@ def _habit(check_id: str, findings: Sequence[tuple[int, Finding]], checklist: Ch
         instances=instances,
         mean_confidence=mean_confidence,
         score=_score(category, len(instances), mean_confidence),
+        trend=(trends or {}).get(check_id),
     )
 
 
@@ -168,8 +187,11 @@ def _group(
 
 
 def _rank(habits: Sequence[Habit]) -> list[Habit]:
+    # A habit the player has carried across matches breaks a tie against one seen once,
+    # which is the same repetition argument recurrence_points makes inside a match. It is
+    # only a tie-breaker: the documented weights still decide the order.
     # Alphabetical last so an identical score always produces the same report.
-    return sorted(habits, key=lambda h: (-h.score, -h.count, h.check_id))
+    return sorted(habits, key=lambda h: (-h.score, -TREND_RANK[h.trend], -h.count, h.check_id))
 
 
 def _practice_for(habit: Habit) -> PracticeItem | None:
@@ -210,17 +232,35 @@ def _verdict(focus: Sequence[Habit], windows: int) -> str:
     return f"{first_sentence(lead.lead.observation)} ({lead.category}, {times})."
 
 
+def habit_counts(results: Sequence[WindowResult]) -> dict[str, int]:
+    """How often each check fired in this review, which is what history records."""
+    counts: dict[str, int] = {}
+    for result in results:
+        for found in result.findings:
+            counts[found.check_id] = counts.get(found.check_id, 0) + 1
+    return counts
+
+
 def build_session_summary(
-    results: Sequence[WindowResult], rank: str | None, checklist: Checklist | None = None
+    results: Sequence[WindowResult],
+    rank: str | None,
+    checklist: Checklist | None = None,
+    trends: Mapping[str, HabitTrend] | None = None,
 ) -> SessionSummary:
     """Merge, rank and cap the review into an action set, and choose one thing to practise."""
     checklist = checklist or load_checklist()
 
     habits = _rank(
-        [_habit(check_id, found, checklist) for check_id, found in _group(results, False).items()]
+        [
+            _habit(check_id, found, checklist, trends)
+            for check_id, found in _group(results, False).items()
+        ]
     )
     hindsight = _rank(
-        [_habit(check_id, found, checklist) for check_id, found in _group(results, True).items()]
+        [
+            _habit(check_id, found, checklist, trends)
+            for check_id, found in _group(results, True).items()
+        ]
     )
     focus = tuple(habits[:MAX_FOCUS_ITEMS])
     also_seen = tuple(habits[MAX_FOCUS_ITEMS:])

@@ -93,3 +93,46 @@ def test_write_report_creates_file(tmp_path: Path) -> None:
     path = write_report(build_report(out), out)
     assert path == out / "report.md"
     assert path.read_text(encoding="utf-8").startswith("# Review: match.mp4")
+
+
+def test_a_persistent_habit_says_so_in_the_report(tmp_path: Path) -> None:
+    from dataclasses import replace as _replace
+
+    report = _with_summary(tmp_path)
+    assert report.summary is not None
+    tagged = _replace(
+        report.summary,
+        focus=tuple(_replace(h, trend="persistent") for h in report.summary.focus),
+    )
+    text = render_report(_replace(report, summary=tagged), tmp_path)
+    assert "every recent match" in text
+    assert "It is the habit, not the match." in text
+
+
+def test_a_new_habit_is_not_given_a_history_note(tmp_path: Path) -> None:
+    from dataclasses import replace as _replace
+
+    report = _with_summary(tmp_path)
+    assert report.summary is not None
+    tagged = _replace(
+        report.summary, focus=tuple(_replace(h, trend="new") for h in report.summary.focus)
+    )
+    text = render_report(_replace(report, summary=tagged), tmp_path)
+    assert "new this match" in text
+    assert "It is the habit" not in text
+
+
+def _with_summary(tmp_path: Path) -> Report:
+    from dataclasses import replace as _replace
+
+    from round_review.coaching.session import build_session_summary
+
+    report = build_report(tmp_path)
+    # The stock fixture's finding leans on later information, so it lands in hindsight.
+    results = [
+        _replace(w, findings=tuple(_replace(f, information_revealed_later="") for f in w.findings))
+        for w in report.results
+    ]
+    return _replace(
+        report, results=tuple(results), summary=build_session_summary(results, rank=None)
+    )

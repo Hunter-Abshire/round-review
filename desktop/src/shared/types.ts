@@ -183,6 +183,8 @@ export interface StrengthItem {
 }
 
 /** One habit: a checklist item and every time it came up in this review. */
+export type HabitTrend = 'new' | 'repeat' | 'improving' | 'persistent';
+
 export interface Habit {
   check_id: string;
   check_label: string | null;
@@ -190,6 +192,7 @@ export interface Habit {
   count: number;
   windows: number[];
   score: number;
+  trend: HabitTrend | null;
   mean_confidence: number;
   timestamps: number[];
   observation: string;

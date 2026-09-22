@@ -11,6 +11,7 @@ from pathlib import Path
 
 from round_review.coaching.context import PlayerContext, merge_context
 from round_review.coaching.frames import select_situation_frames
+from round_review.coaching.history import MatchHabits, append_match, read_history, tag_habits
 from round_review.coaching.knowledge import CoachingKnowledge, load_knowledge
 from round_review.coaching.parse import Finding
 from round_review.coaching.prompt import (
@@ -29,9 +30,9 @@ from round_review.coaching.question import (
     parse_answer,
 )
 from round_review.coaching.review import WindowResult, review_window
-from round_review.coaching.session import build_session_summary
+from round_review.coaching.session import build_session_summary, habit_counts
 from round_review.coaching.situation import Situation, parse_situation
-from round_review.config import Config, default_data_dir, identities_file
+from round_review.config import Config, default_data_dir, habits_file, identities_file
 from round_review.diagnosis import abstention_warning
 from round_review.errors import (
     AlreadyProcessed,
@@ -502,6 +503,11 @@ def review_file(
         _record(deps, key, path, "failed", calls, None, unreadable, 0, time.monotonic() - started)
         raise unreadable
 
+    # Tagged before this match is recorded, so it is never compared against itself.
+    counts = habit_counts(results)
+    history_path = habits_file(cfg)
+    trends = tag_habits(counts, read_history(history_path), windows=len(results))
+
     report = Report(
         recording,
         deps.clock(),
@@ -509,7 +515,12 @@ def review_file(
         tuple(results),
         tuple(warnings),
         stopped_reason=f"{type(stopped).__name__}: {stopped}" if stopped else None,
-        summary=build_session_summary(results, rank=context.rank, checklist=knowledge.checklist),
+        summary=build_session_summary(
+            results,
+            rank=context.rank,
+            checklist=knowledge.checklist,
+            trends=trends,
+        ),
     )
     report_path = write_report(report, out_dir)
     write_report_json(report, out_dir)
@@ -517,6 +528,11 @@ def review_file(
     identity = identity_index(key, results)
     if identity:
         write_identity(identities_file(cfg), identity)
+    if counts:
+        append_match(
+            history_path,
+            MatchHabits(key=key, reviewed_at=deps.clock(), windows=len(results), counts=counts),
+        )
     _record(
         deps,
         key,

@@ -11,7 +11,7 @@ from pathlib import Path
 
 from round_review.coaching.context import PlayerContext, merge_context
 from round_review.coaching.frames import select_situation_frames
-from round_review.coaching.knowledge import load_knowledge
+from round_review.coaching.knowledge import CoachingKnowledge, load_knowledge
 from round_review.coaching.parse import Finding
 from round_review.coaching.prompt import (
     RETRY_NUDGE,
@@ -53,6 +53,8 @@ from round_review.ledger import (
 )
 from round_review.llm.client import build_chat_request, send_review
 from round_review.llm.transport import Transport, UrllibTransport
+from round_review.reference.corpus import build_corpus, load_notes
+from round_review.reference.search import Hit, build_index, search
 from round_review.report.json_report import write_report_json
 from round_review.report.markdown import Report, write_report
 from round_review.video.frames import encode_frame_b64, extract_frames, extract_single_frame
@@ -348,6 +350,29 @@ def review_file(
     return report
 
 
+def _references(
+    cfg: Config, knowledge: CoachingKnowledge, question: str, context: PlayerContext
+) -> list[Hit]:
+    """Retrieve reference passages for a question. Never fails the question: an unreadable
+    notes folder means no references, not no answer."""
+    if cfg.reference_passages <= 0:
+        return []
+    try:
+        notes = load_notes(cfg.notes_dir)
+    except RoundReviewError as exc:
+        log.warning("notes could not be read, answering without them: %s", exc)
+        notes = []
+    corpus = build_corpus(knowledge, notes)
+    tags = [tag for tag in (context.agent, context.map) if tag]
+    return search(
+        build_index(corpus),
+        question,
+        limit=cfg.reference_passages,
+        tags=tags,
+        max_chars=cfg.max_reference_chars,
+    )
+
+
 def answer_question(
     path: Path,
     deps: Deps,
@@ -403,7 +428,10 @@ def answer_question(
             context = merge_context(context, situation.to_context())
 
     system = build_question_system_prompt(knowledge, situation.phase if situation else None)
-    prompt = build_question_prompt(window, asked_samples, spec, context, situation, knowledge)
+    references = _references(cfg, knowledge, spec.question, context)
+    prompt = build_question_prompt(
+        window, asked_samples, spec, context, situation, knowledge, references
+    )
     images = [encode_frame_b64(s.path) for s in asked_samples]
 
     last_error: ParseError | None = None
@@ -415,10 +443,12 @@ def answer_question(
         response = send_review(request, deps.transport, history_calls + calls, cfg.daily_call_cap)
         calls += 1
         try:
-            return parse_answer(response.content, spec)
+            answer = parse_answer(response.content, spec)
         except ParseError as exc:
             last_error = exc
             log.warning("answer attempt %d unparseable: %s", attempt + 1, exc)
+        else:
+            return replace(answer, sources=tuple(hit.passage.title for hit in references))
 
     assert last_error is not None
     raise ParseError(f"could not read an answer after a retry: {last_error}", model_calls=calls)

@@ -206,3 +206,55 @@ class TestParseAnswer:
     def test_garbage_is_a_parse_error(self) -> None:
         with pytest.raises(ParseError):
             parse_answer("I think you played fine", QuestionSpec(100.0, 112.0, "q"))
+
+
+class TestReferences:
+    def hits(self) -> list[Any]:
+        from round_review.reference.corpus import Passage
+        from round_review.reference.search import Hit
+
+        return [
+            Hit(Passage("note:1", "note", "Viper Bind", "Wall from spawn covers B plant."), 4.2),
+            Hit(Passage("map:bind", "map", "Bind", "Teleporters and Hookah."), 2.1),
+        ]
+
+    def test_retrieved_passages_are_quoted_with_their_titles(self) -> None:
+        text = build_question_prompt(
+            WINDOW,
+            SAMPLES,
+            QuestionSpec(100.0, 112.0, "viper wall?"),
+            PlayerContext(),
+            None,
+            load_knowledge(),
+            references=self.hits(),
+        )
+        assert "Viper Bind" in text
+        assert "Wall from spawn covers B plant." in text
+        assert "Teleporters and Hookah." in text
+
+    def test_the_model_is_told_where_the_reference_came_from(self) -> None:
+        text = build_question_prompt(
+            WINDOW,
+            SAMPLES,
+            QuestionSpec(100.0, 112.0, "q"),
+            PlayerContext(),
+            None,
+            load_knowledge(),
+            references=self.hits(),
+        )
+        lower = text.lower()
+        assert "your own notes" in lower or "note" in lower
+        # and that a reference is not evidence about these frames
+        assert "frames" in lower
+
+    def test_no_references_changes_nothing(self) -> None:
+        plain = build_question_prompt(
+            WINDOW,
+            SAMPLES,
+            QuestionSpec(100.0, 112.0, "q"),
+            PlayerContext(),
+            None,
+            load_knowledge(),
+            references=[],
+        )
+        assert "Reference" not in plain

@@ -190,3 +190,44 @@ def test_an_empty_question_is_rejected_before_any_model_call(video: Path, tmp_pa
             video, make_deps(tmp_path, transport), QuestionSpec(40.0, 52.0, "   "), PlayerContext()
         )
     assert transport.calls == []
+
+
+def test_notes_and_knowledge_are_retrieved_for_the_question(video: Path, tmp_path: Path) -> None:
+    notes = tmp_path / "notes"
+    notes.mkdir()
+    (notes / "lineups.md").write_text(
+        "# Viper wall on Bind\nStand on the box in attacker spawn and aim at the third tile.\n"
+    )
+    transport = FakeTransport(SITUATION, ANSWER)
+    deps = make_deps(tmp_path, transport, notes_dir=notes)
+    answer = answer_question(
+        video,
+        deps,
+        QuestionSpec(40.0, 52.0, "What is my Viper wall lineup for Bind?"),
+        PlayerContext(),
+    )
+    prompt = transport.calls[1].prompt
+    assert "third tile" in prompt  # the player's own note reached the model
+    assert answer.sources
+    assert any("Viper wall on Bind" in s for s in answer.sources)
+
+
+def test_retrieval_can_be_switched_off(video: Path, tmp_path: Path) -> None:
+    notes = tmp_path / "notes"
+    notes.mkdir()
+    (notes / "n.md").write_text("# Thing\nsomething very distinctive here\n")
+    transport = FakeTransport(SITUATION, ANSWER)
+    deps = make_deps(tmp_path, transport, notes_dir=notes, reference_passages=0)
+    answer = answer_question(video, deps, QuestionSpec(40.0, 52.0, "thing?"), PlayerContext())
+    assert "something very distinctive" not in transport.calls[1].prompt
+    assert answer.sources == ()
+
+
+def test_a_bad_notes_folder_does_not_stop_the_answer(video: Path, tmp_path: Path) -> None:
+    notes = tmp_path / "notes"
+    notes.mkdir()
+    (notes / "huge.md").write_text("x" * (2 * 1024 * 1024))
+    transport = FakeTransport(SITUATION, ANSWER)
+    deps = make_deps(tmp_path, transport, notes_dir=notes)
+    answer = answer_question(video, deps, QuestionSpec(40.0, 52.0, "why?"), PlayerContext())
+    assert answer.answerable is True  # the question is still answered

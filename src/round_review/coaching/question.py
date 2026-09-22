@@ -31,6 +31,7 @@ from round_review.coaching.parse import extract_json
 from round_review.coaching.prompt import PERSONA
 from round_review.coaching.situation import Situation
 from round_review.errors import ParseError
+from round_review.reference.search import Hit
 from round_review.video.frames import FrameSample
 from round_review.video.windows import Window
 
@@ -81,6 +82,8 @@ class Answer:
     alternatives: tuple[Alternative, ...]
     confidence: float
     warnings: tuple[str, ...] = ()
+    # Titles of the reference passages the answer was given, so it can be audited.
+    sources: tuple[str, ...] = ()
 
 
 ANSWER_SCHEMA: dict[str, Any] = {
@@ -163,6 +166,7 @@ def build_question_prompt(
     context: PlayerContext,
     situation: Situation | None,
     knowledge: CoachingKnowledge,
+    references: Sequence[Hit] = (),
 ) -> str:
     from round_review.coaching.prompt import _captions, _clock_range
 
@@ -186,6 +190,17 @@ def build_question_prompt(
         f"{_clock_range(window.end_s)} of the recording. You are given {len(samples)} frames, "
         f"attached in this order:\n{_captions(samples)}"
     )
+    if references:
+        quoted = "\n\n".join(
+            f"[{hit.passage.kind}] {hit.passage.title}\n{hit.passage.text}" for hit in references
+        )
+        sections.append(
+            "Reference material, retrieved because it matches the question. Passages marked "
+            "note are the player's own written notes and you should treat them as correct "
+            "about their setups and team calls. Reference material describes the game in "
+            "general; it is not evidence about these frames, so do not claim you saw "
+            f"something because a reference mentions it.\n\n{quoted}"
+        )
     sections.append(
         "Answer their question from these frames. Give the answer first, then what was "
         "visible, then what only became clear later, then your assumptions, then up to "

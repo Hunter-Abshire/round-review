@@ -16,11 +16,14 @@ import click
 import uvicorn
 
 from round_review.coaching.context import PlayerContext, context_from_mapping
+from round_review.coaching.knowledge import load_knowledge
 from round_review.coaching.question import QuestionSpec
 from round_review.config import Config, default_config_path, default_data_dir, load_config
 from round_review.errors import RoundReviewError
 from round_review.ledger import is_processed, read_ledger, recording_key
 from round_review.pipeline import Deps, answer_question, make_default_deps, review_file
+from round_review.reference.corpus import build_corpus, load_notes
+from round_review.reference.search import build_index, search
 from round_review.server.app import create_app
 from round_review.server.jobs import JobOptions, JobQueue, ProgressFn
 from round_review.validation.scenes import (
@@ -198,6 +201,51 @@ def _with_coverage(
     if max_windows is not None:
         config = replace(config, max_windows=max_windows)
     return config
+
+
+@main.group()
+def reference() -> None:
+    """Inspect what the coach can look up when you ask it a question.
+
+    Questions are answered from the bundled briefs plus your own notes folder, retrieved by
+    keyword. Nothing is fetched from the internet.
+    """
+
+
+@reference.command("search")
+@click.argument("question", nargs=-1, required=True)
+@click.option("--limit", type=int, default=5, help="How many passages to show.")
+@click.option("--agent", default=None, help="Favour passages about this agent.")
+@click.option("--map", "game_map", default=None, help="Favour passages about this map.")
+@click.pass_obj
+def reference_search(
+    config: Config, question: tuple[str, ...], limit: int, agent: str | None, game_map: str | None
+) -> None:
+    """Show which reference passages a question would retrieve, and their scores."""
+    text = " ".join(question)
+    try:
+        notes = load_notes(config.notes_dir)
+    except RoundReviewError as exc:
+        _fail(exc)
+        return
+    corpus = build_corpus(load_knowledge(), notes)
+    tags = [tag for tag in (agent, game_map) if tag]
+    hits = search(
+        build_index(corpus),
+        text,
+        limit=limit,
+        tags=tags,
+        max_chars=config.max_reference_chars,
+    )
+    where = f" ({len(notes)} from your notes)" if notes else " (no notes folder configured)"
+    click.echo(f"{len(corpus)} passages searched{where}\n")
+    if not hits:
+        click.echo("Nothing matched that question.")
+        return
+    for hit in hits:
+        click.echo(f"[{hit.passage.kind}] {hit.passage.title}  (score {hit.score:.1f})")
+        body = hit.passage.text.replace("\n", " ")
+        click.echo(f"    {body[:160]}{'...' if len(body) > 160 else ''}\n")
 
 
 @main.group()

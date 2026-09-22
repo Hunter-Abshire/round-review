@@ -57,6 +57,13 @@ class Config:
     # footage one question may cover.
     question_frames: int = 6
     max_question_span_s: float = 60.0
+    # A folder of your own markdown or text notes (lineups, team calls, a coach's advice).
+    # Their sections are searched alongside the bundled briefs when you ask a question.
+    notes_dir: Path | None = None
+    # How many reference passages an asked question may carry, and their size budget.
+    # 0 switches retrieval off entirely.
+    reference_passages: int = 4
+    max_reference_chars: int = 4000
     # Keep the model loaded between calls; a review is dozens of calls back to back.
     ollama_keep_alive: str = "30m"
     # Give up after this many windows in a row are skipped before coaching. A model that
@@ -105,7 +112,7 @@ NON_NEGATIVE_KEYS: frozenset[str] = frozenset(
     }
 )
 PATH_KEYS: frozenset[str] = frozenset(
-    {"recordings_dir", "reports_dir", "ledger_path", "hud_templates_path"}
+    {"recordings_dir", "reports_dir", "ledger_path", "hud_templates_path", "notes_dir"}
 )
 COVERAGE_MODES: frozenset[str] = frozenset({"full", "sampled"})
 

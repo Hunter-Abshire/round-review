@@ -486,3 +486,58 @@ def test_config_init_can_set_the_recordings_folder(
     result = CliRunner().invoke(cli.main, ["config", "init", "--recordings-dir", str(vids)])
     assert result.exit_code == 0, result.output
     assert f'recordings_dir = "{vids.as_posix()}"' in target.read_text()
+
+
+def test_reference_search_shows_what_a_question_would_retrieve(
+    patched: dict[str, object], tmp_path: Path
+) -> None:
+    result = CliRunner().invoke(
+        cli.main, ["reference", "search", "What is my Viper wall lineup for Bind?"]
+    )
+    assert result.exit_code == 0, result.output
+    assert "viper" in result.output.lower()
+    assert "[agent]" in result.output or "[map]" in result.output
+    assert "score" in result.output.lower()
+
+
+def test_reference_search_counts_the_notes_it_found(
+    monkeypatch: pytest.MonkeyPatch, patched: dict[str, object], cfg: Config, tmp_path: Path
+) -> None:
+    import dataclasses
+
+    notes = tmp_path / "notes"
+    notes.mkdir()
+    (notes / "n.md").write_text("# Viper Bind\nWall from the left box covers B.")
+    monkeypatch.setattr(
+        cli,
+        "load_config",
+        lambda path, env, data_dir=None: dataclasses.replace(cfg, notes_dir=notes),
+    )
+    result = CliRunner().invoke(cli.main, ["reference", "search", "viper wall bind"])
+    assert result.exit_code == 0, result.output
+    assert "1 from your notes" in result.output
+    assert "[note]" in result.output
+
+
+def test_reference_search_says_when_nothing_matches(patched: dict[str, object]) -> None:
+    result = CliRunner().invoke(cli.main, ["reference", "search", "zzzz qqqq xxxx"])
+    assert result.exit_code == 0
+    assert "nothing" in result.output.lower()
+
+
+def test_reference_search_reports_a_broken_notes_folder(
+    monkeypatch: pytest.MonkeyPatch, patched: dict[str, object], cfg: Config, tmp_path: Path
+) -> None:
+    import dataclasses
+
+    notes = tmp_path / "notes"
+    notes.mkdir()
+    (notes / "huge.md").write_text("x" * (2 * 1024 * 1024))
+    monkeypatch.setattr(
+        cli,
+        "load_config",
+        lambda path, env, data_dir=None: dataclasses.replace(cfg, notes_dir=notes),
+    )
+    result = CliRunner().invoke(cli.main, ["reference", "search", "anything"])
+    assert result.exit_code == 1
+    assert "KnowledgeError" in result.output

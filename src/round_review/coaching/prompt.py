@@ -335,7 +335,10 @@ def build_coach_prompt(
         sections.append(f"Coaching priorities at this rank: {focus}")
     agent = find_agent(knowledge.agents, context.agent)
     if agent:
-        sections.append(render_agent_brief(agent))
+        # On a buy window only the kit matters, for budgeting utility against the gun. The
+        # rest of the brief is about fights the player has not had yet.
+        if not buy_phase:
+            sections.append(render_agent_brief(agent))
         kit = ", ".join(f"{name} ({key})" for key, name, _purpose in agent.abilities)
         sections.append(
             f"{agent.name} has exactly these abilities: {kit}. Any other ability belongs to "
@@ -350,7 +353,9 @@ def build_coach_prompt(
             "Coach only what you can see: position, timing, angles, movement and trades."
         )
     game_map = find_map(knowledge.maps, context.map)
-    if game_map:
+    # 4,100 characters of callouts and power positions decide nothing about a purchase; the
+    # economy brief carries the one line about what this map's sightlines mean for a weapon.
+    if game_map and not buy_phase:
         sections.append(render_map_brief(game_map))
     # Prices and thresholds, only where a purchase is being judged. Everywhere else it is
     # 1,500 tokens spent on a decision the player is not making.

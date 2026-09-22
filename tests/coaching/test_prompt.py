@@ -157,3 +157,44 @@ def test_a_known_agent_gets_its_brief_and_no_warning() -> None:
     text = build_coach_prompt(WINDOW, SAMPLES, PlayerContext(agent="Veto"), None, knowledge)
     assert "Agent brief: Veto" in text
     assert "do not name any ability" not in text.lower()
+
+
+def test_a_buy_prompt_drops_the_briefs_it_cannot_use() -> None:
+    """A purchase is not judged on power positions and entry timings. The map brief is
+    4,100 characters of site callouts, and the economy brief already carries the one line
+    about what this map's sightlines mean for a weapon."""
+    from round_review.coaching.context import PlayerContext
+    from round_review.coaching.knowledge import load_knowledge
+    from round_review.coaching.prompt import build_coach_prompt
+
+    knowledge = load_knowledge()
+    context = PlayerContext(rank="Gold 2", agent="Veto", map="Ascent", side="defense")
+    buy = build_coach_prompt(WINDOW, SAMPLES, context, None, knowledge, buy_phase=True)
+    fight = build_coach_prompt(WINDOW, SAMPLES, context, None, knowledge)
+
+    assert "Map brief" not in buy and "Map brief" in fight
+    assert "Power positions" not in buy
+    assert "Economy brief" in buy and "Economy brief" not in fight
+    # The map still reaches the buy prompt, as the one line that changes a weapon choice.
+    assert "worst shotgun map" in buy
+    assert len(buy) < len(fight) + 4000
+
+
+def test_the_buy_prompt_keeps_the_agent_kit_for_utility_budgeting() -> None:
+    from round_review.coaching.context import PlayerContext
+    from round_review.coaching.knowledge import load_knowledge
+    from round_review.coaching.prompt import build_coach_prompt
+
+    knowledge = load_knowledge()
+    buy = build_coach_prompt(
+        WINDOW,
+        SAMPLES,
+        PlayerContext(agent="Veto", map="Ascent"),
+        None,
+        knowledge,
+        buy_phase=True,
+    )
+    # Which abilities exist decides how much of the buy should go to utility.
+    assert "Chokehold" in buy
+    # ...but not the combat coaching around them.
+    assert "good play looks like" not in buy.lower()

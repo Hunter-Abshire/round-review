@@ -707,9 +707,7 @@ def test_an_unreadable_clock_says_so_instead_of_quietly_tiling(
 
     monkeypatch.setattr(pipeline_module, "_scan_rounds", lambda *a, **k: ())
     # Tiling covers the whole clip, so it needs more answers than a sampled review.
-    deps = make_deps(
-        tmp_path, FakeTransport(*[good(35.0)] * 40), coverage="rounds", hud_check=True
-    )
+    deps = make_deps(tmp_path, FakeTransport(*[good(35.0)] * 40), coverage="rounds", hud_check=True)
     report = review_file(video, deps)
     assert any("round" in w.lower() and "clock" in w.lower() for w in report.warnings)
 

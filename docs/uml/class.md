@@ -267,6 +267,37 @@ classDiagram
         +float aspect
     }
 
+    class Habit {
+        +str check_id
+        +str category
+        +int count
+        +tuple~int~ windows
+        +tuple~Finding~ instances
+        +int score
+        +lead() Finding
+    }
+    class SessionSummary {
+        +str verdict
+        +tuple~Habit~ focus
+        +tuple~Strength~ strengths
+        +tuple~Habit~ hindsight
+        +tuple~Habit~ also_seen
+        +PracticeItem practice
+        +str rank_focus
+    }
+    class PracticeItem {
+        +str rule
+        +str drill
+        +str success_check
+    }
+    class Strength {
+        +float timestamp_s
+        +str check_id
+        +str observation
+        +str why_it_worked
+        +float confidence
+    }
+
     class JobOptions {
         +bool force
         +str coverage
@@ -318,6 +349,12 @@ classDiagram
     WindowResult o-- Window
     WindowResult o-- FrameSample
     WindowResult o-- Finding
+    WindowResult o-- Strength
+    SessionSummary o-- Habit
+    SessionSummary o-- Strength
+    SessionSummary o-- PracticeItem
+    Habit o-- Finding
+    Report o-- SessionSummary
     Finding --> FrameSample : evidence_frame
     WindowResult o-- Situation
     WindowResult o-- PlayerContext
@@ -356,6 +393,8 @@ classDiagram
 | `coaching.situation` | `Situation` | `parse_situation` |
 | `coaching.prompt` | `FINDING_SCHEMA`, `SITUATION_SCHEMA` | `build_system_prompt(knowledge, phase)`, `build_situation_prompt`, `build_coach_prompt` |
 | `coaching.parse` | `Finding` | `parse_findings(text, window)`, `extract_json(text)` |
+| `coaching.session` | `Habit`, `SessionSummary`, `PracticeItem` | `build_session_summary`: merge, rank, cap, choose one thing to practise |
+| `coaching.frames` | | `select_situation_frames`: the frame budget per pass |
 | `coaching.review` | `WindowResult` | `review_window(..., context, knowledge, situation_pass)`: pass 1 situation, pass 2 coach with one retry |
 | `report.markdown` | `Report` | `render_report`, `write_report` |
 | `pipeline` | `Deps` | `review_file(path, deps, on_progress)`, `make_default_deps(config)`, `key_for(path)`, `report_dir_for(config, path)` |

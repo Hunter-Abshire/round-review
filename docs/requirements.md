@@ -1,6 +1,6 @@
 # round-review requirements
 
-Version 0.6 (review cost). Last updated 2026-09-21.
+Version 0.7 (coaching report). Last updated 2026-09-21.
 
 ## Purpose
 
@@ -47,6 +47,13 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | FR-24 | A review that abstained on most of its windows says so in plain words, counts the reasons, and points at scene validation, instead of being indistinguishable from a review of flawless play. Reports carry `partial` and `stopped_reason`. |
 | FR-25 | The round clock is read deterministically, with no model involved: ffmpeg crops the timer region to a grayscale raster and the digits are segmented and matched against templates learned from the player's own footage. Reading a HUD never fails a review; an unreadable HUD is simply no evidence. |
 | FR-26 | A clock above `buy_phase_max_s` (default 45 s, above both the buy phase and the post-plant spike timer) proves the round is live and pre-plant, and overrides a model phase of `pre_round`, `post_plant`, `retake` or unreadable. `spectating` is never overridden, because the clock belongs to whoever is being watched. Any override is recorded in the report. |
+| FR-31 | Each window may report up to two strengths: specific, evidence-bound things the player did right. Praise that is vague, filler, or shorter than a phrase is dropped rather than shown, and zero strengths is a valid result. |
+| FR-32 | Findings sharing a checklist id are merged into one habit carrying every instance and timestamp. Habits are ranked by recurrence and by what the category of mistake costs, and the action set is capped at three. |
+| FR-33 | The report is ordered verdict, corrections, strengths, hindsight-dependent findings, everything else, practice. Corrections precede praise deliberately. |
+| FR-34 | Findings that depend on information revealed after the decision are reported in their own section rather than counted against the player. |
+| FR-35 | Every review ends with exactly one in-game rule, one drill and a success check, chosen for the top-ranked habit from `knowledge/drills.json`. |
+| FR-36 | Every report states what it could not see: the sampled coverage, the absence of per-round outcome data, and that it reads neither comms nor intent. |
+| FR-37 | The desktop review view opens with the coach panel, with clickable jumps to every instance of a habit, and groups the findings sidebar by category. |
 | FR-28 | The scene-reading pass carries `situation_frames` frames spread across the window rather than every extracted frame, because it runs for every window including the ones it skips. Requests keep the model resident between calls. |
 | FR-29 | Reviews record their window count and duration in the ledger, and each clip shows an estimated review time derived from what past reviews on this machine actually took. |
 | FR-30 | A review that skips `abstain_streak_limit` windows in a row stops, is recorded as partial, and names scene validation as the thing to check. |
@@ -111,6 +118,7 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | `situation_frames` | 3 | Frames the scene pass carries; 0 = all of them |
 | `ollama_keep_alive` | 30m | Keep the model resident between calls |
 | `abstain_streak_limit` | 20 | Give up after this many skipped windows in a row; 0 = never |
+| `coach_frames` | 0 | Frames the coach pass carries; 0 = all of them |
 | `coverage` | full | `full` tiles the whole recording; `sampled` takes `windows_per_file` windows |
 | `hud_check` | true | Read the round clock deterministically and veto phase misreads |
 | `hud_timer_region` | 0.455,0.020,0.090,0.055 | Timer box as fractions of the frame; verify with `hud crop` |
@@ -124,7 +132,7 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | `poll_s` | 20 | Watcher poll interval |
 | `quiet_polls` | 3 | Consecutive unchanged polls before a file is stable |
 | `min_age_s` | 120 | Minimum mtime age before a file is stable |
-| `request_timeout_s` | 300 | Ollama request timeout |
+| `request_timeout_s` | 900 | Ollama request timeout; a coach call with a dozen frames is slow |
 | `api_port` | 8765 | Loopback port for the local API used by the desktop app |
 
 ## Known risks

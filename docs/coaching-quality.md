@@ -138,6 +138,62 @@ what past reviews on that machine actually took.
 The deeper point stands: full coverage of a real match pays for a great deal of buy phase,
 walking and spectating. Encounter-anchored windows remain the right answer.
 
+## How the report is shaped, and why (2026-09-21)
+
+The output is now modelled on how coaches actually give feedback rather than on what the
+model happens to emit. The design decisions and their sources:
+
+- **At most three focus items, fewer preferred.** The best-supported number in the
+  literature. Medical-education guidance says two or three per session; esports practice
+  guidance says one to three goals and warns against ten; Valorant review checklists say one
+  or two mistakes per session. Carpentier & Mageau found corrective-feedback *volume*
+  independently predicted lower competence satisfaction, so more items is worse even when
+  every item is correct.
+- **Corrections first, praise after.** Henley & DiGennaro Reed tested feedback order
+  directly: corrective-positive-positive performed best, positive-positive-corrective worst.
+  The feedback sandwich is contested rather than debunked, but praise-first is the one
+  arrangement with no support, and Ivey research (2025) found recipients detect buffer
+  praise and discount both halves.
+- **No praise ratio.** The famous 5:1 descends from Fredrickson & Losada, whose model was
+  mathematically invalidated and formally withdrawn. Strengths are included when they are
+  genuine and specific, zero to three of them, never padded.
+- **Praise describes behaviour, never ability.** Mueller & Dweck: ability praise produced
+  challenge avoidance and worse resilience. The parser drops praise shorter than 25
+  characters or matching a filler phrase, because generic praise is the automated-feedback
+  failure mode users dismiss.
+- **Merge symptoms into habits.** Findings sharing a checklist id become one habit with all
+  its timestamps. Six symptoms of one habit make a report look thorough and the player look
+  hopeless.
+- **Rank by recurrence and cost.** `coaching/session.py` scores each habit as
+  `3*recurrence + 3*cost + 2*control + upstream`, following the factors and weights in the
+  research. Recurrence uses the published 0-3 scale. Cost, control and upstream come from a
+  per-category table, standing in for the per-round outcome data that sampled frames cannot
+  give; every report says so.
+- **Grade the decision, not the result.** Baron & Hershey's outcome bias is robust even in
+  people who say they are ignoring outcomes. Findings that lean on later-revealed
+  information are reported in their own section rather than counted against the player.
+- **One practice item, with a success check.** Locke & Latham on specific attainable goals;
+  Ericsson's criteria via Bubna et al. require it be solo-repeatable with its own feedback
+  signal. Category rules and drills live in `knowledge/drills.json`, paired because published
+  rank training plans pair one drill with one in-game rule.
+- **State what could not be seen.** No product in the market publishes an observability
+  note. For a frame-sampling reviewer it is the difference between trustworthy and merely
+  confident, so every report names the sampled coverage, the absence of round outcomes, and
+  that it cannot read comms or intent.
+
+Sources: Kluger & DeNisi (1996) feedback intervention theory; Hattie & Timperley feedback
+levels; Carpentier & Mageau (2013, 2016) autonomy-supportive feedback; Henley & DiGennaro
+Reed (2015) feedback order; Brown, Sokal & Friedman and Nickerson (2018) on positivity
+ratios; Mueller & Dweck (1998); Baron & Hershey (1988) and its 2023 replication; Kalyuga et
+al. on expertise reversal; Locke & Latham; Bubna et al. (2023) esports deliberate practice;
+Otte et al. (2020) on overcoaching. Product conventions from UpForge, Omnic Forge, Leetify,
+Refrag Coach, Scope.gg, Mobalytics, Metafy's coach handbook and BetterGamer.
+
+Not built yet: **cross-match habit tracking.** Every competitor is weakest here and it is
+the one thing a per-match human review structurally cannot give. Tagging a habit NEW /
+REPEAT / IMPROVING / PERSISTENT needs history the ledger could carry, and it would make the
+"recurring" section far stronger than within-match repetition alone.
+
 ## Next implementation priorities
 
 1. Build the labelled validation set with `scenes scaffold` and run `scenes validate`

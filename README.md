@@ -284,6 +284,15 @@ Each finding has to cite a checklist item, say what was visible, separate what y
 what only became clear later, and name its assumptions. That is deliberate: it is what stops
 the model telling you that you should have known about an enemy you could not possibly see.
 
+The report itself is shaped like a coach's write-up rather than a list of everything the
+model noticed: one verdict, at most three prioritised fixes with every timestamp they
+occurred at, then what you did well, then one in-game rule and one drill for your next
+session. Repeats of the same mistake are merged into a single habit so three symptoms of one
+problem do not eat all three slots. Findings that only make sense with hindsight are put in
+their own section instead of counted against you, and every report states what it could not
+see. Those choices come from coaching-feedback research; the sources are in
+[docs/coaching-quality.md](docs/coaching-quality.md).
+
 The coaching knowledge lives in JSON under `src/round_review/coaching/knowledge/`: a checklist
 of 87 concrete checks, a brief for each of the 29 agents, and one for each of the 13 maps.
 Edit those files to change what the coach looks for; there is no need to touch the prompt.

@@ -17,9 +17,7 @@ from round_review.coaching.knowledge import AgentBrief, find_agent
 def ability_owners(agents: Mapping[str, AgentBrief]) -> dict[str, str]:
     """Lowercased ability name -> the name of the agent it belongs to."""
     return {
-        name.lower(): brief.name
-        for brief in agents.values()
-        for _key, name, _purpose in brief.abilities
+        ability.name.lower(): brief.name for brief in agents.values() for ability in brief.abilities
     }
 
 
@@ -41,13 +39,11 @@ def foreign_abilities(
     brief = find_agent(agents, agent)
     if brief is None:
         return ()
-    own = {name.lower() for _key, name, _purpose in brief.abilities}
+    own = {a.name.lower() for a in brief.abilities}
     found = {
         canonical
         for lowered, canonical in (
-            (name.lower(), name)
-            for other in agents.values()
-            for _key, name, _purpose in other.abilities
+            (a.name.lower(), a.name) for other in agents.values() for a in other.abilities
         )
         if lowered not in own and _pattern(canonical).search(text)
     }

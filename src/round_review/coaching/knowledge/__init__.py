@@ -76,11 +76,31 @@ class Checklist:
 
 
 @dataclass(frozen=True, slots=True)
+class Ability:
+    """One slot of a kit, with what it costs and whether that is worth paying.
+
+    Cost is free text rather than a number: signatures are free with paid extra charges,
+    Chamber sells bullets, and every one of these moves with a balance patch. A sentence
+    the model can quote beats a number that will be wrong in three months.
+    """
+
+    key: str
+    name: str
+    purpose: str
+    cost: str
+    when: str
+    verdict: str
+
+
+@dataclass(frozen=True, slots=True)
 class AgentBrief:
     id: str
     name: str
     role: str
-    abilities: tuple[tuple[str, str, str], ...]  # (key, name, purpose)
+    abilities: tuple[Ability, ...]
+    # Ultimate cost in points, and whether the agent can function on a pistol round.
+    ult_points: int
+    eco: str
     job_in_round: str
     good_play_looks_like: tuple[str, ...]
     common_mistakes: tuple[str, ...]
@@ -165,10 +185,13 @@ def parse_agents(data: Mapping[str, Any]) -> dict[str, AgentBrief]:
         if role not in ROLES:
             raise KnowledgeError(f"{where}: unknown role {role!r}")
         abilities = tuple(
-            (
-                str(_field(a, "key", where)),
-                str(_field(a, "name", where)),
-                str(_field(a, "purpose", where)),
+            Ability(
+                key=str(_field(a, "key", where)),
+                name=str(_field(a, "name", where)),
+                purpose=str(_field(a, "purpose", where)),
+                cost=str(_field(a, "cost", where)),
+                when=str(_field(a, "when", where)),
+                verdict=str(a.get("verdict", "")),
             )
             for a in _field(raw, "abilities", where)
         )
@@ -184,6 +207,8 @@ def parse_agents(data: Mapping[str, Any]) -> dict[str, AgentBrief]:
             common_mistakes=_strings(raw, "common_mistakes", where),
             ability_checks=_strings(raw, "ability_checks", where),
             tips=_strings(raw, "tips", where),
+            ult_points=int(_field(raw, "ult_points", where)),
+            eco=str(raw.get("eco", "")),
         )
     return agents
 
@@ -495,9 +520,26 @@ def _bullets(title: str, items: Sequence[str]) -> list[str]:
     return [f"{title}:", *[f"  - {i}" for i in items]] if items else []
 
 
+ECO_NOTE: dict[str, str] = {
+    "strong": "functions on a pistol round: the key ability is free or very cheap",
+    "crippled": "needs most of the kit to function, so an eco round costs more than the gun",
+}
+
+
 def render_agent_brief(agent: AgentBrief) -> str:
-    lines = [f"Agent brief: {agent.name} ({agent.role}). {agent.job_in_round}"]
-    lines += _bullets("Abilities", [f"{k} {n}: {p}" for k, n, p in agent.abilities])
+    eco = ECO_NOTE.get(agent.eco)
+    head = f"Agent brief: {agent.name} ({agent.role}). {agent.job_in_round}"
+    if eco:
+        head += f" On a thin buy, {agent.name} {eco}."
+    lines = [head]
+    lines += _bullets(
+        "Abilities",
+        [
+            f"{a.key} {a.name} ({a.cost}): {a.purpose} Use it: {a.when}."
+            + (f" Worth it? {a.verdict}." if a.verdict else "")
+            for a in agent.abilities
+        ],
+    )
     lines += _bullets("Good play looks like", agent.good_play_looks_like)
     lines += _bullets("Common mistakes to look for", agent.common_mistakes)
     lines += _bullets("HUD ability checks", agent.ability_checks)

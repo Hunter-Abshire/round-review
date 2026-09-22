@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from round_review.coaching.knowledge import (
+    Ability,
     AgentBrief,
     Checklist,
     MapBrief,
@@ -59,6 +60,7 @@ def test_find_agent_is_lenient_on_name() -> None:
                     "name": "KAY/O",
                     "role": "initiator",
                     "abilities": [],
+                    "ult_points": 8,
                     "job_in_round": "j",
                     "good_play_looks_like": [],
                     "common_mistakes": [],
@@ -190,15 +192,19 @@ def test_render_checklist_can_drop_checks_not_visible_in_frames() -> None:
 
 def test_render_agent_and_map_briefs() -> None:
     agent = AgentBrief(
-        "jett",
-        "Jett",
-        "duelist",
-        (("E", "Tailwind", "dash to reposition"),),
-        "entry",
-        ("dashes after kill",),
-        ("dies with dash up",),
-        ("dash icon lit at death = wasted",),
-        ("tip",),
+        id="jett",
+        name="Jett",
+        role="duelist",
+        abilities=(
+            Ability("E", "Tailwind", "dash to reposition", "free", "dash out after you tag", ""),
+        ),
+        ult_points=8,
+        eco="strong",
+        job_in_round="entry",
+        good_play_looks_like=("dashes after kill",),
+        common_mistakes=("dies with dash up",),
+        ability_checks=("dash icon lit at death = wasted",),
+        tips=("tip",),
     )
     text = render_agent_brief(agent)
     assert "Jett (duelist)" in text and "Tailwind" in text and "dies with dash up" in text

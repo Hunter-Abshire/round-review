@@ -8,22 +8,34 @@
         {
           "key": "C",
           "name": "Cloudburst",
-          "purpose": "2 short smokes (2.5s) to cut an angle while you cross, dash, or plant; not a controller smoke."
+          "purpose": "2 short smokes (2.5s) to cut an angle while you cross, dash, or plant; not a controller smoke.",
+          "cost": "200 each, two charges",
+          "when": "Smoke the two off-angles that watch your entry",
+          "verdict": "Buy both on a full buy"
         },
         {
           "key": "Q",
           "name": "Updraft",
-          "purpose": "1 charge: reach off-angles or escape vertically; the escape tool once Tailwind is spent."
+          "purpose": "1 charge: reach off-angles or escape vertically; the escape tool once Tailwind is spent.",
+          "cost": "150",
+          "when": "Take the height angle after the site is smoked",
+          "verdict": "Buy: 150 for an unexpected angle"
         },
         {
           "key": "E",
           "name": "Tailwind",
-          "purpose": "Activate then dash within 7.5s; recharges on 2 kills. Entry into site or bail after the first duel."
+          "purpose": "Activate then dash within 7.5s; recharges on 2 kills. Entry into site or bail after the first duel.",
+          "cost": "free, resets every two kills",
+          "when": "Dash in on the flash, or dash out after you tag",
+          "verdict": "Free: dying with the dash armed is the classic Jett error"
         },
         {
           "key": "X",
           "name": "Blade Storm",
-          "purpose": "Eco/force-round kill tool with knives that refresh on left-click kills; take Op-like duels without buying."
+          "purpose": "Eco/force-round kill tool with knives that refresh on left-click kills; take Op-like duels without buying.",
+          "cost": "8 ult points",
+          "when": "A free gun on an eco round",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Jett is first into site: she takes the opening duel, dashes out after taking damage, and lets the team trade. On defense she plays Operator or aggressive off-angles, takes one shot, and Tailwinds to safety before the swing.",
@@ -53,7 +65,9 @@
         "Your job is the first duel, not the last; take it and get out",
         "Save Updraft as a panic exit if Tailwind is down",
         "Pop Blade Storm on rounds where you have no gun, not when you have a Vandal"
-      ]
+      ],
+      "ult_points": 8,
+      "eco": "strong"
     },
     {
       "id": "phoenix",
@@ -63,22 +77,34 @@
         {
           "key": "C",
           "name": "Blaze",
-          "purpose": "Curvable fire wall that blocks vision and heals Phoenix; used to split a site or self-heal."
+          "purpose": "Curvable fire wall that blocks vision and heals Phoenix; used to split a site or self-heal.",
+          "cost": "150",
+          "when": "Wall through the choke and run your own entry through it",
+          "verdict": "Buy every round: 150 and it heals you"
         },
         {
           "key": "Q",
           "name": "Curveball",
-          "purpose": "2 curving flashes; pop from cover to blind a corner you are about to swing."
+          "purpose": "2 curving flashes; pop from cover to blind a corner you are about to swing.",
+          "cost": "free first, 250 for the second, a charge resets every two kills",
+          "when": "Curve it around the corner and swing on the count",
+          "verdict": "Buy the second on a full buy"
         },
         {
           "key": "E",
           "name": "Hot Hands",
-          "purpose": "Fireball molly: damage a corner or stand in it to heal; 1 charge, refreshes on 2 kills."
+          "purpose": "Fireball molly: damage a corner or stand in it to heal; 1 charge, refreshes on 2 kills.",
+          "cost": "200",
+          "when": "Molly the corner before you swing; it heals you too",
+          "verdict": "Buy when you can"
         },
         {
           "key": "X",
           "name": "Run It Back",
-          "purpose": "Free respawn marker; use to take a high-risk peek, dry entry, or scout a site for free."
+          "purpose": "Free respawn marker; use to take a high-risk peek, dry entry, or scout a site for free.",
+          "cost": "7 ult points",
+          "when": "A free entry: take the fight you would never take",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Phoenix self-flashes and enters site, using Blaze to cut off crossfire and Hot Hands to clear corners. On defense he holds close angles, self-heals off his wall or molly, and uses Run It Back to take fights he could not otherwise afford.",
@@ -108,7 +134,9 @@
         "Stand on the correct side of your wall before you throw it",
         "Ult is for a peek you would not take otherwise, then the real push",
         "Heal only when the map is quiet, not mid-execute"
-      ]
+      ],
+      "ult_points": 7,
+      "eco": "crippled"
     },
     {
       "id": "reyna",
@@ -118,22 +146,34 @@
         {
           "key": "C",
           "name": "Leer",
-          "purpose": "2 nearsight eyes (60 HP); throw above head height into site so defenders must shoot it or lose vision."
+          "purpose": "2 nearsight eyes (60 HP); throw above head height into site so defenders must shoot it or lose vision.",
+          "cost": "250 each, two charges",
+          "when": "Leer the angle and then swing it; do not leer and wait",
+          "verdict": "Buy one always, the second on a full buy"
         },
         {
           "key": "Q",
           "name": "Devour",
-          "purpose": "Consume a soul orb to heal 50 temporary HP; only when no second enemy can trade."
+          "purpose": "Consume a soul orb to heal 50 temporary HP; only when no second enemy can trade.",
+          "cost": "200, shared pool with Dismiss, needs a soul orb",
+          "when": "Take the orb right after a kill if you are staying in the fight",
+          "verdict": "Buy the extra charge on a full buy, but credits without kills buy nothing"
         },
         {
           "key": "E",
           "name": "Dismiss",
-          "purpose": "Consume a soul orb to go intangible 1.5s; the reposition after a kill. Default over Devour."
+          "purpose": "Consume a soul orb to go intangible 1.5s; the reposition after a kill. Default over Devour.",
+          "cost": "200, shared pool with Devour, needs a soul orb",
+          "when": "Dismiss the second you trade a kill and you are low",
+          "verdict": "Same pool as Devour"
         },
         {
           "key": "X",
           "name": "Empress",
-          "purpose": "Combat stim plus auto-Devour on kills; chain fights on a pushed site or a retake."
+          "purpose": "Combat stim plus auto-Devour on kills; chain fights on a pushed site or a retake.",
+          "cost": "7 ult points",
+          "when": "Open a round with it when you are confident, not as a comeback button",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Reyna throws Leer over the site, takes the first duel, and Dismisses out of the line of fire after the kill. On defense she takes aggressive early picks and relies on Leer plus Dismiss to escape; without a kill she has no utility, so she must play with the team.",
@@ -163,7 +203,9 @@
         "Leer above head height, tight before the swing",
         "No orbs means you are a trader, not an entry",
         "Empress before the site push, not after the fight"
-      ]
+      ],
+      "ult_points": 7,
+      "eco": "crippled"
     },
     {
       "id": "raze",
@@ -173,22 +215,34 @@
         {
           "key": "C",
           "name": "Boom Bot",
-          "purpose": "Ground drone that hunts and damages; clears close corners or flushes a lurker before entry."
+          "purpose": "Ground drone that hunts and damages; clears close corners or flushes a lurker before entry.",
+          "cost": "300",
+          "when": "Send it in first when you are entering a site blind",
+          "verdict": "First to cut on a force"
         },
         {
           "key": "Q",
           "name": "Blast Pack",
-          "purpose": "2 satchels for movement (satchel jump into site) or damage; slows now reduce mid-air force."
+          "purpose": "2 satchels for movement (satchel jump into site) or damage; slows now reduce mid-air force.",
+          "cost": "200 each, two charges",
+          "when": "Satchel into site after the flash, or out after you trade",
+          "verdict": "Buy both on a full buy: mobility, not damage"
         },
         {
           "key": "E",
           "name": "Paint Shells",
-          "purpose": "Cluster grenade for corners, post-plant denial, or after an enemy is stalled; refreshes on 2 kills."
+          "purpose": "Cluster grenade for corners, post-plant denial, or after an enemy is stalled; refreshes on 2 kills.",
+          "cost": "free, resets every two kills",
+          "when": "Nade the corner you know is held before you enter",
+          "verdict": "Free, and it can kill outright"
         },
         {
           "key": "X",
           "name": "Showstopper",
-          "purpose": "Rocket launcher for a guaranteed opening kill or stalling a retake; pair with a satchel jump."
+          "purpose": "Rocket launcher for a guaranteed opening kill or stalling a retake; pair with a satchel jump.",
+          "cost": "8 ult points",
+          "when": "Rocket the stacked choke or a post-plant",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Raze clears close corners with Boom Bot and Paint Shells, then satchels onto site to create the opening pick. On defense she delays with utility on chokes and plays for high-damage entry denial, using Showstopper to end retakes or stop a push.",
@@ -218,7 +272,9 @@
         "Nade a slowed or stalled enemy, not empty space",
         "Satchel in behind a flash, not before it",
         "Ult from an angle they have not pre-aimed"
-      ]
+      ],
+      "ult_points": 8,
+      "eco": "strong"
     },
     {
       "id": "yoru",
@@ -228,22 +284,34 @@
         {
           "key": "C",
           "name": "Fakeout",
-          "purpose": "Decoy that walks forward with your last weapon and flashes when shot; bait a peek or fake a push."
+          "purpose": "Decoy that walks forward with your last weapon and flashes when shot; bait a peek or fake a push.",
+          "cost": "200",
+          "when": "Send the clone down the choke to draw the first shot",
+          "verdict": "Buy when you can"
         },
         {
           "key": "Q",
           "name": "Blindside",
-          "purpose": "1 bounce flash (1.5s); bounce off a wall then swing. Only one charge since 12.05."
+          "purpose": "1 bounce flash (1.5s); bounce off a wall then swing. Only one charge since 12.05.",
+          "cost": "250, one charge",
+          "when": "Bounce it off the wall and swing on the flash",
+          "verdict": "Buy every round: it is his only flash now"
         },
         {
           "key": "E",
           "name": "Gatecrash",
-          "purpose": "Teleport beacon (20 HP, 20s active); use to enter behind a defender or to escape after a peek."
+          "purpose": "Teleport beacon (20 HP, 20s active); use to enter behind a defender or to escape after a peek.",
+          "cost": "free first, 150 for the second, resets every two kills",
+          "when": "Send the teleport in early, take the site, then teleport in behind them",
+          "verdict": "Buy the second on a full buy: his fakes need both"
         },
         {
           "key": "X",
           "name": "Dimensional Drift",
-          "purpose": "Invisible walk to scout or reposition behind enemies; cannot cast Blindside or set Fakeout while in it."
+          "purpose": "Invisible walk to scout or reposition behind enemies; cannot cast Blindside or set Fakeout while in it.",
+          "cost": "8 ult points",
+          "when": "A free info walk, or a reposition for a lurk",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Yoru creates a second front: teleport behind the site or fake a push with Fakeout, then flash and entry when the team commits. On defense he takes an early flash-assisted pick and Gatecrashes out, or uses the ult to gather information for the retake.",
@@ -273,7 +341,9 @@
         "Bounce every flash; a straight Blindside is a wasted charge",
         "Fake with the decoy where they expect you, go where they don't",
         "Time the flank to the team's push, not to your own boredom"
-      ]
+      ],
+      "ult_points": 8,
+      "eco": "crippled"
     },
     {
       "id": "neon",
@@ -283,22 +353,34 @@
         {
           "key": "C",
           "name": "Fast Lane",
-          "purpose": "Two electric walls that block vision; run a corridor into site without being shot from the sides."
+          "purpose": "Two electric walls that block vision; run a corridor into site without being shot from the sides.",
+          "cost": "300",
+          "when": "Two walls down the choke so you can run in without a crossfire",
+          "verdict": "Buy when you can"
         },
         {
           "key": "Q",
           "name": "Relay Bolt",
-          "purpose": "2 bouncing concuss bolts (2.5s); stun the corner you are about to slide onto."
+          "purpose": "2 bouncing concuss bolts (2.5s); stun the corner you are about to slide onto.",
+          "cost": "200",
+          "when": "Bounce the concuss into the corner right before you slide in",
+          "verdict": "Buy every round: it is what makes the slide survivable"
         },
         {
           "key": "E",
           "name": "High Gear",
-          "purpose": "Sprint (16s) plus a slide; 60s recharge so the sprint must be planned, not toggled on a whim."
+          "purpose": "Sprint (16s) plus a slide; 60s recharge so the sprint must be planned, not toggled on a whim.",
+          "cost": "free, slide resets every two kills",
+          "when": "Sprint the rotate, slide the entry, and never slide into an unflashed angle",
+          "verdict": "Free, and it is the whole agent"
         },
         {
           "key": "X",
           "name": "Overdrive",
-          "purpose": "Lightning beam with accuracy while sprinting; use to entry and chain kills on a stacked site."
+          "purpose": "Lightning beam with accuracy while sprinting; use to entry and chain kills on a stacked site.",
+          "cost": "8 ult points",
+          "when": "Take a site alone when they are a man down",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Neon uses Fast Lane and Relay Bolt to sprint and slide into site before defenders can set up, forcing the opening duel. On defense she takes fast off-angle peeks or rotates quicker than anyone to rejoin a retake; the 60s High Gear recharge means one big sprint per round.",
@@ -328,7 +410,9 @@
         "One sprint per round: spend it on the site hit",
         "Wall your path before you run it",
         "Ult up close on a stacked site, not from range"
-      ]
+      ],
+      "ult_points": 8,
+      "eco": "strong"
     },
     {
       "id": "iso",
@@ -338,22 +422,34 @@
         {
           "key": "C",
           "name": "Contingency",
-          "purpose": "Indestructible bullet-blocking wall that moves forward; cross a lane or push a defender off an angle."
+          "purpose": "Indestructible bullet-blocking wall that moves forward; cross a lane or push a defender off an angle.",
+          "cost": "200",
+          "when": "Push the wall through the choke and walk in behind it",
+          "verdict": "Buy every round: an indestructible bullet block for 200"
         },
         {
           "key": "Q",
           "name": "Undercut",
-          "purpose": "Bolt that applies Vulnerable and Suppress for 4s through walls; throw before a peek to disable a Sentinel or Op angle."
+          "purpose": "Bolt that applies Vulnerable and Suppress for 4s through walls; throw before a peek to disable a Sentinel or Op angle.",
+          "cost": "300",
+          "when": "Undercut through the wall before the peek to make the duel free",
+          "verdict": "Buy when you can, it got expensive"
         },
         {
           "key": "E",
           "name": "Double Tap",
-          "purpose": "Shield that absorbs one hit; orbs from downed enemies refresh it. Activate before every planned duel; instant weapon draw after cancel."
+          "purpose": "Shield that absorbs one hit; orbs from downed enemies refresh it. Activate before every planned duel; instant weapon draw after cancel.",
+          "cost": "free, refreshed by shooting orbs off damaged enemies",
+          "when": "Get the shield up before the first duel, not after",
+          "verdict": "Free: entering without the shield up is the Iso mistake"
         },
         {
           "key": "X",
           "name": "Kill Contract",
-          "purpose": "Pulls one enemy into a 1v1 arena (36m); isolate the anchor or the Op player before the push."
+          "purpose": "Pulls one enemy into a 1v1 arena (36m); isolate the anchor or the Op player before the push.",
+          "cost": "7 ult points",
+          "when": "Isolate their star player, or the last man on a retake",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Iso activates Double Tap, Undercuts the angle he is about to peek, and takes the first duel with the shield up while the team enters. On defense he holds an aggressive angle with the shield, uses Contingency to escape or reposition, and ults the most dangerous enemy on a retake.",
@@ -383,7 +479,9 @@
         "Undercut the angle, then swing it",
         "Wall to cross, not to hide",
         "Ult the enemy who wins the site, not the first one you see"
-      ]
+      ],
+      "ult_points": 7,
+      "eco": "strong"
     },
     {
       "id": "waylay",
@@ -393,22 +491,34 @@
         {
           "key": "C",
           "name": "Saturate",
-          "purpose": "Bouncing light bomb that Hinders (slows everything) for 3s; bounce into a corner before you enter."
+          "purpose": "Bouncing light bomb that Hinders (slows everything) for 3s; bounce into a corner before you enter.",
+          "cost": "300",
+          "when": "Hinder the anchor's angle right before you enter",
+          "verdict": "Skip on a half buy"
         },
         {
           "key": "Q",
           "name": "Light Speed",
-          "purpose": "Two dashes, first one can go up; entry across a gap or escape after a duel."
+          "purpose": "Two dashes, first one can go up; entry across a gap or escape after a duel.",
+          "cost": "300",
+          "when": "Dash in after the flash; the second dash is your exit",
+          "verdict": "Buy when you can"
         },
         {
           "key": "E",
           "name": "Refract",
-          "purpose": "Drop a beacon, then return to it for a free peek; the escape after a first-contact duel."
+          "purpose": "Drop a beacon, then return to it for a free peek; the escape after a first-contact duel.",
+          "cost": "free, resets every two kills",
+          "when": "Drop the beacon before you peek, recall it the moment you are traded on",
+          "verdict": "Free: a get-out-of-jail card every round"
         },
         {
           "key": "X",
           "name": "Convergent Paths",
-          "purpose": "Wide Hinder zone with an afterimage; aim restriction on enemies; use to break a stacked site or a retake."
+          "purpose": "Wide Hinder zone with an afterimage; aim restriction on enemies; use to break a stacked site or a retake.",
+          "cost": "8 ult points",
+          "when": "Hinder the whole site for an execute",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Waylay places Refract, dashes across the entry, takes the opening duel, and returns to safety, using Saturate to stop a defender from swinging. On defense she takes one fast off-angle fight and Refracts back before the trade, delaying pushes with Saturate on chokes.",
@@ -438,7 +548,9 @@
         "Saturate the corner, then walk in at normal speed",
         "One dash in, keep one for out",
         "Ult when the team is ready to push through it, not before"
-      ]
+      ],
+      "ult_points": 8,
+      "eco": "strong"
     },
     {
       "id": "sova",
@@ -448,22 +560,34 @@
         {
           "key": "C",
           "name": "Owl Drone",
-          "purpose": "Pilot a drone to scout and tag one enemy; clear a corner or confirm site presence before entry."
+          "purpose": "Pilot a drone to scout and tag one enemy; clear a corner or confirm site presence before entry.",
+          "cost": "400",
+          "when": "Fly into site on a slow default to find the anchor before you commit",
+          "verdict": "Full buy only: joint most expensive basic in the game"
         },
         {
           "key": "Q",
           "name": "Shock Bolt",
-          "purpose": "2 bolts (damage); lineups on post-plant defusers or to punish a revealed enemy."
+          "purpose": "2 bolts (damage); lineups on post-plant defusers or to punish a revealed enemy.",
+          "cost": "150 each, two charges",
+          "when": "Bolt the default plant spot the moment the spike lands",
+          "verdict": "Buy both every round, the cheapest damage utility going"
         },
         {
           "key": "E",
           "name": "Recon Bolt",
-          "purpose": "Reveals enemies in a radius; the pre-execute and retake info tool, 50s cooldown."
+          "purpose": "Reveals enemies in a radius; the pre-execute and retake info tool, 50s cooldown.",
+          "cost": "free, 50s cooldown",
+          "when": "Fire before the execute, then again after first contact",
+          "verdict": "Free: two per round if you manage the cooldown"
         },
         {
           "key": "X",
           "name": "Hunter's Fury",
-          "purpose": "3 wall-piercing energy blasts; punish revealed or post-plant enemies through walls."
+          "purpose": "3 wall-piercing energy blasts; punish revealed or post-plant enemies through walls.",
+          "cost": "8 ult points",
+          "when": "Wall-bang the choke you know they are stacked behind",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Sova gives the team information before it commits: Recon Bolt the site, drone the close corners, and Shock Bolt any revealed enemy. On defense he recons the main choke early to see what is coming, then drones or recons for the retake.",
@@ -493,7 +617,9 @@
         "Drone with a plan: one corner, one dart",
         "Shock a revealed target, not an empty corner",
         "Stand behind cover when you pilot"
-      ]
+      ],
+      "ult_points": 8,
+      "eco": "strong"
     },
     {
       "id": "breach",
@@ -503,22 +629,34 @@
         {
           "key": "C",
           "name": "Aftershock",
-          "purpose": "Delayed 3-burst damage through a wall; clear a corner, stall a defuse, or force a plant delay."
+          "purpose": "Delayed 3-burst damage through a wall; clear a corner, stall a defuse, or force a plant delay.",
+          "cost": "200",
+          "when": "Burn the corner you know is held right before you swing",
+          "verdict": "Buy when you can"
         },
         {
           "key": "Q",
           "name": "Flashpoint",
-          "purpose": "2 through-wall flashes (2.25s); blind the site as teammates swing."
+          "purpose": "2 through-wall flashes (2.25s); blind the site as teammates swing.",
+          "cost": "250 each, two charges",
+          "when": "Flash through the wall for the entry, not after he is already in",
+          "verdict": "Both on a full buy, one on a force"
         },
         {
           "key": "E",
           "name": "Fault Line",
-          "purpose": "Long through-wall concuss (2.5s, 1.2s delay); stun the anchor then the team swings; 50s cooldown."
+          "purpose": "Long through-wall concuss (2.5s, 1.2s delay); stun the anchor then the team swings; 50s cooldown.",
+          "cost": "free, 50s cooldown",
+          "when": "Stun the choke as the execute starts",
+          "verdict": "Free and it recharges, so use it twice"
         },
         {
           "key": "X",
           "name": "Rolling Thunder",
-          "purpose": "Cascading concuss (18m wide); commit the team through it on a site or a retake."
+          "purpose": "Cascading concuss (18m wide); commit the team through it on a site or a retake.",
+          "cost": "8 ult points",
+          "when": "Full-site stun for an execute or a retake",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Breach flashes and stuns through the wall so the team can enter without dueling a set defender. On defense he delays pushes with Fault Line and Aftershock, and his flashes are the retake tool that lets teammates swing onto a site together.",
@@ -548,7 +686,9 @@
         "Stun a spot you know is held, with a teammate ready to peek",
         "Aftershock the defuse, not an empty corner",
         "Ult when the team walks in behind it"
-      ]
+      ],
+      "ult_points": 8,
+      "eco": "strong"
     },
     {
       "id": "skye",
@@ -558,22 +698,34 @@
         {
           "key": "C",
           "name": "Regrowth",
-          "purpose": "Channel heal for allies in range; heal after the fight, never during it."
+          "purpose": "Channel heal for allies in range; heal after the fight, never during it.",
+          "cost": "150",
+          "when": "Heal the entry back up between fights, never mid-duel",
+          "verdict": "Buy: 150 for 100 HP of pool"
         },
         {
           "key": "Q",
           "name": "Trailblazer",
-          "purpose": "Tiger that clears a corner and concusses (4s direct hit); pilot it into site before the entry."
+          "purpose": "Tiger that clears a corner and concusses (4s direct hit); pilot it into site before the entry.",
+          "cost": "300",
+          "when": "Send it to concuss the anchor a second before your duelist enters",
+          "verdict": "Buy when you can"
         },
         {
           "key": "E",
           "name": "Guiding Light",
-          "purpose": "Controllable hawk flash; 60s cooldown so plan one at the execute, one at the retake."
+          "purpose": "Controllable hawk flash; 60s cooldown so plan one at the execute, one at the retake.",
+          "cost": "free first, 250 for the second, 50s recharge",
+          "when": "Flash over the choke on a count with the entry",
+          "verdict": "Buy the second every full buy: flashes are why she is picked"
         },
         {
           "key": "X",
           "name": "Seekers",
-          "purpose": "Three seekers that track and nearsight the three closest enemies; reveal positions before a push."
+          "purpose": "Three seekers that track and nearsight the three closest enemies; reveal positions before a push.",
+          "cost": "8 ult points",
+          "when": "Flush a stacked site or break a post-plant",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Skye scouts with Trailblazer, flashes with Guiding Light as the team swings, and heals after site is taken. On defense she flashes to let a teammate re-peek, uses the tiger to stall or check, and saves Seekers to open a retake.",
@@ -603,7 +755,9 @@
         "Tiger the corner, then teammates swing on the stun",
         "Heal behind cover after the fight",
         "Seekers open the retake, they do not end it"
-      ]
+      ],
+      "ult_points": 8,
+      "eco": "crippled"
     },
     {
       "id": "kayo",
@@ -613,22 +767,34 @@
         {
           "key": "C",
           "name": "FRAG/ment",
-          "purpose": "Lingering damage pulses; deny a plant or defuse, or clear a close corner."
+          "purpose": "Lingering damage pulses; deny a plant or defuse, or clear a close corner.",
+          "cost": "200",
+          "when": "Throw it on the spike to deny the defuse",
+          "verdict": "Buy when you can"
         },
         {
           "key": "Q",
           "name": "FLASH/drive",
-          "purpose": "2 flashes, right-click for a short 2.25s underhand pop-flash around corners."
+          "purpose": "2 flashes, right-click for a short 2.25s underhand pop-flash around corners.",
+          "cost": "250 each, two charges",
+          "when": "Both on the execute, pop-flashing the entry angle",
+          "verdict": "Buy both, the whole reason he is picked"
         },
         {
           "key": "E",
           "name": "ZERO/point",
-          "purpose": "Suppression blade that disables abilities and reveals who is hit; throw before a push or retake; 50s cooldown."
+          "purpose": "Suppression blade that disables abilities and reveals who is hit; throw before a push or retake; 50s cooldown.",
+          "cost": "free, 50s cooldown",
+          "when": "Knife the site before the execute to delete the sentinel's utility",
+          "verdict": "Free: throw it every single round"
         },
         {
           "key": "X",
           "name": "NULL/cmd",
-          "purpose": "Pulsing suppression plus combat stim and downed-state revival; pop at the start of a site hit or retake."
+          "purpose": "Pulsing suppression plus combat stim and downed-state revival; pop at the start of a site hit or retake.",
+          "cost": "8 ult points",
+          "when": "Suppress the retake so their utility cannot answer",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack KAY/O suppresses the site with ZERO/point so Sentinels and Controllers cannot respond, then pop-flashes as the team enters. On defense he throws the knife at the main push, flashes for re-peeks, and uses FRAG/ment to stall the plant or defuse.",
@@ -658,7 +824,9 @@
         "Right-click pop-flash around corners",
         "Save the molly for the spike",
         "Ult at the start of the hit, from cover"
-      ]
+      ],
+      "ult_points": 8,
+      "eco": "strong"
     },
     {
       "id": "fade",
@@ -668,22 +836,34 @@
         {
           "key": "C",
           "name": "Prowler",
-          "purpose": "2 creatures that nearsight the first enemy they reach; send them into corners before the team swings."
+          "purpose": "2 creatures that nearsight the first enemy they reach; send them into corners before the team swings.",
+          "cost": "250 each, two charges",
+          "when": "One down the likely lurk path right after first contact",
+          "verdict": "Buy one always, the second on a full buy"
         },
         {
           "key": "Q",
           "name": "Seize",
-          "purpose": "Orb that tethers, deafens and decays; hold enemies in place for a swing or stall a push."
+          "purpose": "Orb that tethers, deafens and decays; hold enemies in place for a swing or stall a push.",
+          "cost": "200",
+          "when": "Drop it on the defuser to break a retake",
+          "verdict": "Buy when you can"
         },
         {
           "key": "E",
           "name": "Haunt",
-          "purpose": "Reveals enemies in line of sight and marks them with trails; the pre-push info tool, 50s cooldown."
+          "purpose": "Reveals enemies in line of sight and marks them with trails; the pre-push info tool, 50s cooldown.",
+          "cost": "free, 50s cooldown",
+          "when": "Throw before the swing; the terror trail keeps tracking after it dies",
+          "verdict": "Free, and the best free recon in the game"
         },
         {
           "key": "X",
           "name": "Nightfall",
-          "purpose": "Wave that deafens, marks and decays; commit the team behind it on an execute or retake."
+          "purpose": "Wave that deafens, marks and decays; commit the team behind it on an execute or retake.",
+          "cost": "8 ult points",
+          "when": "Mark, deafen and decay a whole site on execute",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Fade Haunts the site before the push, sends Prowlers into the revealed positions, and Seizes anyone holding a strong angle. On defense she Haunts the main choke to see the push, uses Seize to stall, and Nightfall for a retake.",
@@ -713,7 +893,9 @@
         "Seize the revealed player, and have someone swing on it",
         "Prowlers need a follow-up or they are wasted",
         "Ult when the team walks with it"
-      ]
+      ],
+      "ult_points": 8,
+      "eco": "strong"
     },
     {
       "id": "gekko",
@@ -723,22 +905,34 @@
         {
           "key": "C",
           "name": "Mosh Pit",
-          "purpose": "Lingering damage pool; deny a plant/defuse or force enemies off a corner; reclaimable since 12.03."
+          "purpose": "Lingering damage pool; deny a plant/defuse or force enemies off a corner; reclaimable since 12.03.",
+          "cost": "250, reclaimable",
+          "when": "Mosh the plant, pick the globule up, use it again on the retake",
+          "verdict": "Buy when you can, you get it back"
         },
         {
           "key": "Q",
           "name": "Wingman",
-          "purpose": "Seeks and concusses (2.5s), or plants/defuses the spike; pick up the globule after."
+          "purpose": "Seeks and concusses (2.5s), or plants/defuses the spike; pick up the globule after.",
+          "cost": "300, reclaimable",
+          "when": "Send him to plant while you hold the fight",
+          "verdict": "Buy when you can"
         },
         {
           "key": "E",
           "name": "Dizzy",
-          "purpose": "Flying flash that blinds enemies in her sight; pop at a corner with teammates ready, then reclaim."
+          "purpose": "Flying flash that blinds enemies in her sight; pop at a corner with teammates ready, then reclaim.",
+          "cost": "free, reclaim via globule",
+          "when": "Flash for the entry, reclaim, flash again for the retake",
+          "verdict": "Free: two flashes a round if you pick it up"
         },
         {
           "key": "X",
           "name": "Thrash",
-          "purpose": "Controllable creature that detains enemies; open a site or a retake, then reclaim for a second cast."
+          "purpose": "Controllable creature that detains enemies; open a site or a retake, then reclaim for a second cast.",
+          "cost": "8 ult points",
+          "when": "Detain the anchor so the site is free",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Gekko sends Wingman and Dizzy into site ahead of the entry, reclaims both, and uses Wingman to plant while the team holds. On defense he uses Dizzy for re-peeks, Wingman to stall a push, and Mosh Pit for post-plant denial; reclaiming (15s cooldown) is what makes him cheap.",
@@ -768,7 +962,9 @@
         "Dizzy needs line of sight on the target",
         "Let Wingman plant on contested sites",
         "Mosh the spike, not the entry"
-      ]
+      ],
+      "ult_points": 8,
+      "eco": "strong"
     },
     {
       "id": "tejo",
@@ -778,22 +974,34 @@
         {
           "key": "C",
           "name": "Stealth Drone",
-          "purpose": "Pilotable drone; pulse for a full reveal and suppress in 16m; check a site before the push (400 credits)."
+          "purpose": "Pilotable drone; pulse for a full reveal and suppress in 16m; check a site before the push (400 credits).",
+          "cost": "400",
+          "when": "Suppress the sentinel's site before your team touches the choke",
+          "verdict": "Full buy only"
         },
         {
           "key": "Q",
           "name": "Special Delivery",
-          "purpose": "Sticky grenade that concusses (2.5s) and damages; stun a corner before the swing."
+          "purpose": "Sticky grenade that concusses (2.5s) and damages; stun a corner before the swing.",
+          "cost": "200",
+          "when": "Concuss the plant spot to break the defuse",
+          "verdict": "Buy when you can"
         },
         {
           "key": "E",
           "name": "Guided Salvo",
-          "purpose": "Up to 2 map-targeted missiles that destroy utility and damage; clear Sentinel setups or force enemies off a spot."
+          "purpose": "Up to 2 map-targeted missiles that destroy utility and damage; clear Sentinel setups or force enemies off a spot.",
+          "cost": "free first, 150 for the second",
+          "when": "Salvo the two default anchor spots before you swing",
+          "verdict": "Buy the second, 150 for a second rocket"
         },
         {
           "key": "X",
           "name": "Armageddon",
-          "purpose": "Map-targeted explosive path (9 points); commit the team behind it on an execute or retake."
+          "purpose": "Map-targeted explosive path (9 points); commit the team behind it on an execute or retake.",
+          "cost": "9 ult points",
+          "when": "Draw the strike path through a stacked site",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Tejo clears the site's utility with Guided Salvo, drones for a reveal, and concusses the anchor as the team enters. On defense he uses the drone to read the push, Salvo to break attacker setups or a post-plant, and Special Delivery to stall.",
@@ -823,7 +1031,9 @@
         "Drone with a question in mind, then answer it",
         "Stun the corner the duelist swings",
         "Ult where they are, with the team behind it"
-      ]
+      ],
+      "ult_points": 9,
+      "eco": "crippled"
     },
     {
       "id": "brimstone",
@@ -833,22 +1043,34 @@
         {
           "key": "C",
           "name": "Stim Beacon",
-          "purpose": "Fire-rate and speed buff (10%); drop before a site push or a retake swing."
+          "purpose": "Fire-rate and speed buff (10%); drop before a site push or a retake swing.",
+          "cost": "200",
+          "when": "Drop it on the plant before the post-plant hold, or on the group right before the swing",
+          "verdict": "Skip on a half buy: dead credits unless the team is stacked"
         },
         {
           "key": "Q",
           "name": "Incendiary",
-          "purpose": "Molly that damages; post-plant lineups and corner clears."
+          "purpose": "Molly that damages; post-plant lineups and corner clears.",
+          "cost": "250",
+          "when": "Molly the default plant spot the moment the spike goes down",
+          "verdict": "Buy when you can, his best post-plant tool"
         },
         {
           "key": "E",
           "name": "Sky Smoke",
-          "purpose": "Up to 3 long map-placed smokes; block defender angles as the team enters."
+          "purpose": "Up to 3 long map-placed smokes; block defender angles as the team enters.",
+          "cost": "free first, 100 each for two more, no recharge",
+          "when": "All three clouds down as the execute starts, not after first contact",
+          "verdict": "Buy every round: 100 is the cheapest smoke in the game"
         },
         {
           "key": "X",
           "name": "Orbital Strike",
-          "purpose": "Map-targeted laser; deny a defuse or clear a post-plant hold."
+          "purpose": "Map-targeted laser; deny a defuse or clear a post-plant hold.",
+          "cost": "8 ult points",
+          "when": "Drop it on the spike when you cannot retake with bodies",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Brimstone smokes the angles defenders hold so the team can enter, then denies the defuse with Incendiary or Orbital Strike. On defense he smokes the main choke on the push and saves smokes for the retake, using Stim Beacon on swings.",
@@ -878,7 +1100,9 @@
         "Save one smoke for the retake",
         "Molly the spike, not the corner",
         "Stim before every team swing"
-      ]
+      ],
+      "ult_points": 8,
+      "eco": "strong"
     },
     {
       "id": "omen",
@@ -888,22 +1112,34 @@
         {
           "key": "C",
           "name": "Shrouded Step",
-          "purpose": "Short teleport; reach an off-angle or reposition through a smoke."
+          "purpose": "Short teleport; reach an off-angle or reposition through a smoke.",
+          "cost": "100 each, two charges",
+          "when": "Repeek a fresh angle after a trade, or step onto site behind your own smoke",
+          "verdict": "Buy both, 100 each is free money"
         },
         {
           "key": "Q",
           "name": "Paranoia",
-          "purpose": "Through-wall nearsight (25m); throw as a teammate swings a held angle."
+          "purpose": "Through-wall nearsight (25m); throw as a teammate swings a held angle.",
+          "cost": "250",
+          "when": "Fire through the choke immediately before the swing, not as an opener",
+          "verdict": "Buy when you can, first cut on a force"
         },
         {
           "key": "E",
           "name": "Dark Cover",
-          "purpose": "2 global smokes on a 40s cooldown; block angles as the team enters or delay pushes."
+          "purpose": "2 global smokes on a 40s cooldown; block angles as the team enters or delay pushes.",
+          "cost": "free first, 150 for the second, 40s recharge",
+          "when": "Both smokes down at execute; the recharge covers the retake",
+          "verdict": "Buy the second every full buy: a one-smoke Omen is not a controller"
         },
         {
           "key": "X",
           "name": "From the Shadows",
-          "purpose": "Map-wide teleport; flank onto a site or reposition for a retake."
+          "purpose": "Map-wide teleport; flank onto a site or reposition for a retake.",
+          "cost": "7 ult points",
+          "when": "Late-round lurk teleport to steal a flank or sell a fake rotate",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Omen smokes the defender angles on the execute and Paranoias the entry corner as the duelist swings. On defense he smokes the main choke when the push starts, plays off-angles with Shrouded Step, and keeps a smoke for the retake.",
@@ -933,7 +1169,9 @@
         "Paranoia the corner someone is about to swing",
         "Save one smoke for the retake",
         "Equip your gun before the ult teleport"
-      ]
+      ],
+      "ult_points": 7,
+      "eco": "crippled"
     },
     {
       "id": "viper",
@@ -943,22 +1181,34 @@
         {
           "key": "C",
           "name": "Snake Bite",
-          "purpose": "2 acid mollies with Vulnerable; deny a defuse or clear a corner."
+          "purpose": "2 acid mollies with Vulnerable; deny a defuse or clear a corner.",
+          "cost": "300",
+          "when": "Into the default plant to stall a defuse",
+          "verdict": "Skip on a half buy, 300 is a lot for a stall"
         },
         {
           "key": "Q",
           "name": "Poison Cloud",
-          "purpose": "Reusable gas orb; block one angle repeatedly, toggle on a push."
+          "purpose": "Reusable gas orb; block one angle repeatedly, toggle on a push.",
+          "cost": "200, re-toggleable all round",
+          "when": "One-way onto site, then re-toggle after first contact",
+          "verdict": "Buy every round: reusable, the best 200 in her kit"
         },
         {
           "key": "E",
           "name": "Toxic Screen",
-          "purpose": "Long gas wall; split the site so only one side sees the entry, toggle on the execute."
+          "purpose": "Long gas wall; split the site so only one side sees the entry, toggle on the execute.",
+          "cost": "free, lasts all round on fuel",
+          "when": "Wall on the barrier drop to split the site before anyone has info",
+          "verdict": "Free: always place it, and stop burning fuel when nobody is pushing"
         },
         {
           "key": "X",
           "name": "Viper's Pit",
-          "purpose": "Large gas dome; anchor a post-plant or lock down a site on defense."
+          "purpose": "Large gas dome; anchor a post-plant or lock down a site on defense.",
+          "cost": "9 ult points",
+          "when": "Post-plant hold on a site you cannot hold with bodies",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Viper places wall and orb before the push and toggles them as the team commits, then holds the post-plant with Snake Bites and fuel. On defense she walls the main choke or site, delays with orb and mollies, and uses Viper's Pit to anchor a site alone.",
@@ -988,7 +1238,9 @@
         "Toggle off to save fuel for the fight",
         "Mollies belong to the spike",
         "Pit where the team can play around it"
-      ]
+      ],
+      "ult_points": 9,
+      "eco": "strong"
     },
     {
       "id": "astra",
@@ -998,22 +1250,34 @@
         {
           "key": "C",
           "name": "Gravity Well",
-          "purpose": "Star that pulls and makes enemies Fragile (2.5s); pull an anchor off an angle or a defuser off the spike."
+          "purpose": "Star that pulls and makes enemies Fragile (2.5s); pull an anchor off an angle or a defuser off the spike.",
+          "cost": "free, spends a placed star",
+          "when": "Pop it on the plant to break a post-plant hold",
+          "verdict": "Free"
         },
         {
           "key": "Q",
           "name": "Nova Pulse",
-          "purpose": "Star that concusses (2.5s); stun a corner as teammates swing."
+          "purpose": "Star that concusses (2.5s); stun a corner as teammates swing.",
+          "cost": "free, spends a placed star",
+          "when": "Concuss the choke a beat before the team swings",
+          "verdict": "Free"
         },
         {
           "key": "E",
           "name": "Nebula / Dissipate",
-          "purpose": "Star becomes a smoke or fakes one; pre-place stars and smoke the site on the execute."
+          "purpose": "Star becomes a smoke or fakes one; pre-place stars and smoke the site on the execute.",
+          "cost": "free first star, 150 each up to five",
+          "when": "Place the full set during the buy phase: mid-round placement is too slow",
+          "verdict": "Two to four stars minimum, a one-star Astra is not a controller"
         },
         {
           "key": "X",
           "name": "Cosmic Divide",
-          "purpose": "Map-wide wall blocking bullets and sound; split the site for a plant or retake."
+          "purpose": "Map-wide wall blocking bullets and sound; split the site for a plant or retake.",
+          "cost": "7 ult points",
+          "when": "Cut the site in half to isolate a fight",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Astra pre-places stars on the defender angles and converts them to smokes as the team commits, using pulls and stuns on held corners. On defense she stalls the push with a stun or pull and keeps stars available for the retake; star management across the round is her whole job.",
@@ -1043,7 +1307,9 @@
         "Go Astral only from cover",
         "Keep a star for the retake",
         "Pull the defuser, stun the swing"
-      ]
+      ],
+      "ult_points": 7,
+      "eco": "crippled"
     },
     {
       "id": "harbor",
@@ -1053,22 +1319,34 @@
         {
           "key": "C",
           "name": "Storm Surge",
-          "purpose": "Thrown whirlpool that Nearsights and Slows (2s); throw on the corner a teammate swings."
+          "purpose": "Thrown whirlpool that Nearsights and Slows (2s); throw on the corner a teammate swings.",
+          "cost": "200",
+          "when": "Into the choke as the team swings, to nearsight and slow the hold",
+          "verdict": "Buy when you can"
         },
         {
           "key": "Q",
           "name": "High Tide",
-          "purpose": "Guidable water wall (300 credits) that blocks vision and slows; cut a site in half on the push."
+          "purpose": "Guidable water wall (300 credits) that blocks vision and slows; cut a site in half on the push.",
+          "cost": "300",
+          "when": "Wall through site to cut the crossfire while you plant",
+          "verdict": "Buy when you can, first cut on a force"
         },
         {
           "key": "E",
           "name": "Cove",
-          "purpose": "Remote-placed water smoke (30s cooldown); reactivate to shield it from bullets; plant behind it."
+          "purpose": "Remote-placed water smoke (30s cooldown); reactivate to shield it from bullets; plant behind it.",
+          "cost": "free, 30s recharge",
+          "when": "Bubble the plant, then re-shield it when they start defusing",
+          "verdict": "Free: use it twice a round or it is wasted"
         },
         {
           "key": "X",
           "name": "Reckoning",
-          "purpose": "Forward wave that Nearsights and Slows; team pushes in behind it on an execute or retake."
+          "purpose": "Forward wave that Nearsights and Slows; team pushes in behind it on an execute or retake.",
+          "cost": "7 ult points",
+          "when": "Clear a post-plant stack off the spike",
+          "verdict": ""
         }
       ],
       "job_in_round": "Since the 11.10 rework Harbor is an aggressive controller: on attack he smokes with Cove, splits the site with High Tide, and Storm Surges the corner the entry swings. On defense he walls the choke, uses Storm Surge to stall, and Reckoning to open a retake; he is strongest paired with a second controller.",
@@ -1098,7 +1376,9 @@
         "Wall to split, not to hide",
         "Surge the corner, then swing it",
         "Ult as the team moves with it"
-      ]
+      ],
+      "ult_points": 7,
+      "eco": "strong"
     },
     {
       "id": "clove",
@@ -1108,22 +1388,34 @@
         {
           "key": "C",
           "name": "Pick-me-up",
-          "purpose": "After a kill or assist, activate for 50 overheal and speed; take the next fight faster."
+          "purpose": "After a kill or assist, activate for 50 overheal and speed; take the next fight faster.",
+          "cost": "200",
+          "when": "Take the orb after you trade someone, to survive the retake",
+          "verdict": "Situational, worthless if you did no damage"
         },
         {
           "key": "Q",
           "name": "Meddle",
-          "purpose": "Thrown decay orb (4m radius); throw on the corner a teammate swings."
+          "purpose": "Thrown decay orb (4m radius); throw on the corner a teammate swings.",
+          "cost": "250",
+          "when": "Decay the post-plant hold before the retake swing",
+          "verdict": "Skip on a half buy"
         },
         {
           "key": "E",
           "name": "Ruse",
-          "purpose": "2 map-placed smokes, castable while dead (1 charge, 6s duration when dead); smoke on the execute and after death."
+          "purpose": "2 map-placed smokes, castable while dead (1 charge, 6s duration when dead); smoke on the execute and after death.",
+          "cost": "free first, 150 for the second, castable while dead",
+          "when": "Re-smoke the site from the grave so your team can still retake",
+          "verdict": "Buy the second every full buy"
         },
         {
           "key": "X",
           "name": "Not Dead Yet",
-          "purpose": "Self-revive after death; must get a kill or assist quickly or die again."
+          "purpose": "Self-revive after death; must get a kill or assist quickly or die again.",
+          "cost": "8 ult points",
+          "when": "Self-res, but you need a kill or damaging assist or you die again",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Clove smokes the defender angles on the execute, throws Meddle on a held corner as teammates swing, and keeps one smoke for after death. On defense they smoke the choke, play a semi-aggressive angle, and use the ult only when a kill is realistically available right after reviving.",
@@ -1153,7 +1445,9 @@
         "Meddle the corner, then a teammate swings",
         "Ult only when a kill is right there",
         "You are the smoker, not the entry"
-      ]
+      ],
+      "ult_points": 8,
+      "eco": "crippled"
     },
     {
       "id": "miks",
@@ -1163,22 +1457,34 @@
         {
           "key": "C",
           "name": "M-pulse",
-          "purpose": "2 throwables; alt-fire toggles Concuss (stun a corner) or Heal (top up the team after site is taken)."
+          "purpose": "2 throwables; alt-fire toggles Concuss (stun a corner) or Heal (top up the team after site is taken).",
+          "cost": "250 each, two charges",
+          "when": "Concuss pulse into the choke before the swing, flip to heal for the post-plant",
+          "verdict": "Provisional: buy one, the second is a luxury"
         },
         {
           "key": "Q",
           "name": "Harmonize",
-          "purpose": "Combat stim and speed for you and one ally (8s, refreshes on kill); give it to the entry, not a passive teammate."
+          "purpose": "Combat stim and speed for you and one ally (8s, refreshes on kill); give it to the entry, not a passive teammate.",
+          "cost": "200, refreshes on kills",
+          "when": "Stim yourself and the entry right before you push",
+          "verdict": "Provisional: buy when you can"
         },
         {
           "key": "E",
           "name": "Waveform",
-          "purpose": "2 map-placed smokes (about 17s); block defender angles on the execute or retake."
+          "purpose": "2 map-placed smokes (about 17s); block defender angles on the execute or retake.",
+          "cost": "free first, 100 for the second, 40s recharge",
+          "when": "Both smokes at execute; the recharge covers your retake",
+          "verdict": "Buy the second, it is 100"
         },
         {
           "key": "X",
           "name": "Bassquake",
-          "purpose": "Forward wave that knocks back, Deafens and Slows (8s); break a held site or open a retake, adjustable mid-cast."
+          "purpose": "Forward wave that knocks back, Deafens and Slows (8s); break a held site or open a retake, adjustable mid-cast.",
+          "cost": "8 ult points",
+          "when": "Charged cone that knocks back, deafens and slows",
+          "verdict": ""
         }
       ],
       "job_in_round": "Miks (released 12.05) is a support controller: on attack he smokes with Waveform, Harmonizes the entry, and concusses the corner they swing, then heals after the site is taken. On defense he smokes the choke, uses concuss to stall, heals the anchor, and Bassquakes to open a retake.",
@@ -1208,7 +1514,9 @@
         "Stim the entry, not the anchor",
         "Concuss first, heal after the fight",
         "Ult when the team is walking with you"
-      ]
+      ],
+      "ult_points": 8,
+      "eco": "strong"
     },
     {
       "id": "sage",
@@ -1218,22 +1526,34 @@
         {
           "key": "C",
           "name": "Barrier Orb",
-          "purpose": "Wall (300 credits) to block a choke, boost a teammate, or protect the plant/defuse."
+          "purpose": "Wall (300 credits) to block a choke, boost a teammate, or protect the plant/defuse.",
+          "cost": "300",
+          "when": "Wall the choke at barrier drop to buy your team twenty seconds",
+          "verdict": "Buy when you can, first cut on a force"
         },
         {
           "key": "Q",
           "name": "Slow Orb",
-          "purpose": "2 slow fields (7s); stall a push or a retake through a choke."
+          "purpose": "2 slow fields (7s); stall a push or a retake through a choke.",
+          "cost": "200 each, two charges",
+          "when": "Slow the entry path as they commit, or the defuse",
+          "verdict": "Buy one always"
         },
         {
           "key": "E",
           "name": "Healing Orb",
-          "purpose": "100 HP over 5s to an ally or self (45s cooldown); heal after fights, never during them."
+          "purpose": "100 HP over 5s to an ally or self (45s cooldown); heal after fights, never during them.",
+          "cost": "free, 45s cooldown",
+          "when": "Heal the entry between fights, never mid-duel",
+          "verdict": "Free: ending a round with it unused is the classic Sage error"
         },
         {
           "key": "X",
           "name": "Resurrection",
-          "purpose": "Revive a teammate at full HP; use when the area is safe or the revived player can immediately act."
+          "purpose": "Revive a teammate at full HP; use when the area is safe or the revived player can immediately act.",
+          "cost": "7 ult points",
+          "when": "Res the best gun, not the nearest body",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Sage walls off a flank or the plant, slows the retake path, and heals the entry after the first fight. On defense she anchors a site with wall and slows to delay the push, heals the anchor, and resurrects a teammate for a retake.",
@@ -1263,7 +1583,9 @@
         "Slow when they are actually coming through",
         "Heal from cover, after the fight",
         "Res where the revived player can shoot back"
-      ]
+      ],
+      "ult_points": 7,
+      "eco": "strong"
     },
     {
       "id": "cypher",
@@ -1273,22 +1595,34 @@
         {
           "key": "C",
           "name": "Trapwire",
-          "purpose": "2 wires: 0.7s windup, then tags, slows 50% and reveals; place low or off-standard to catch flanks and lurks."
+          "purpose": "2 wires: 0.7s windup, then tags, slows 50% and reveals; place low or off-standard to catch flanks and lurks.",
+          "cost": "200 each, two charges",
+          "when": "Both wires on the flank route you are not watching",
+          "verdict": "Buy at least one every round"
         },
         {
           "key": "Q",
           "name": "Cyber Cage",
-          "purpose": "2 activatable smokes; block a choke or a peek, activate once enemies are committed."
+          "purpose": "2 activatable smokes; block a choke or a peek, activate once enemies are committed.",
+          "cost": "100 each, two charges",
+          "when": "Cage the angle you are repeeking, or delay a retake",
+          "verdict": "Buy both: at 100 it is the cheapest utility in the game"
         },
         {
           "key": "E",
           "name": "Spycam",
-          "purpose": "Camera with a dart; revealed within 8m when inactive, so place it high and out of foot traffic."
+          "purpose": "Camera with a dart; revealed within 8m when inactive, so place it high and out of foot traffic.",
+          "cost": "free, 15s recall",
+          "when": "Cam on info duty early, then recall and re-place after the rotate",
+          "verdict": "Free: one placement a round is a wasted cam"
         },
         {
           "key": "X",
           "name": "Neural Theft",
-          "purpose": "Reveal all enemies from a corpse; use before a push or retake to see rotations."
+          "purpose": "Reveal all enemies from a corpse; use before a push or retake to see rotations.",
+          "cost": "7 ult points",
+          "when": "Use it on a corpse right before the retake",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Cypher wires the flank behind the team, places a cam to watch the retake path, and uses cages to block a defuse angle. On defense he sets up a site with wires and cam so he can hold it alone, calls what the cam shows, and moves setups round to round.",
@@ -1318,7 +1652,9 @@
         "Cam high, out of the walking path",
         "Cage when they are in it, not before",
         "Watch the cam from cover"
-      ]
+      ],
+      "ult_points": 7,
+      "eco": "strong"
     },
     {
       "id": "killjoy",
@@ -1328,22 +1664,34 @@
         {
           "key": "C",
           "name": "Nanoswarm",
-          "purpose": "2 hidden damage grenades (5s); deny a plant/defuse or punish a choke."
+          "purpose": "2 hidden damage grenades (5s); deny a plant/defuse or punish a choke.",
+          "cost": "200 each, two charges",
+          "when": "Swarm the spike to deny the defuse, not for chip damage",
+          "verdict": "Buy both on a full buy"
         },
         {
           "key": "Q",
           "name": "Alarmbot",
-          "purpose": "Hidden bot (20 HP) that Vulnerables; place at the edge of an entry so it is hard to shoot early."
+          "purpose": "Hidden bot (20 HP) that Vulnerables; place at the edge of an entry so it is hard to shoot early.",
+          "cost": "200",
+          "when": "Tuck it in the flank corridor you cannot watch",
+          "verdict": "Buy every round, the cheapest flank insurance"
         },
         {
           "key": "E",
           "name": "Turret",
-          "purpose": "Auto-firing turret; place elevated or off-angle to spot and tag pushes; 2s reactivation."
+          "purpose": "Auto-firing turret; place elevated or off-angle to spot and tag pushes; 2s reactivation.",
+          "cost": "free, 20s redeploy",
+          "when": "Cover the off-angle at round start, re-place it after you rotate",
+          "verdict": "Free: pick it up and move it, do not leave it dead"
         },
         {
           "key": "X",
           "name": "Lockdown",
-          "purpose": "Detains enemies in a large radius after a windup; clear a site for a retake or force attackers off a plant."
+          "purpose": "Detains enemies in a large radius after a windup; clear a site for a retake or force attackers off a plant.",
+          "cost": "9 ult points",
+          "when": "Detain a retake or force a site off",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Killjoy places the turret to watch the flank, Nanoswarms for post-plant denial, and the Alarmbot on the retake path. On defense she anchors a site with turret and bot in non-standard spots, stays within range so they stay active, and Lockdowns to clear a taken site.",
@@ -1373,7 +1721,9 @@
         "Swarms belong to the spike",
         "Stay in range or your setup is off",
         "Lockdown from cover, with the team ready"
-      ]
+      ],
+      "ult_points": 9,
+      "eco": "strong"
     },
     {
       "id": "chamber",
@@ -1383,22 +1733,34 @@
         {
           "key": "C",
           "name": "Trademark",
-          "purpose": "1 trap with no range restriction that slows 50%; watch a flank or the retake path."
+          "purpose": "1 trap with no range restriction that slows 50%; watch a flank or the retake path.",
+          "cost": "200",
+          "when": "Cover the flank you are leaving when you take an aggressive angle",
+          "verdict": "Buy when you can"
         },
         {
           "key": "Q",
           "name": "Headhunter",
-          "purpose": "Heavy pistol (100 per bullet) that one-taps heads; eco and save-round pick tool."
+          "purpose": "Heavy pistol (100 per bullet) that one-taps heads; eco and save-round pick tool.",
+          "cost": "100 per bullet, eight max",
+          "when": "Buy two or three bullets on an eco and hold a head-level angle",
+          "verdict": "The best eco purchase in the game"
         },
         {
           "key": "E",
           "name": "Rendezvous",
-          "purpose": "Single anchor, 18m teleport radius; place it before the peek and teleport out after the first shot."
+          "purpose": "Single anchor, 18m teleport radius; place it before the peek and teleport out after the first shot.",
+          "cost": "free, 30s",
+          "when": "Anchor behind cover, peek wide, teleport out after you tag",
+          "verdict": "Free: never hold an angle without the anchor placed"
         },
         {
           "key": "X",
           "name": "Tour de Force",
-          "purpose": "Custom sniper that kills on upper-body hit and slows on kill; hold long angles on defense or a post-plant."
+          "purpose": "Custom sniper that kills on upper-body hit and slows on kill; hold long angles on defense or a post-plant.",
+          "cost": "8 ult points",
+          "when": "A free Operator on a save or a retake",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Chamber places Trademark on the flank, takes an aggressive early pick with Rendezvous placed, and plays Operator or Headhunter angles in post-plant. On defense he holds a long angle with the anchor placed within range, takes one shot, teleports out, and uses Trademark to watch the other entry.",
@@ -1428,7 +1790,9 @@
         "One shot, then teleport",
         "Trademark the flank, hidden",
         "Headhunter is for heads, not sprays"
-      ]
+      ],
+      "ult_points": 8,
+      "eco": "strong"
     },
     {
       "id": "deadlock",
@@ -1438,22 +1802,34 @@
         {
           "key": "C",
           "name": "Barrier Mesh",
-          "purpose": "Movement-blocking wall (300 credits); seal a choke with both edges touching walls, fortify to hold."
+          "purpose": "Movement-blocking wall (300 credits); seal a choke with both edges touching walls, fortify to hold.",
+          "cost": "300",
+          "when": "Mesh the choke to force them into a single entry",
+          "verdict": "First thing to cut"
         },
         {
           "key": "Q",
           "name": "Sonic Sensor",
-          "purpose": "Concusses (2.5s) when noise is made in range; place on the spike or an active entry, not a quiet flank."
+          "purpose": "Concusses (2.5s) when noise is made in range; place on the spike or an active entry, not a quiet flank.",
+          "cost": "200 each, two charges",
+          "when": "One on flank, one on the site entry you are not looking at",
+          "verdict": "Buy one always"
         },
         {
           "key": "E",
           "name": "GravNet",
-          "purpose": "Free grenade (50s cooldown) that crouches and slows; throw just before a teammate peeks."
+          "purpose": "Free grenade (50s cooldown) that crouches and slows; throw just before a teammate peeks.",
+          "cost": "free, 50s cooldown",
+          "when": "Throw it as they enter site to force crouch-walk speed",
+          "verdict": "Free: use it on the push, not pre-placed"
         },
         {
           "key": "X",
           "name": "Annihilation",
-          "purpose": "Captures the first enemy hit and drags them; use on a retake or a 1v1 with a practised lineup."
+          "purpose": "Captures the first enemy hit and drags them; use on a retake or a 1v1 with a practised lineup.",
+          "cost": "7 ult points",
+          "when": "Pick off the last man or break a post-plant",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Deadlock uses GravNet on a held corner as a teammate swings, walls the retake path, and places a sensor on the spike. On defense she seals a choke with Barrier Mesh, sensors the loud entries, and uses GravNet to stall or set up a kill; she is best on maps with a single main lane.",
@@ -1483,7 +1859,9 @@
         "Sensors go where they make noise: the spike",
         "Wall edge to edge or it is a doorway",
         "The wall blocks feet, not bullets"
-      ]
+      ],
+      "ult_points": 7,
+      "eco": "strong"
     },
     {
       "id": "vyse",
@@ -1493,22 +1871,34 @@
         {
           "key": "C",
           "name": "Razorvine",
-          "purpose": "2 invisible nests that slow and damage when activated; corner or post-plant denial."
+          "purpose": "2 invisible nests that slow and damage when activated; corner or post-plant denial.",
+          "cost": "150 each, two charges",
+          "when": "Vine the plant spot so a defuse costs them health",
+          "verdict": "Buy both at 150 each"
         },
         {
           "key": "Q",
           "name": "Shear",
-          "purpose": "Hidden wall trap that isolates the enemy who crosses; place on an entry to cut a push in half."
+          "purpose": "Hidden wall trap that isolates the enemy who crosses; place on an entry to cut a push in half.",
+          "cost": "200",
+          "when": "Set it on the choke you cannot hold and play the timing off the wall",
+          "verdict": "Buy when you can"
         },
         {
           "key": "E",
           "name": "Arc Rose",
-          "purpose": "Stealthed placeable flash (2s), can be placed through walls; activate as a teammate swings; recall on 20s."
+          "purpose": "Stealthed placeable flash (2s), can be placed through walls; activate as a teammate swings; recall on 20s.",
+          "cost": "free, pick up and redeploy",
+          "when": "Pre-place on your hold angle, pop it when you hear the push",
+          "verdict": "Free and redeployable, so use it early"
         },
         {
           "key": "X",
           "name": "Steel Garden",
-          "purpose": "Jams primary weapons in 28m after a 4.4s windup; pop on a stacked site during a retake or entry."
+          "purpose": "Jams primary weapons in 28m after a 4.4s windup; pop on a stacked site during a retake or entry.",
+          "cost": "8 ult points",
+          "when": "Jam their primaries on a retake",
+          "verdict": ""
         }
       ],
       "job_in_round": "On attack Vyse places Arc Rose through a wall and flashes the site as the team enters, then uses Razorvine and Shear for post-plant denial. On defense she sets up an entry with Shear and Razorvine to split a push, flashes for re-peeks, and Steel Gardens a retake.",
@@ -1538,7 +1928,9 @@
         "Activate vines when they are in them",
         "Shear the entry, isolate the first one in",
         "Ult from cover, then the team swings"
-      ]
+      ],
+      "ult_points": 8,
+      "eco": "strong"
     },
     {
       "id": "veto",
@@ -1548,22 +1940,34 @@
         {
           "key": "C",
           "name": "Crosscut",
-          "purpose": "2 vortexes (200 each); place one, peek, then look at it and reactivate to teleport back (30m range)."
+          "purpose": "2 vortexes (200 each); place one, peek, then look at it and reactivate to teleport back (30m range).",
+          "cost": "200 each, two charges",
+          "when": "Drop a vortex behind cover so you can peek wide and teleport back",
+          "verdict": "Buy one always"
         },
         {
           "key": "Q",
           "name": "Chokehold",
-          "purpose": "Thrown trap that holds, Deafens and Decays for 4.5s; place in tight doorways or dark corners."
+          "purpose": "Thrown trap that holds, Deafens and Decays for 4.5s; place in tight doorways or dark corners.",
+          "cost": "200",
+          "when": "Trap the defuser, or the first man through the choke",
+          "verdict": "Buy when you can"
         },
         {
           "key": "E",
           "name": "Interceptor",
-          "purpose": "Free device; activate to destroy bouncing or shootable utility in its zone (9s); reclaim for a 20s cooldown."
+          "purpose": "Free device; activate to destroy bouncing or shootable utility in its zone (9s); reclaim for a 20s cooldown.",
+          "cost": "free, 20s reclaim",
+          "when": "Place it on the utility-heavy choke: it eats their flashes and mollies",
+          "verdict": "Free and it deletes enemy utility, so always have it deployed"
         },
         {
           "key": "X",
           "name": "Evolution",
-          "purpose": "Combat stim, 40 HP/s regen and debuff immunity; push or retake through utility, but Ops and Chamber still kill you."
+          "purpose": "Combat stim, 40 HP/s regen and debuff immunity; push or retake through utility, but Ops and Chamber still kill you.",
+          "cost": "7 ult points",
+          "when": "Stim and regen for a solo retake",
+          "verdict": ""
         }
       ],
       "job_in_round": "Veto (released 11.07b) is an anti-utility sentinel: on defense he holds an entry with Chokehold and activates Interceptor as the execute's flashes and grenades come in. On attack he places a Crosscut before a peek, Interceptors the Sentinel setup on site, and uses Evolution to take space through utility.",
@@ -1593,7 +1997,9 @@
         "Trap the doorway, not the open floor",
         "Vortex first, peek second, back after the shot",
         "Ult through utility, not through an Op"
-      ]
+      ],
+      "ult_points": 7,
+      "eco": "strong"
     }
   ],
   "sources": [

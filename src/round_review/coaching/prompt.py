@@ -339,7 +339,8 @@ def build_coach_prompt(
         # rest of the brief is about fights the player has not had yet.
         if not buy_phase:
             sections.append(render_agent_brief(agent))
-        kit = ", ".join(f"{name} ({key})" for key, name, _purpose in agent.abilities)
+        # Costs included: a buy window has to weigh utility against the gun.
+        kit = ", ".join(f"{a.name} ({a.key}, {a.cost})" for a in agent.abilities)
         sections.append(
             f"{agent.name} has exactly these abilities: {kit}. Any other ability belongs to "
             "an agent the player is not using, so never suggest one."

@@ -323,6 +323,9 @@ CORE_CATEGORIES: frozenset[str] = frozenset(
     }
 )
 PHASE_CATEGORIES: dict[str, frozenset[str]] = {
+    # A planned buy window judges the purchase and nothing else: the player is standing
+    # in spawn reading a menu, so positioning and crosshair advice there is noise.
+    "buy": frozenset({"economy"}),
     "pre_round": frozenset({"economy", "info", "mental", "positioning", "utility"}),
     "early": CORE_CATEGORIES,
     "mid": CORE_CATEGORIES,

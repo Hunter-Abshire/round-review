@@ -122,6 +122,7 @@ class TestPrompt:
             abilities_available=("Tailwind",),
             credits=3900,
             teammates_alive=4,
+            team_loadout=(),
             enemies_alive=4,
             enemies_visible=1,
             timeline=((100.0, "walks A main"),),

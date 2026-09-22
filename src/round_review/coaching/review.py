@@ -254,7 +254,17 @@ def review_window(
                     "barrier is up or that the round has not started."
                 )
 
-        if situation is not None and situation.phase in (None, "pre_round", "spectating"):
+        # A buy window is planned on the buy phase deliberately: it is the only moment the
+        # purchase, the credits and the team's loadout are on screen, so it is coached on
+        # economy rather than skipped like every other pre-round window.
+        buying = (
+            window.source == "buy" and situation is not None and situation.phase != "spectating"
+        )
+        if (
+            not buying
+            and situation is not None
+            and situation.phase in (None, "pre_round", "spectating")
+        ):
             reason = {"pre_round": "buy phase", "spectating": "spectating another player"}.get(
                 situation.phase or "", "round phase unreadable"
             )
@@ -272,7 +282,11 @@ def review_window(
                 hud_override=hud_override,
             )
 
-    system = build_system_prompt(knowledge, situation.phase if situation else None)
+    buy_phase = window.source == "buy"
+    system = build_system_prompt(
+        knowledge,
+        "buy" if buy_phase else (situation.phase if situation else None),
+    )
     prompt = build_coach_prompt(
         window, coach_samples, context, situation, knowledge, state, clock_correction
     )

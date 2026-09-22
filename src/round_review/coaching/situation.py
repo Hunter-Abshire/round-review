@@ -30,6 +30,9 @@ class Situation:
     abilities_available: tuple[str, ...]
     credits: int | None
     teammates_alive: int | None
+    # One line per teammate from the buy menu: name, credits, weapon, shield. Empty
+    # outside the buy phase, where the menu is the only place that is on screen.
+    team_loadout: tuple[str, ...]
     enemies_alive: int | None
     enemies_visible: int
     timeline: tuple[tuple[float, str], ...]
@@ -68,6 +71,7 @@ class Situation:
             "abilities_available": list(self.abilities_available),
             "credits": self.credits,
             "teammates_alive": self.teammates_alive,
+            "team_loadout": list(self.team_loadout),
             "enemies_alive": self.enemies_alive,
             "enemies_visible": self.enemies_visible,
             "timeline": [{"t": t, "event": e} for t, e in self.timeline],
@@ -128,6 +132,9 @@ def parse_situation(text: str) -> Situation:
         abilities_available=tuple(str(a) for a in abilities) if isinstance(abilities, list) else (),
         credits=_int(raw.get("credits")),
         teammates_alive=_int(raw.get("teammates_alive")),
+        team_loadout=tuple(str(x) for x in (raw.get("team_loadout") or []))
+        if isinstance(raw.get("team_loadout"), list)
+        else (),
         enemies_alive=_int(raw.get("enemies_alive")),
         enemies_visible=_int(raw.get("enemies_visible")) or 0,
         timeline=tuple(timeline),

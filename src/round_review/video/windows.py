@@ -5,13 +5,14 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass
+from itertools import pairwise
 from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:  # avoids a cycle: vision imports video.probe
     from round_review.vision.timeline import RoundSpan
 
 WindowSource = Literal[
-    "evenly_spaced", "tiled", "events", "asked", "round_start", "round_end", "death"
+    "evenly_spaced", "tiled", "events", "asked", "round_start", "round_end", "death", "buy"
 ]
 Coverage = Literal["full", "sampled", "rounds"]
 
@@ -19,6 +20,8 @@ Coverage = Literal["full", "sampled", "rounds"]
 MIN_TAIL_FRACTION = 0.5
 # How much of a death window sits before the death itself.
 DEATH_LEAD_IN = 0.75
+# Seconds after live play ends before the buy menu is up: the round-end banner runs first.
+BUY_MENU_DELAY_S = 2.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,6 +128,10 @@ def tile_windows(
     return windows
 
 
+def _live_end_of(span: RoundSpan) -> float:
+    return span.end_s if span.live_end_s is None else span.live_end_s
+
+
 def _round_index(spans: Sequence[RoundSpan], timestamp_s: float) -> int | None:
     last = len(spans) - 1
     for i, span in enumerate(spans):
@@ -145,6 +152,7 @@ def round_windows(
     duration_s: float,
     deaths: Sequence[float] = (),
     max_windows: int = 0,
+    buy_windows: bool = True,
 ) -> list[Window]:
     """Review the moments a coach would: the opening of each round, the seconds that ended
     it, and every death.
@@ -156,6 +164,14 @@ def round_windows(
     if window_s <= 0:
         raise ValueError("window_s must be > 0")
     candidates: list[tuple[float, WindowSource, int | None]] = []
+    if buy_windows:
+        # The buy phase before a barrier drop belongs to the round it buys for, which is how
+        # a player thinks about it. Without a window here the economy checks never ran at
+        # all: credits and the team's loadout are only on screen in the buy menu.
+        for previous, span in pairwise(spans):
+            buy_at = _live_end_of(previous) + BUY_MENU_DELAY_S
+            if buy_at + window_s <= span.start_s:
+                candidates.append((buy_at, "buy", span.index))
     for span in spans:
         # The end of LIVE play, not the end of the span: a span runs barrier drop to barrier
         # drop, so its last seconds are the next round's buy phase. Anchoring here used to
@@ -175,7 +191,7 @@ def round_windows(
         return []
 
     # Deaths first at the same moment: the death is the more specific reason to look.
-    priority = {"death": 0, "round_start": 1, "round_end": 2}
+    priority = {"death": 0, "buy": 1, "round_start": 2, "round_end": 3}
     candidates.sort(key=lambda c: (c[0], priority[c[1]]))
 
     kept: list[tuple[float, float, WindowSource, int | None]] = []

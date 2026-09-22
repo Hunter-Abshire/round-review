@@ -293,18 +293,19 @@ def test_scenes_describe_prints_the_situation_json(
     from round_review.validation.scenes import SceneCase, SceneOutcome, SceneReport
 
     situation = Situation(
-        "Jett",
-        "Ascent",
-        "attack",
-        "early",
-        "Vandal",
-        (),
-        None,
-        None,
-        None,
-        0,
-        (),
-        "Live round.",
+        agent="Jett",
+        map="Ascent",
+        side="attack",
+        phase="early",
+        weapon="Vandal",
+        abilities_available=(),
+        credits=None,
+        teammates_alive=None,
+        team_loadout=(),
+        enemies_alive=None,
+        enemies_visible=0,
+        timeline=(),
+        summary="Live round.",
     )
     report = SceneReport(
         "m",

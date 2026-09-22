@@ -213,6 +213,7 @@ SITUATION_SCHEMA: dict[str, Any] = {
         "abilities_available": {"type": "array", "items": {"type": "string"}},
         "credits": {"type": ["integer", "null"]},
         "teammates_alive": {"type": ["integer", "null"]},
+        "team_loadout": {"type": "array", "items": {"type": "string"}},
         "enemies_alive": {"type": ["integer", "null"]},
         "enemies_visible": {"type": "integer"},
         "timeline": {
@@ -234,6 +235,7 @@ SITUATION_SCHEMA: dict[str, Any] = {
         "abilities_available",
         "credits",
         "teammates_alive",
+        "team_loadout",
         "enemies_alive",
         "enemies_visible",
         "timeline",
@@ -304,7 +306,12 @@ def build_situation_prompt(
         "which abilities are still available (lit icons), credits, how many teammates and how "
         "many enemies are still alive (the round counters beside the scoreboard), enemies "
         "visible, and a short timeline of what the player does frame by frame. Finish with a "
-        "two-sentence summary."
+        "two-sentence summary.\n\n"
+        "If the buy menu is open, this is a purchase decision: read the player's own "
+        "credits, what they bought, and for each teammate in the list down the left their "
+        "name, their credits and the weapon and shield icons beside them. Put one entry "
+        'per teammate in team_loadout, like "Baozi: 2750, rifle, heavy shield". Report '
+        "only what the menu actually shows."
     )
 
 

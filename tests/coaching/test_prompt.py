@@ -70,6 +70,7 @@ def test_coach_prompt_includes_briefs_situation_and_rank_focus() -> None:
         abilities_available=("Tailwind",),
         credits=3900,
         teammates_alive=4,
+        team_loadout=(),
         enemies_alive=4,
         enemies_visible=0,
         timeline=((100.0, "walking A main"),),

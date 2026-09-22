@@ -615,3 +615,55 @@ def test_a_hidden_clock_inside_a_live_round_still_gets_coached(
     assert result.hud_override
     assert result.abstained_reason is None
     assert "inside a live round" in transport.calls[1].prompt
+
+
+def test_a_buy_window_is_coached_on_economy_instead_of_abstaining(
+    samples: list[FrameSample],
+) -> None:
+    """Every pre-round window abstained, so the nine economy checks never fired once. A
+    window planned as the buy phase is the one place the purchase can be judged."""
+    buy_window = Window(index=0, start_s=60.0, end_s=72.0, source="buy")
+    transport = FakeTransport(
+        _situation(phase="pre_round"),
+        _findings(check_id="economy.full_buy_threshold", category="economy", timestamp_s=61.0),
+    )
+    result = review_window(
+        buy_window,
+        samples,
+        transport,
+        model="m",
+        calls_today=0,
+        cap=10,
+        timeout_s=1.0,
+        context=PlayerContext(rank="Gold 2"),
+        knowledge=KNOWLEDGE,
+        situation_pass=True,
+    )
+    assert result.abstained_reason is None
+    assert len(result.findings) == 1
+
+
+def test_a_buy_window_only_sends_the_economy_checks(samples: list[FrameSample]) -> None:
+    buy_window = Window(index=0, start_s=60.0, end_s=72.0, source="buy")
+    transport = FakeTransport(_situation(phase="pre_round"), GOOD)
+    review_window(
+        buy_window,
+        samples,
+        transport,
+        model="m",
+        calls_today=0,
+        cap=10,
+        timeout_s=1.0,
+        context=PlayerContext(),
+        knowledge=KNOWLEDGE,
+        situation_pass=True,
+    )
+    system = transport.calls[1].system
+    assert "economy." in system
+    assert "crosshair." not in system and "postplant." not in system
+
+
+def test_an_ordinary_pre_round_window_still_abstains(samples: list[FrameSample]) -> None:
+    transport = FakeTransport(_situation(phase="pre_round"), GOOD)
+    result = review(transport, samples)
+    assert result.abstained_reason == "buy phase"

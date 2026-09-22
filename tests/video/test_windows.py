@@ -124,3 +124,51 @@ def test_a_round_that_is_all_buy_phase_gets_no_windows() -> None:
     # A recording that starts mid-shop has a first "round" with no live play in it at all.
     span = RoundSpan(1, 0.0, 24.0, live_end_s=0.0)
     assert round_windows((span,), window_s=12.0, duration_s=600.0) == []
+
+
+class TestBuyWindows:
+    """Economy is decided in the buy menu, which the review never looked at: every
+    pre-round window abstained before it reached the checklist, so the nine economy checks
+    could not fire at all."""
+
+    def test_the_buy_phase_before_a_round_gets_its_own_window(self) -> None:
+        spans = (
+            RoundSpan(1, 0.0, 100.0, live_end_s=70.0),
+            RoundSpan(2, 100.0, 200.0, live_end_s=170.0),
+        )
+        got = round_windows(spans, window_s=12.0, duration_s=600.0)
+        buys = [(w.start_s, w.end_s, w.round_index) for w in got if w.source == "buy"]
+        # the gap 70-100 is round 2's buy phase, so the window belongs to round 2
+        assert buys == [(72.0, 84.0, 2)]
+
+    def test_a_span_that_is_all_buy_phase_still_gets_a_buy_window(self) -> None:
+        # A recording starting mid-shop: no live play, but the purchase is right there.
+        spans = (
+            RoundSpan(1, 0.0, 24.0, live_end_s=0.0),
+            RoundSpan(2, 24.0, 120.0, live_end_s=90.0),
+        )
+        got = round_windows(spans, window_s=12.0, duration_s=600.0)
+        buys = [(w.start_s, w.end_s, w.round_index) for w in got if w.source == "buy"]
+        # It is the buy phase FOR round 2, so that is the round it is labelled with.
+        assert buys == [(2.0, 14.0, 2)]
+
+    def test_no_buy_window_when_the_gap_is_too_short(self) -> None:
+        spans = (
+            RoundSpan(1, 0.0, 100.0, live_end_s=96.0),
+            RoundSpan(2, 100.0, 200.0, live_end_s=170.0),
+        )
+        got = round_windows(spans, window_s=12.0, duration_s=600.0)
+        assert [w for w in got if w.source == "buy"] == []
+
+    def test_the_last_round_has_no_buy_window_after_it(self) -> None:
+        spans = (RoundSpan(1, 0.0, 100.0, live_end_s=70.0),)
+        got = round_windows(spans, window_s=12.0, duration_s=600.0)
+        assert [w for w in got if w.source == "buy"] == []
+
+    def test_buy_windows_can_be_turned_off(self) -> None:
+        spans = (
+            RoundSpan(1, 0.0, 100.0, live_end_s=70.0),
+            RoundSpan(2, 100.0, 200.0, live_end_s=170.0),
+        )
+        got = round_windows(spans, window_s=12.0, duration_s=600.0, buy_windows=False)
+        assert [w for w in got if w.source == "buy"] == []

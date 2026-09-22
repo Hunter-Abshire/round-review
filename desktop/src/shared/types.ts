@@ -148,6 +148,59 @@ export interface Finding {
   evidence_frame: string | null;
 }
 
+export interface StrengthItem {
+  timestamp_s: number;
+  check_id: string;
+  check_label: string | null;
+  category: string;
+  observation: string;
+  visible_evidence: string;
+  why_it_worked: string;
+  confidence: number;
+  evidence_frame: string | null;
+}
+
+/** One habit: a checklist item and every time it came up in this review. */
+export interface Habit {
+  check_id: string;
+  check_label: string | null;
+  category: string;
+  count: number;
+  windows: number[];
+  score: number;
+  mean_confidence: number;
+  timestamps: number[];
+  observation: string;
+  visible_evidence: string;
+  information_revealed_later: string;
+  assumption_flags: string[];
+  suggested_alternative: string;
+  evidence_frame: string | null;
+}
+
+export interface PracticeItem {
+  for_check_id: string;
+  rule: string;
+  drill: string;
+  success_check: string;
+}
+
+export interface ReportSummary {
+  verdict: string;
+  rank_focus: string | null;
+  windows_reviewed: number;
+  focus: Habit[];
+  hindsight: Habit[];
+  also_seen: Array<{
+    check_id: string;
+    check_label: string | null;
+    category: string;
+    count: number;
+  }>;
+  strengths: StrengthItem[];
+  practice: PracticeItem | null;
+}
+
 export interface ReportWindow {
   index: number;
   start_s: number;
@@ -156,6 +209,7 @@ export interface ReportWindow {
   context: PlayerContext;
   situation: Situation | null;
   abstained_reason: string | null;
+  strengths: StrengthItem[];
   findings: Finding[];
   warnings: string[];
 }
@@ -173,6 +227,7 @@ export interface Report {
   model: string;
   partial: boolean;
   stopped_reason: string | null;
+  summary: ReportSummary | null;
   windows: ReportWindow[];
   warnings: string[];
 }

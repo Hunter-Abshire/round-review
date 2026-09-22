@@ -3,6 +3,7 @@ import { createApi, type Api } from './api';
 import {
   diagnosisOf,
   renderClipList,
+  renderCoachPanel,
   renderContextBar,
   renderCoverageSummary,
   renderFindingCard,
@@ -43,6 +44,7 @@ const run = (api: Api): void => {
   const timeline = byId('timeline');
   const coverage = byId('coverage');
   const findingList = byId('finding-list');
+  const coach = byId('coach');
   const card = byId('finding');
   const title = byId('review-title');
 
@@ -85,6 +87,13 @@ const run = (api: Api): void => {
     const findingCount = state.markers.length;
     title.textContent = `${report.recording.name} — ${findingCount} finding${findingCount === 1 ? '' : 's'}`;
     renderCoverageSummary(coverage, report);
+    if (report.summary) {
+      renderCoachPanel(coach, report.summary, seconds => {
+        video.currentTime = seconds;
+        void video.play();
+      });
+    }
+    coach.hidden = report.summary === null;
     renderTimeline(timeline, {
       markers: state.markers,
       coverage: state.coverage,

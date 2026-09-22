@@ -3,7 +3,11 @@ import {
   type Clip,
   type Finding,
   type Job,
+  type Habit,
+  type PracticeItem,
   type Report,
+  type ReportSummary,
+  type StrengthItem,
   type Settings,
 } from '../../src/shared/types';
 
@@ -36,6 +40,7 @@ export const report = (overrides: Partial<Report> = {}): Report => ({
   model: 'qwen3-vl:8b',
   partial: false,
   stopped_reason: null,
+  summary: null,
   windows: [
     {
       index: 0,
@@ -45,6 +50,7 @@ export const report = (overrides: Partial<Report> = {}): Report => ({
       context: EMPTY_CONTEXT,
       situation: null,
       abstained_reason: null,
+      strengths: [],
       findings: [finding()],
       warnings: [],
     },
@@ -68,6 +74,7 @@ export const report = (overrides: Partial<Report> = {}): Report => ({
         summary: 'Entering A main with dash up.',
       },
       abstained_reason: null,
+      strengths: [],
       findings: [finding({ timestamp_s: 305, category: 'utility' }), finding({ timestamp_s: 310 })],
       warnings: ['window warning'],
     },
@@ -121,5 +128,57 @@ export const settings = (overrides: Partial<Settings> = {}): Settings => ({
   hud_check: true,
   hud_ready: true,
   hud_missing_characters: [],
+  ...overrides,
+});
+
+export const habit = (overrides: Partial<Habit> = {}): Habit => ({
+  check_id: 'peeking.no_repeek',
+  check_label: 'Peeking / does the player avoid re-peeking the identical angle',
+  category: 'peeking',
+  count: 3,
+  windows: [0, 1, 2],
+  score: 18,
+  mean_confidence: 0.8,
+  timestamps: [34, 50, 70],
+  observation: 'You re-peeked A Main from the same spot about a second after trading shots.',
+  visible_evidence: 'The minimap shows no teammate within trade range.',
+  information_revealed_later: '',
+  assumption_flags: ['enemy position'],
+  suggested_alternative: 'Swing from the opposite side of the choke instead.',
+  evidence_frame: 'frames/e00_01.jpg',
+  ...overrides,
+});
+
+export const strengthItem = (overrides: Partial<StrengthItem> = {}): StrengthItem => ({
+  timestamp_s: 30,
+  check_id: 'utility.has_purpose',
+  check_label: 'Utility / did the ability serve a job',
+  category: 'utility',
+  observation: 'You smoked Heaven before stepping into A Main rather than after taking damage.',
+  visible_evidence: 'The smoke lands at t=30.0s, before the first shot.',
+  why_it_worked: 'It removed the angle that usually punishes that entry.',
+  confidence: 0.8,
+  evidence_frame: null,
+  ...overrides,
+});
+
+export const practiceItem = (overrides: Partial<PracticeItem> = {}): PracticeItem => ({
+  for_check_id: 'peeking.no_repeek',
+  rule: 'After you shoot once, reposition. Never re-peek the same angle.',
+  drill: 'Practice Range, 5 minutes: clear corners with a pre-aimed jiggle peek.',
+  success_check: 'Next review: this should show up fewer than 3 times.',
+  ...overrides,
+});
+
+export const summary = (overrides: Partial<ReportSummary> = {}): ReportSummary => ({
+  verdict:
+    'You re-peeked A Main from the same spot about a second after trading shots (peeking, 3 times).',
+  rank_focus: 'Coach fewer coin-flip peeks and basic team play.',
+  windows_reviewed: 5,
+  focus: [habit()],
+  hindsight: [],
+  also_seen: [],
+  strengths: [strengthItem()],
+  practice: practiceItem(),
   ...overrides,
 });

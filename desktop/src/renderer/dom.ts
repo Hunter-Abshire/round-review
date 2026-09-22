@@ -1,10 +1,13 @@
 import type {
   Clip,
+  Habit,
   Knowledge,
   PlayerContext,
   Report,
+  ReportSummary,
   ReviewOptions,
   Settings,
+  StrengthItem,
 } from '../shared/types';
 import {
   formatBytes,
@@ -314,7 +317,16 @@ export const renderFindingList = (
     );
     return;
   }
+  let lastCategory: string | null = null;
   for (const marker of markers) {
+    if (marker.finding.category !== lastCategory) {
+      lastCategory = marker.finding.category;
+      const count = markers.filter(m => m.finding.category === lastCategory).length;
+      const heading = el('h5', 'finding-group');
+      heading.dataset['category'] = lastCategory;
+      heading.textContent = `${lastCategory} · ${count}`;
+      root.append(heading);
+    }
     const row = el('button', 'finding-row');
     row.dataset['finding'] = marker.id;
     row.setAttribute('aria-pressed', String(marker.id === selectedId));
@@ -462,4 +474,138 @@ export const renderContextBar = (
   focus.value = context.focus ?? '';
   focus.addEventListener('change', () => onChange('focus', focus.value));
   bar.append(focus);
+};
+
+// ------------------------------------------------------------------------- coach panel
+
+const jumpRow = (timestamps: number[], onSeek: (timestampS: number) => void): HTMLElement => {
+  const wrap = el('div', 'jumps');
+  wrap.append(el('span', 'section-label', 'Where to look'));
+  for (const timestamp of timestamps) {
+    const jump = el('button', 'jump', formatClock(timestamp));
+    jump.dataset['jump'] = String(timestamp);
+    jump.addEventListener('click', event => {
+      event.stopPropagation();
+      onSeek(timestamp);
+    });
+    wrap.append(jump);
+  }
+  return wrap;
+};
+
+const focusCard = (
+  index: number,
+  habit: Habit,
+  onSeek: (timestampS: number) => void,
+): HTMLElement => {
+  const card = el('article', `focus cat-${habit.category}`);
+  card.dataset['focus'] = habit.check_id;
+  const head = el('div', 'focus-head');
+  head.append(el('span', 'badge', String(index)));
+  head.append(el('h4', undefined, habit.observation));
+  card.append(head);
+
+  const times = habit.count === 1 ? 'once' : `${habit.count} times`;
+  card.append(el('p', 'focus-meta', `${habit.category} · ${times}`));
+  card.append(jumpRow(habit.timestamps, onSeek));
+  const fix = el('div', 'section fix');
+  fix.append(el('span', 'section-label', 'Try instead'));
+  fix.append(el('p', 'section-body', habit.suggested_alternative));
+  card.append(fix);
+  if (habit.assumption_flags.length > 0) {
+    card.append(
+      el('p', 'focus-assumed', `Assumed, not seen: ${habit.assumption_flags.join(', ')}`),
+    );
+  }
+  // The whole card seeks to the clearest instance, so one click gets you there.
+  card.addEventListener('click', () => onSeek(habit.timestamps[0] ?? 0));
+  return card;
+};
+
+const strengthRow = (strength: StrengthItem): HTMLElement => {
+  const row = el('div', 'strength');
+  row.append(
+    el('span', 'strength-time', formatClock(strength.timestamp_s)),
+    el('span', 'strength-cat', strength.category),
+  );
+  row.append(el('p', 'strength-body', strength.observation));
+  row.append(el('p', 'strength-why', strength.why_it_worked));
+  return row;
+};
+
+/**
+ * The coach's write-up: verdict, then the corrections, then genuine praise, then the one
+ * thing to practise. Corrections come first deliberately; praise placed first reads as a
+ * cushion and gets discounted along with the criticism.
+ */
+export const renderCoachPanel = (
+  root: HTMLElement,
+  summary: ReportSummary,
+  onSeek: (timestampS: number) => void,
+): void => {
+  root.replaceChildren();
+
+  const verdict = el('div', 'verdict');
+  verdict.dataset['verdict'] = 'true';
+  verdict.append(el('span', 'section-label', 'The one thing to fix'));
+  verdict.append(el('p', 'verdict-body', summary.verdict));
+  if (summary.rank_focus) {
+    verdict.append(el('p', 'verdict-rank', `At your rank: ${summary.rank_focus}`));
+  }
+  root.append(verdict);
+
+  if (summary.focus.length > 0) {
+    root.append(el('h3', 'coach-heading', 'What to work on'));
+    summary.focus.forEach((habit, i) => root.append(focusCard(i + 1, habit, onSeek)));
+  }
+
+  if (summary.strengths.length > 0) {
+    root.append(el('h3', 'coach-heading', 'What worked'));
+    const wrap = el('div', 'strengths');
+    for (const strength of summary.strengths) wrap.append(strengthRow(strength));
+    root.append(wrap);
+  }
+
+  if (summary.hindsight.length > 0) {
+    const section = el('div', 'notice hindsight');
+    section.dataset['hindsight'] = 'true';
+    section.append(el('span', 'section-label', 'Judged with hindsight, so treat with care'));
+    for (const habit of summary.hindsight) {
+      section.append(
+        el(
+          'p',
+          'section-body',
+          `${formatClock(habit.timestamps[0] ?? 0)} — ${habit.observation} Only clear afterwards: ${habit.information_revealed_later}`,
+        ),
+      );
+    }
+    root.append(section);
+  }
+
+  if (summary.also_seen.length > 0) {
+    const section = el('details', 'also-seen');
+    section.dataset['alsoSeen'] = 'true';
+    section.setAttribute('data-also-seen', 'true');
+    section.append(el('summary', undefined, `Also seen (${summary.also_seen.length})`));
+    for (const item of summary.also_seen) {
+      const times = item.count === 1 ? 'once' : `${item.count} times`;
+      section.append(
+        el('p', 'note', `${item.category}: ${item.check_label ?? item.check_id} (${times})`),
+      );
+    }
+    root.append(section);
+  }
+
+  if (summary.practice) {
+    const practice = el('div', 'practice');
+    practice.dataset['practice'] = 'true';
+    practice.append(el('h3', 'coach-heading', 'Before your next game'));
+    practice.append(el('span', 'section-label', 'In-game rule'));
+    practice.append(el('p', 'section-body', summary.practice.rule));
+    practice.append(el('span', 'section-label', 'Drill'));
+    practice.append(el('p', 'section-body', summary.practice.drill));
+    practice.append(el('span', 'section-label', 'How you will know it worked'));
+    practice.append(el('p', 'section-body', summary.practice.success_check));
+    root.append(practice);
+  }
 };

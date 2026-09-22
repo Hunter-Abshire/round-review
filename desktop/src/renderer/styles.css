@@ -715,3 +715,180 @@ video {
 .card-plan.long {
   color: var(--warn);
 }
+
+/* ---------------------------------------------------------------- coach panel */
+
+.coach {
+  margin-top: 14px;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.coach-heading {
+  margin: 18px 0 10px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.verdict {
+  padding: 12px 14px;
+  background: var(--panel-2);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+}
+
+.verdict-body {
+  margin: 4px 0 0;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.verdict-rank {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.focus {
+  padding: 14px;
+  margin-bottom: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.focus:hover {
+  border-color: #38404d;
+  border-left-color: var(--accent);
+}
+
+.focus-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.focus-head h4 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.focus-meta {
+  margin: 6px 0 10px 34px;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: capitalize;
+}
+
+.focus-assumed {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--warn);
+}
+
+.jumps {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.jump {
+  background: var(--line);
+  color: var(--text);
+  border: 0;
+  border-radius: 6px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.jump:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.strengths {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.strength {
+  padding: 10px 12px;
+  background: #14251b;
+  border-left: 3px solid var(--ok);
+  border-radius: 8px;
+}
+
+.strength-time {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  margin-right: 8px;
+}
+
+.strength-cat {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: capitalize;
+}
+
+.strength-body {
+  margin: 4px 0 0;
+}
+
+.strength-why {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.notice.hindsight {
+  margin-top: 14px;
+  background: #2a2413;
+  color: #d8cba6;
+  border-left: 3px solid var(--warn);
+}
+
+.also-seen {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.also-seen summary {
+  cursor: pointer;
+}
+
+.practice {
+  margin-top: 18px;
+  padding: 14px;
+  background: var(--panel-2);
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+}
+
+.practice .section-body {
+  margin: 2px 0 10px;
+}
+
+.finding-group {
+  margin: 10px 0 2px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.finding-group:first-child {
+  margin-top: 0;
+}

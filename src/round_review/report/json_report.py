@@ -88,6 +88,8 @@ def report_to_dict(report: Report, base_dir: Path) -> dict[str, Any]:
                 "index": r.window.index,
                 "start_s": r.window.start_s,
                 "end_s": r.window.end_s,
+                "round_index": r.window.round_index,
+                "window_source": r.window.source,
                 "model_calls": r.model_calls,
                 "context": _asdict(r.context),
                 "abstained_reason": r.abstained_reason,

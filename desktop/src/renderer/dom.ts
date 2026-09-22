@@ -1017,7 +1017,11 @@ export const renderGroupedFindings = (
       if (marker.id === selectedId) row.classList.add('selected');
       row.append(el('span', 'finding-index', String(marker.ordinal)));
       const body = el('span', 'finding-body');
-      body.append(el('span', 'finding-time', formatClock(marker.timestamp_s)));
+      const when =
+        marker.roundIndex === null
+          ? formatClock(marker.timestamp_s)
+          : `Round ${marker.roundIndex} · ${formatClock(marker.timestamp_s)}`;
+      body.append(el('span', 'finding-time', when));
       body.append(el('span', 'finding-text', marker.finding.observation));
       row.append(body);
       row.addEventListener('click', () => onSelect(marker.id));
@@ -1067,8 +1071,9 @@ export const renderFindingDetail = (
   bar.append(prev, next);
   root.append(bar);
 
+  const round = props.marker.roundIndex === null ? '' : `Round ${props.marker.roundIndex} · `;
   root.append(
-    el('h4', 'detail-title', `${formatClock(finding.timestamp_s)} · ${finding.category}`),
+    el('h4', 'detail-title', `${round}${formatClock(finding.timestamp_s)} · ${finding.category}`),
   );
   if (finding.check_label) root.append(el('p', 'check', finding.check_label));
   root.append(el('p', 'observation', finding.observation));

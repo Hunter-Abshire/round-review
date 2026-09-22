@@ -51,6 +51,8 @@ export const report = (overrides: Partial<Report> = {}): Report => ({
       index: 0,
       start_s: 60,
       end_s: 72,
+      round_index: null,
+      window_source: 'tiled',
       model_calls: 1,
       context: EMPTY_CONTEXT,
       situation: null,
@@ -63,6 +65,8 @@ export const report = (overrides: Partial<Report> = {}): Report => ({
       index: 1,
       start_s: 300,
       end_s: 312,
+      round_index: null,
+      window_source: 'tiled',
       model_calls: 1,
       context: { ...EMPTY_CONTEXT, agent: 'Jett', map: 'Ascent', side: 'attack' },
       situation: {

@@ -45,8 +45,8 @@ def test_the_model_list_is_filled_at_runtime() -> None:
     assert field_spec("model").choices_from == "ollama_models"
 
 
-def test_coverage_offers_the_two_modes() -> None:
-    assert set(field_spec("coverage").choices) == {"full", "sampled"}
+def test_coverage_offers_every_mode() -> None:
+    assert set(field_spec("coverage").choices) == {"rounds", "full", "sampled"}
 
 
 def test_numeric_fields_that_must_be_positive_say_so() -> None:

@@ -332,7 +332,7 @@ def test_settings_describes_the_review_defaults(client: TestClient) -> None:
     assert body["window_s"] == 12.0
     assert body["model"] == "qwen3-vl:8b"
     assert body["situation_pass"] is True
-    assert body["coverage_modes"] == ["full", "sampled"]
+    assert body["coverage_modes"] == ["full", "rounds", "sampled"]
 
 
 def test_partial_ledger_status_is_reported_as_partial(
@@ -469,7 +469,7 @@ def test_config_lists_every_setting_with_its_value_and_meaning(client: TestClien
     coverage = next(f for f in body["fields"] if f["name"] == "coverage")
     assert coverage["value"] == "full"
     assert coverage["kind"] == "choice"
-    assert coverage["choices"] == ["full", "sampled"]
+    assert coverage["choices"] == ["rounds", "full", "sampled"]
     assert coverage["help"].endswith(".")
     assert coverage["group"] == "How much to review"
     assert body["groups"][0] == "Recordings"

@@ -31,6 +31,19 @@ describe('renderGroupedFindings', () => {
     expect(headings.filter(h => h?.includes('positioning'))).toHaveLength(1);
   });
 
+  it('labels a finding with its round when the clock was read', () => {
+    const root = document.createElement('div');
+    const withRound = markers.map(m => ({ ...m, roundIndex: 7 }));
+    renderGroupedFindings(root, withRound, null, () => undefined);
+    expect(root.querySelector('.finding-time')?.textContent).toContain('Round 7');
+  });
+
+  it('falls back to the timestamp alone when there is no round', () => {
+    const root = document.createElement('div');
+    renderGroupedFindings(root, markers, null, () => undefined);
+    expect(root.querySelector('.finding-time')?.textContent).not.toContain('Round');
+  });
+
   it('counts each category once', () => {
     const root = document.createElement('div');
     renderGroupedFindings(root, markers, null, () => undefined);

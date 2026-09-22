@@ -3,14 +3,22 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-WindowSource = Literal["evenly_spaced", "tiled", "events", "asked"]
-Coverage = Literal["full", "sampled"]
+if TYPE_CHECKING:  # avoids a cycle: vision imports video.probe
+    from round_review.vision.timeline import RoundSpan
+
+WindowSource = Literal[
+    "evenly_spaced", "tiled", "events", "asked", "round_start", "round_end", "death"
+]
+Coverage = Literal["full", "sampled", "rounds"]
 
 # A trailing tile shorter than this fraction of a window is dropped rather than reviewed.
 MIN_TAIL_FRACTION = 0.5
+# How much of a death window sits before the death itself.
+DEATH_LEAD_IN = 0.75
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,6 +27,8 @@ class Window:
     start_s: float
     end_s: float
     source: WindowSource
+    # Which round of the recording this window falls in, when the clock was readable.
+    round_index: int | None = None
 
 
 def select_windows(
@@ -115,6 +125,72 @@ def tile_windows(
     return windows
 
 
+def _round_index(spans: Sequence[RoundSpan], timestamp_s: float) -> int | None:
+    last = len(spans) - 1
+    for i, span in enumerate(spans):
+        if span.contains(timestamp_s) or (i == last and timestamp_s >= span.start_s):
+            return span.index
+    return None
+
+
+def _clamp(start: float, window_s: float, duration_s: float) -> tuple[float, float]:
+    start = min(max(0.0, start), max(0.0, duration_s - window_s))
+    return start, min(duration_s, start + window_s)
+
+
+def round_windows(
+    spans: Sequence[RoundSpan],
+    *,
+    window_s: float,
+    duration_s: float,
+    deaths: Sequence[float] = (),
+    max_windows: int = 0,
+) -> list[Window]:
+    """Review the moments a coach would: the opening of each round, the seconds that ended
+    it, and every death.
+
+    Uniform tiling spends most of a review on players walking. Rounds are where decisions
+    live, so with the clock read the budget goes there instead: a 15-minute game becomes
+    roughly two windows per round plus deaths, not fifty-seven equal slices of wall clock.
+    """
+    if window_s <= 0:
+        raise ValueError("window_s must be > 0")
+    candidates: list[tuple[float, WindowSource, int | None]] = []
+    for span in spans:
+        candidates.append((span.start_s, "round_start", span.index))
+        # A round shorter than two windows is one window; anything longer gets its ending,
+        # which is where the site is taken, lost, or the last player traded.
+        if span.end_s - span.start_s >= 2 * window_s:
+            candidates.append((span.end_s - window_s, "round_end", span.index))
+    # Weighted to the lead-in: the mistake that got the player killed happened before
+    # the death, not after it.
+    candidates.extend(
+        (death - window_s * DEATH_LEAD_IN, "death", _round_index(spans, death)) for death in deaths
+    )
+    if not candidates:
+        return []
+
+    # Deaths first at the same moment: the death is the more specific reason to look.
+    priority = {"death": 0, "round_start": 1, "round_end": 2}
+    candidates.sort(key=lambda c: (c[0], priority[c[1]]))
+
+    kept: list[tuple[float, float, WindowSource, int | None]] = []
+    for raw_start, source, round_index in candidates:
+        start, end = _clamp(raw_start, window_s, duration_s)
+        if kept and start < kept[-1][1]:
+            continue  # overlaps the window already planned; reviewing it twice is waste
+        kept.append((start, end, source, round_index))
+
+    if max_windows and len(kept) > max_windows:
+        step = (len(kept) - 1) / (max_windows - 1) if max_windows > 1 else 0.0
+        kept = [kept[round(i * step)] for i in range(max_windows)]
+
+    return [
+        Window(i, start, end, source, round_index)
+        for i, (start, end, source, round_index) in enumerate(kept)
+    ]
+
+
 def plan_windows(
     duration_s: float,
     *,
@@ -124,13 +200,30 @@ def plan_windows(
     edge_skip_s: float,
     max_windows: int = 0,
     max_span_s: float = 0.0,
+    spans: Sequence[RoundSpan] = (),
+    deaths: Sequence[float] = (),
 ) -> list[Window]:
-    """The single entry point the pipeline uses to decide what gets reviewed."""
+    """The single entry point the pipeline uses to decide what gets reviewed.
+
+    `rounds` falls back to full tiling when the clock scan found nothing, because an
+    uncalibrated HUD must never turn into an empty review.
+    """
+    if coverage == "rounds":
+        planned = round_windows(
+            spans,
+            window_s=window_s,
+            duration_s=duration_s,
+            deaths=deaths,
+            max_windows=max_windows,
+        )
+        if planned:
+            return planned
+        coverage = "full"
     if coverage == "full":
         return tile_windows(duration_s, window_s, edge_skip_s, max_windows, max_span_s)
     if coverage == "sampled":
         return select_windows(duration_s, window_s, windows_per_file, edge_skip_s, max_span_s)
-    raise ValueError(f"unknown coverage mode {coverage!r}; expected 'full' or 'sampled'")
+    raise ValueError(f"unknown coverage mode {coverage!r}; expected 'full', 'sampled' or 'rounds'")
 
 
 def estimate_window_count(
@@ -142,6 +235,8 @@ def estimate_window_count(
     edge_skip_s: float,
     max_windows: int = 0,
     max_span_s: float = 0.0,
+    spans: Sequence[RoundSpan] = (),
+    deaths: Sequence[float] = (),
 ) -> int:
     """How many windows a review of this recording would produce, for UI estimates."""
     return len(
@@ -153,5 +248,7 @@ def estimate_window_count(
             edge_skip_s=edge_skip_s,
             max_windows=max_windows,
             max_span_s=max_span_s,
+            spans=spans,
+            deaths=deaths,
         )
     )

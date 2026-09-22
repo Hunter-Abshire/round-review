@@ -63,6 +63,7 @@ from round_review.video.probe import CommandRunner, Recording, SubprocessRunner,
 from round_review.video.windows import Window, plan_windows
 from round_review.vision.digits import DigitTemplates
 from round_review.vision.hud import HudRead, parse_region, read_hud
+from round_review.vision.timeline import RoundSpan, round_at, scan_clock, segment_rounds
 
 log = logging.getLogger(__name__)
 
@@ -189,6 +190,42 @@ def _read_window_hud(
     )
 
 
+def _round_of(spans: tuple[RoundSpan, ...], window: Window) -> int | None:
+    span = round_at(spans, window.start_s)
+    return span.index if span else None
+
+
+def _scan_rounds(
+    recording: Recording, deps: Deps, templates: DigitTemplates, out_dir: Path
+) -> tuple[RoundSpan, ...]:
+    """Find the round boundaries by scanning the clock. One ffmpeg pass, no model calls.
+
+    Returns nothing when the clock reader is off or untrained, which is a normal state: the
+    caller falls back to time-based windows rather than reviewing an empty plan.
+    """
+    cfg = deps.config
+    if not cfg.hud_check or not templates.characters():
+        return ()
+    try:
+        region = parse_region(cfg.hud_timer_region)
+    except RoundReviewError as exc:
+        log.warning("hud_timer_region is unusable, not scanning for rounds: %s", exc)
+        return ()
+    samples = scan_clock(
+        recording,
+        region,
+        deps.ffmpeg_runner,
+        templates,
+        out_dir=out_dir / "scan",
+        min_confidence=cfg.hud_min_confidence,
+        interval_s=cfg.scan_interval_s,
+        threshold=cfg.hud_threshold,
+    )
+    spans = segment_rounds(samples, min_confidence=cfg.hud_min_confidence)
+    log.info("clock scan: %d sample(s), %d round(s)", len(samples), len(spans))
+    return spans
+
+
 def review_file(
     path: Path,
     deps: Deps,
@@ -225,6 +262,7 @@ def review_file(
 
     try:
         recording = probe(path, deps.probe_runner)
+        spans = _scan_rounds(recording, deps, hud_templates, out_dir)
         windows = plan_windows(
             recording.duration_s,
             window_s=cfg.window_s,
@@ -233,7 +271,14 @@ def review_file(
             edge_skip_s=cfg.edge_skip_s,
             max_windows=cfg.max_windows,
             max_span_s=cfg.max_span_s,
+            spans=spans,
         )
+        # Even a tiled review benefits from round labels, so map any window the scan covers.
+        if spans:
+            windows = [
+                w if w.round_index is not None else replace(w, round_index=_round_of(spans, w))
+                for w in windows
+            ]
     except VideoError as exc:
         _record(deps, key, path, "failed", 0, None, exc, 0, time.monotonic() - started)
         raise

@@ -32,6 +32,8 @@ class Config:
     window_s: float = 12.0
     # "full" tiles the whole recording; "sampled" takes `windows_per_file` spread evenly.
     coverage: str = "full"
+    # Seconds between clock samples when scanning a recording for round boundaries.
+    scan_interval_s: float = 2.0
     windows_per_file: int = 3
     # 0 = unlimited. `max_span_s` reviews only the first N seconds of gameplay.
     max_windows: int = 0
@@ -128,7 +130,7 @@ PATH_KEYS: frozenset[str] = frozenset(
         "notes_dir",
     }
 )
-COVERAGE_MODES: frozenset[str] = frozenset({"full", "sampled"})
+COVERAGE_MODES: frozenset[str] = frozenset({"full", "sampled", "rounds"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -244,9 +246,11 @@ FIELDS: tuple[FieldSpec, ...] = (
         "coverage",
         "How much to review",
         "Coverage",
-        "Review the whole recording, or take a few windows spread across it.",
+        "Review the whole recording, the moments that decide rounds, or a few windows "
+        "spread across it. Rounds needs a trained HUD clock and falls back to the whole "
+        "recording without one.",
         "choice",
-        choices=("full", "sampled"),
+        choices=("rounds", "full", "sampled"),
     ),
     FieldSpec(
         "max_span_s",
@@ -371,6 +375,18 @@ FIELDS: tuple[FieldSpec, ...] = (
         "int",
         minimum=-1,
         maximum=255,
+        advanced=True,
+    ),
+    FieldSpec(
+        "scan_interval_s",
+        "Round clock",
+        "Clock scan interval",
+        "Seconds between clock readings when finding round boundaries. Smaller is more "
+        "precise and slower.",
+        "float",
+        minimum=0.5,
+        maximum=30,
+        unit="s",
         advanced=True,
     ),
     FieldSpec(

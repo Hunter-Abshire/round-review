@@ -4,6 +4,8 @@ export interface Marker {
   id: string;
   ordinal: number;
   windowIndex: number;
+  /** Which round of the recording this moment fell in, when the clock was readable. */
+  roundIndex: number | null;
   timestamp_s: number;
   finding: Finding;
 }
@@ -30,6 +32,7 @@ export const collectMarkers = (report: Report): Marker[] =>
         id: `w${w.index}-f${i}`,
         ordinal: 0,
         windowIndex: w.index,
+        roundIndex: w.round_index,
         timestamp_s: finding.timestamp_s,
         finding,
       })),

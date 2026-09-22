@@ -248,6 +248,8 @@ export interface ReportWindow {
   index: number;
   start_s: number;
   end_s: number;
+  round_index: number | null;
+  window_source: string;
   model_calls: number;
   context: PlayerContext;
   situation: Situation | null;

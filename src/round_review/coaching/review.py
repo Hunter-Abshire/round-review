@@ -288,7 +288,7 @@ def review_window(
         "buy" if buy_phase else (situation.phase if situation else None),
     )
     prompt = build_coach_prompt(
-        window, coach_samples, context, situation, knowledge, state, clock_correction
+        window, coach_samples, context, situation, knowledge, state, clock_correction, buy_phase
     )
     check_ids = knowledge.checklist.check_ids()
     last_error: ParseError | None = None

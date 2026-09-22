@@ -17,6 +17,7 @@ from round_review.coaching.knowledge import (
     relevant_categories,
     render_agent_brief,
     render_checklist,
+    render_economy_brief,
     render_map_brief,
     render_rank_focus,
 )
@@ -323,6 +324,7 @@ def build_coach_prompt(
     knowledge: CoachingKnowledge,
     state: HudState | None = None,
     clock_correction: str | None = None,
+    buy_phase: bool = False,
 ) -> str:
     sections: list[str] = []
     described = context.describe()
@@ -350,6 +352,10 @@ def build_coach_prompt(
     game_map = find_map(knowledge.maps, context.map)
     if game_map:
         sections.append(render_map_brief(game_map))
+    # Prices and thresholds, only where a purchase is being judged. Everywhere else it is
+    # 1,500 tokens spent on a decision the player is not making.
+    if buy_phase:
+        sections.append(render_economy_brief(knowledge.economy))
     if situation:
         sections.append(situation.describe())
     # The clock already overruled the phase field, but the model's own summary still says
@@ -364,6 +370,22 @@ def build_coach_prompt(
             f"overrides anything above that disagrees): {measured}"
         )
     sections.append(_window_line(window, samples))
+    if buy_phase:
+        sections.append(
+            "This is the buy phase. Judge the purchase and nothing else: the player is "
+            "standing in spawn reading a menu, so say nothing about their position, their "
+            "crosshair or their movement.\n\n"
+            "Work from what the menu shows: the player's own credits, what they bought, and "
+            "every teammate's credits, weapon and shield down the left. Decide whether this "
+            "buy fits what the team can afford, whether it sets up the next round, and "
+            "whether a better split of the same credits existed. Cite the numbers you can "
+            "actually read; if the menu is not open or the credits are not legible, say so "
+            "and report nothing.\n\n"
+            f"At most {MAX_FINDINGS_PER_WINDOW} findings, each citing an economy check id, "
+            "with the timestamp of the frame you read it from. Report a strength when the "
+            "buy was right for a reason worth repeating."
+        )
+        return "\n\n".join(sections)
     sections.append(
         "Identify the most consequential supported decision just before or during combat. "
         "Use the checklist to explain that decision, not to enumerate cosmetic imperfections. "

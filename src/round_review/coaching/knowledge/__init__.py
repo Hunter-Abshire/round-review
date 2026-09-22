@@ -8,6 +8,7 @@ context window.
 from __future__ import annotations
 
 import json
+import math
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -236,6 +237,121 @@ def load_maps() -> dict[str, MapBrief]:
 
 
 @dataclass(frozen=True, slots=True)
+class Weapon:
+    name: str
+    cost: int
+    head: int
+    body: int
+    tier: str
+    note: str
+
+    def shots_to_kill(self, effective_hp: int) -> int:
+        """Body shots to kill a target with this much effective HP (100/125/150).
+
+        What turns "heavy shield is better" into something a coach can justify: against a
+        Vandal light and heavy are both four shots, so the 600 credits bought nothing.
+        """
+        return math.ceil(effective_hp / self.body) if self.body > 0 else 0
+
+
+@dataclass(frozen=True, slots=True)
+class ArmorOption:
+    name: str
+    cost: int
+    effective_hp: int
+    note: str
+
+
+@dataclass(frozen=True, slots=True)
+class BuyType:
+    name: str
+    shape: str
+    credits_from: int | None
+    credits_to: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class EconomyBrief:
+    """Prices, rewards and thresholds, so buy advice is not invented at generation time."""
+
+    half_start: int
+    cap: int
+    kill: int
+    round_win: int
+    loss_ladder: tuple[int, ...]
+    spike_plant: int
+    survivor_payout: int
+    credit_rules: tuple[str, ...]
+    armor: tuple[ArmorOption, ...]
+    weapons: tuple[Weapon, ...]
+    buy_types: tuple[BuyType, ...]
+    priorities: tuple[str, ...]
+    dropping: tuple[str, ...]
+
+
+def parse_economy(data: Mapping[str, Any]) -> EconomyBrief:
+    where = "economy"
+    credits = _field(data, "credits", where)
+    ladder = _field(credits, "loss_ladder", where)
+    if not isinstance(ladder, list) or not all(isinstance(v, int) for v in ladder):
+        raise KnowledgeError(f"{where}: loss_ladder must be a list of integers")
+
+    weapons: list[Weapon] = []
+    for raw in _field(data, "weapons", where):
+        name = str(_field(raw, "name", where))
+        weapons.append(
+            Weapon(
+                name=name,
+                cost=int(_field(raw, "cost", f"weapon {name}")),
+                head=int(_field(raw, "head", f"weapon {name}")),
+                body=int(_field(raw, "body", f"weapon {name}")),
+                tier=str(_field(raw, "tier", f"weapon {name}")),
+                note=str(raw.get("note", "")),
+            )
+        )
+    if not weapons:
+        raise KnowledgeError(f"{where}: no weapons")
+
+    armor = tuple(
+        ArmorOption(
+            name=str(_field(raw, "name", "armor")),
+            cost=int(_field(raw, "cost", "armor")),
+            effective_hp=int(_field(raw, "effective_hp", "armor")),
+            note=str(raw.get("note", "")),
+        )
+        for raw in _field(data, "armor", where)
+    )
+    buy_types = tuple(
+        BuyType(
+            name=str(_field(raw, "name", "buy type")),
+            shape=str(_field(raw, "shape", "buy type")),
+            credits_from=raw.get("from"),
+            credits_to=raw.get("to"),
+        )
+        for raw in _field(data, "buy_types", where)
+    )
+    return EconomyBrief(
+        half_start=int(_field(credits, "half_start", where)),
+        cap=int(_field(credits, "cap", where)),
+        kill=int(_field(credits, "kill", where)),
+        round_win=int(_field(credits, "round_win", where)),
+        loss_ladder=tuple(ladder),
+        spike_plant=int(_field(credits, "spike_plant", where)),
+        survivor_payout=int(_field(credits, "survivor_payout", where)),
+        credit_rules=_strings(credits, "rules", where),
+        armor=armor,
+        weapons=tuple(weapons),
+        buy_types=buy_types,
+        priorities=_strings(data, "priorities", where),
+        dropping=_strings(data, "dropping", where),
+    )
+
+
+def load_economy() -> EconomyBrief:
+    return parse_economy(_read("economy.json"))
+
+
+@dataclass(frozen=True, slots=True)
 class Practice:
     """What to do about a category: one rule for ranked, one drill for outside it."""
 
@@ -275,11 +391,12 @@ class CoachingKnowledge:
     checklist: Checklist
     agents: Mapping[str, AgentBrief]
     maps: Mapping[str, MapBrief]
+    economy: EconomyBrief
 
 
 @cache
 def load_knowledge() -> CoachingKnowledge:
-    return CoachingKnowledge(load_checklist(), load_agents(), load_maps())
+    return CoachingKnowledge(load_checklist(), load_agents(), load_maps(), load_economy())
 
 
 # -- lookup ----------------------------------------------------------------------------------
@@ -373,6 +490,44 @@ def render_agent_brief(agent: AgentBrief) -> str:
     lines += _bullets("Good play looks like", agent.good_play_looks_like)
     lines += _bullets("Common mistakes to look for", agent.common_mistakes)
     lines += _bullets("HUD ability checks", agent.ability_checks)
+    return "\n".join(lines)
+
+
+def render_economy_brief(economy: EconomyBrief) -> str:
+    """The prices, rewards and thresholds a buy decision turns on.
+
+    Sent only on buy windows. Everywhere else it is 3,000 characters of prompt spent on a
+    decision the player is not making.
+    """
+    guns = ", ".join(f"{w.name} {w.cost}" for w in economy.weapons if w.cost >= 300)
+    armour = ", ".join(f"{a.name} {a.cost} ({a.effective_hp} effective HP)" for a in economy.armor)
+    ladder = ", ".join(f"{c:,}" for c in economy.loss_ladder)
+    lines = [
+        "Economy brief (credits are exact; buy-type thresholds are convention, give or take 300):",
+        f"  Prices: {guns}.",
+        f"  Armor: {armour}.",
+        f"  Rewards: kill {economy.kill}, round win {economy.round_win:,}, "
+        f"loss {ladder} on a streak, spike plant {economy.spike_plant}, "
+        f"cap {economy.cap:,}, {economy.half_start} at the start of a half.",
+    ]
+    lines += [f"  - {rule}" for rule in economy.credit_rules]
+    lines.append("  Buy types:")
+    for buy in economy.buy_types:
+        span = ""
+        if buy.credits_from and buy.credits_to:
+            span = f" ({buy.credits_from:,}-{buy.credits_to:,})"
+        elif buy.credits_from:
+            span = f" ({buy.credits_from:,}+)"
+        elif buy.credits_to:
+            span = f" (under {buy.credits_to:,})"
+        lines.append(f"  - {buy.name}{span}: {buy.shape}")
+    lines.append("  Priorities:")
+    lines += [f"  - {rule}" for rule in economy.priorities]
+    lines.append("  Dropping:")
+    lines += [f"  - {rule}" for rule in economy.dropping]
+    notable = [w for w in economy.weapons if w.note and w.cost >= 850]
+    lines.append("  Weapon notes:")
+    lines += [f"  - {w.name}: {w.note}" for w in notable]
     return "\n".join(lines)
 
 

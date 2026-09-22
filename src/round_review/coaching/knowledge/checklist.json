@@ -353,7 +353,7 @@
     {
       "id": "economy",
       "name": "Economy management",
-      "principle": "The player buys with the team, full-buys only from about 3,900 credits, saves when a full buy next round is the better outcome, and reads the enemy's likely buy to choose distances and fights.",
+      "principle": "The player buys with the team, full-buys only from about 3,900 credits, saves when the gun kept is worth more than the loss bonus given up, spends the difference between light and heavy shields on utility when it buys nothing, and reads both the team's credits and the enemy's likely buy before committing.",
       "checks": [
         {
           "id": "economy.team_sync",
@@ -416,6 +416,48 @@
           "check": "When the player has surplus credits (over ~6,000) and a teammate is short of a rifle, does the player drop a weapon in the buy phase?",
           "common_mistake": "Sitting on 8,000 credits while a teammate plays the full buy with a Sheriff.",
           "fix": "Ask who needs a gun before the barrier drops; five rifles beat one bank balance.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "economy.survivor_penalty",
+          "check": "In a round the team is losing, does the player either contest it or disengage early enough to save a weapon worth more than the bonus they give up? Surviving a lost round pays a flat 1,000 instead of the 1,900-2,900 loss bonus.",
+          "common_mistake": "Hiding to survive while holding a Classic or a Ghost, which forfeits up to 1,900 credits to save 500.",
+          "fix": "Saving is only worth it with a rifle, and roughly break-even with a Spectre at the 2,900 tier. With a pistol, take the fight and trade.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "economy.shield_over_utility",
+          "check": "On a buy short of a full buy, did the player take the heavy shield when light plus an ability would have bought more? Against a Vandal or a close Phantom, light and heavy are both four body shots.",
+          "common_mistake": "1,000 credits into 25 extra armor on a half buy, with no abilities bought.",
+          "fix": "On a half buy take light shield and spend the 600 on utility or a better gun. Heavy is for full buys, where the credits compete with nothing.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "economy.bonus_round_rebuy",
+          "check": "On the round after winning an eco, is the player re-buying a rifle while already carrying a picked-up enemy rifle?",
+          "common_mistake": "Spending 2,900 on a Vandal while holding the Phantom taken off a body last round.",
+          "fix": "On a bonus round buy shields and utility only, and bank the rest.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "economy.halftime_spend",
+          "check": "In the last round of a half, is the player still holding credits they cannot carry? Everything resets to 800 at the break.",
+          "common_mistake": "Ending round 12 with 4,000 banked.",
+          "fix": "In the last round of a half, spend everything: the best gun, the best shield and every ability.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "economy.request_ignored",
+          "check": "When a teammate has requested a weapon in the buy menu and the player has a comfortable surplus, do they buy it for them?",
+          "common_mistake": "Sitting near the credit cap while a teammate plays the round on a Classic.",
+          "fix": "Right-click the requested weapon to buy it for them. Credits at the cap are wasted; a gun in a teammate's hands is not.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "economy.anti_eco_read",
+          "check": "When the enemy is clearly on a save, does the player scale their buy back rather than spending a full buy into it?",
+          "common_mistake": "Buying rifle plus heavy shield against a team that just lost two rounds and died holding pistols.",
+          "fix": "Against an eco, buy what wins the round and bank the rest; the credits matter more next round than the third extra advantage this one.",
           "visible_in_frames": true
         }
       ]

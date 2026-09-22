@@ -6,7 +6,7 @@ import math
 from dataclasses import dataclass
 from typing import Literal
 
-WindowSource = Literal["evenly_spaced", "tiled", "events"]
+WindowSource = Literal["evenly_spaced", "tiled", "events", "asked"]
 Coverage = Literal["full", "sampled"]
 
 # A trailing tile shorter than this fraction of a window is dropped rather than reviewed.

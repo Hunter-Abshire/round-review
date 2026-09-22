@@ -14,10 +14,12 @@ from pathlib import Path
 from typing import Literal
 
 from round_review.coaching.context import PlayerContext
+from round_review.coaching.question import QuestionSpec
 
 log = logging.getLogger(__name__)
 
 JobStatus = Literal["queued", "running", "done", "failed"]
+JobKind = Literal["review", "question"]
 ACTIVE: frozenset[str] = frozenset({"queued", "running"})
 ProgressFn = Callable[[int, int], None]
 
@@ -34,6 +36,8 @@ class JobOptions:
 
 
 RunFn = Callable[[Path, PlayerContext, JobOptions, ProgressFn], object]
+# A question returns its answer, which is stored on the job for the app to collect.
+QuestionFn = Callable[[Path, PlayerContext, QuestionSpec], object]
 
 
 @dataclass(slots=True)
@@ -49,14 +53,24 @@ class Job:
     finished_at: datetime | None
     context: PlayerContext = field(default_factory=PlayerContext)
     options: JobOptions = field(default_factory=JobOptions)
+    kind: JobKind = "review"
+    # Set on question jobs only: what was asked, and the answer once it is known.
+    question: QuestionSpec | None = None
+    answer: object | None = None
 
 
 class JobQueue:
     """Owns the worker thread and the job table. All public methods are thread-safe and
     return snapshots, never live Job objects."""
 
-    def __init__(self, run: RunFn, clock: Callable[[], datetime]) -> None:
+    def __init__(
+        self,
+        run: RunFn,
+        clock: Callable[[], datetime],
+        run_question: QuestionFn | None = None,
+    ) -> None:
         self._run = run
+        self._run_question = run_question
         self._clock = clock
         self._queue: queue.Queue[str | None] = queue.Queue()
         self._jobs: dict[str, Job] = {}
@@ -149,6 +163,36 @@ class JobQueue:
         self._queue.put(job.id)
         return dataclasses.replace(job)
 
+    def submit_question(
+        self,
+        path: Path,
+        key: str,
+        spec: QuestionSpec,
+        context: PlayerContext | None = None,
+    ) -> Job:
+        """Queue a question. Never deduplicated: two questions about the same clip are two
+        different questions, and the player is waiting for both answers."""
+        with self._lock:
+            job = Job(
+                id=uuid.uuid4().hex[:12],
+                path=path,
+                key=key,
+                status="queued",
+                windows_done=0,
+                windows_total=0,
+                error=None,
+                created_at=self._clock(),
+                finished_at=None,
+                context=context or PlayerContext(),
+                kind="question",
+                question=spec,
+            )
+            self._jobs[job.id] = job
+            self._order.append(job.id)
+            self._pending += 1
+        self._queue.put(job.id)
+        return dataclasses.replace(job)
+
     # -- worker ----------------------------------------------------------------------------
 
     def _set(self, job_id: str, **changes: object) -> None:
@@ -179,7 +223,13 @@ class JobQueue:
                 self._set(job_id, windows_done=done, windows_total=total)
 
             try:
-                self._run(job.path, job.context, job.options, on_progress)
+                if job.kind == "question":
+                    if self._run_question is None or job.question is None:
+                        raise RuntimeError("this queue cannot answer questions")
+                    answer = self._run_question(job.path, job.context, job.question)
+                    self._set(job_id, answer=answer)
+                else:
+                    self._run(job.path, job.context, job.options, on_progress)
             except Exception as exc:  # the worker must survive any job failure
                 log.error(
                     "job %s (%s) failed: %s: %s", job_id, job.path.name, type(exc).__name__, exc

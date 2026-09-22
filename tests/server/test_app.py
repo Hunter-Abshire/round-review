@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from round_review.coaching.context import PlayerContext
+from round_review.coaching.question import QuestionSpec
 from round_review.config import Config
 from round_review.errors import VideoError
 from round_review.ledger import LedgerEntry, append_entry
@@ -54,6 +55,8 @@ class FakeRun:
         self.calls: list[Path] = []
         self.contexts: list[PlayerContext] = []
         self.options: list[JobOptions] = []
+        self.questions: list[QuestionSpec] = []
+        self.question_contexts: list[PlayerContext] = []
 
     def __call__(
         self, path: Path, context: PlayerContext, options: JobOptions, on_progress: ProgressFn
@@ -83,10 +86,34 @@ class FakeRun:
         on_progress(1, 1)
 
 
+ANSWER = {
+    "question": "How could I have used utility here?",
+    "start_s": 40.0,
+    "end_s": 52.0,
+    "answerable": True,
+    "answer": "You pushed that angle with your smoke still up.",
+    "what_you_could_see": "The ability icon is lit at t=44.0s.",
+    "what_you_could_not_know": "",
+    "assumptions": [],
+    "alternatives": [
+        {"action": "Smoke the far angle first.", "why": "It halves the exposure."},
+        {"action": "Wait for your team.", "why": "It keeps the trade."},
+    ],
+    "confidence": 0.8,
+    "warnings": [],
+}
+
+
 @pytest.fixture
 def client(cfg: Config) -> TestClient:
     run = FakeRun(cfg)
-    jobs = JobQueue(run, clock=lambda: NOW)
+
+    def answer(path: Path, context: PlayerContext, spec: QuestionSpec) -> dict[str, object]:
+        run.questions.append(spec)
+        run.question_contexts.append(context)
+        return ANSWER
+
+    jobs = JobQueue(run, clock=lambda: NOW, run_question=answer)
     jobs.start()
     app = create_app(cfg, jobs, probe_runner=FakeProbe())
     app.state.fake_run = run
@@ -363,3 +390,60 @@ def test_a_long_review_is_estimated_in_hours(client: TestClient, cfg: Config, cl
     )
     (item,) = client.get("/api/clips").json()["clips"]
     assert item["estimated_time"] == "about 2 hours 30 minutes"  # 5 windows at 30 min each
+
+
+def test_ask_queues_a_question_and_returns_the_answer(client: TestClient, clip: Path) -> None:
+    r = client.post(
+        "/api/ask",
+        json={
+            "path": str(clip),
+            "start_s": 40,
+            "end_s": 52,
+            "question": "How could I have used utility here?",
+            "context": {"rank": "Gold 2"},
+        },
+    )
+    assert r.status_code == 202, r.text
+    job = r.json()
+    assert job["kind"] == "question"
+    assert job["question"]["question"] == "How could I have used utility here?"
+    assert job["question"]["start_s"] == 40.0
+
+    assert client.app.state.jobs.wait_idle(timeout=5)  # type: ignore[attr-defined]
+    done = client.get(f"/api/jobs/{job['id']}").json()
+    assert done["status"] == "done"
+    assert done["answer"]["answer"].startswith("You pushed")
+    assert len(done["answer"]["alternatives"]) == 2
+    asked = client.app.state.fake_run.questions  # type: ignore[attr-defined]
+    assert asked[0].question == "How could I have used utility here?"
+    assert client.app.state.fake_run.question_contexts[0].rank == "Gold 2"  # type: ignore[attr-defined]
+
+
+def test_ask_rejects_an_empty_question(client: TestClient, clip: Path) -> None:
+    r = client.post(
+        "/api/ask", json={"path": str(clip), "start_s": 10, "end_s": 20, "question": "   "}
+    )
+    assert r.status_code == 422
+
+
+def test_ask_rejects_a_path_outside_the_recordings_folder(
+    client: TestClient, tmp_path: Path
+) -> None:
+    outside = tmp_path / "elsewhere.mp4"
+    outside.write_bytes(b"x")
+    r = client.post(
+        "/api/ask", json={"path": str(outside), "start_s": 1, "end_s": 2, "question": "why?"}
+    )
+    assert r.status_code == 400
+
+
+def test_ask_accepts_a_bare_click_with_no_end(client: TestClient, clip: Path) -> None:
+    r = client.post("/api/ask", json={"path": str(clip), "start_s": 60, "question": "why?"})
+    assert r.status_code == 202, r.text
+    assert r.json()["question"]["end_s"] == 60.0  # the pipeline widens it
+
+
+def test_settings_publishes_the_question_limits(client: TestClient) -> None:
+    body = client.get("/api/settings").json()
+    assert body["max_question_span_s"] == 60.0
+    assert body["question_frames"] == 6

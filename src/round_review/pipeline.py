@@ -10,10 +10,27 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from round_review.coaching.context import PlayerContext, merge_context
+from round_review.coaching.frames import select_situation_frames
 from round_review.coaching.knowledge import load_knowledge
 from round_review.coaching.parse import Finding
+from round_review.coaching.prompt import (
+    RETRY_NUDGE,
+    SITUATION_SCHEMA,
+    SITUATION_SYSTEM_PROMPT,
+    build_situation_prompt,
+)
+from round_review.coaching.question import (
+    ANSWER_SCHEMA,
+    Answer,
+    QuestionSpec,
+    build_question_prompt,
+    build_question_system_prompt,
+    clamp_span,
+    parse_answer,
+)
 from round_review.coaching.review import WindowResult, review_window
 from round_review.coaching.session import build_session_summary
+from round_review.coaching.situation import Situation, parse_situation
 from round_review.config import Config
 from round_review.diagnosis import abstention_warning
 from round_review.errors import (
@@ -34,10 +51,11 @@ from round_review.ledger import (
     read_ledger,
     recording_key,
 )
+from round_review.llm.client import build_chat_request, send_review
 from round_review.llm.transport import Transport, UrllibTransport
 from round_review.report.json_report import write_report_json
 from round_review.report.markdown import Report, write_report
-from round_review.video.frames import extract_frames, extract_single_frame
+from round_review.video.frames import encode_frame_b64, extract_frames, extract_single_frame
 from round_review.video.probe import CommandRunner, Recording, SubprocessRunner, probe
 from round_review.video.windows import Window, plan_windows
 from round_review.vision.digits import DigitTemplates
@@ -328,3 +346,79 @@ def review_file(
         time.monotonic() - started,
     )
     return report
+
+
+def answer_question(
+    path: Path,
+    deps: Deps,
+    spec: QuestionSpec,
+    context: PlayerContext | None = None,
+) -> Answer:
+    """Answer one question about one stretch of a recording.
+
+    Same two passes as a review of a window: read the scene, then reason about it. The
+    difference is that the player chose the moment and the question, so nothing is skipped
+    for being the buy phase; if they asked about it, they want an answer about it.
+    """
+    if not spec.question.strip():
+        raise ValueError("question must not be empty")
+
+    cfg = deps.config
+    context = merge_context(
+        context or PlayerContext(), PlayerContext(notes=cfg.player_notes or None)
+    )
+    knowledge = load_knowledge()
+    recording = probe(path, deps.probe_runner)
+    start, end = clamp_span(spec.start_s, spec.end_s, recording.duration_s, cfg.max_question_span_s)
+    spec = QuestionSpec(start, end, spec.question)
+    window = Window(0, start, end, "asked")
+
+    frames_dir = report_dir_for(cfg, path) / "asked"
+    samples = extract_frames(
+        recording, window, deps.ffmpeg_runner, cfg.fps, cfg.frame_width, frames_dir
+    )
+    asked_samples = select_situation_frames(samples, cfg.question_frames)
+
+    history_calls = calls_today(read_ledger(cfg.ledger_path), deps.clock().date())
+    calls = 0
+    situation: Situation | None = None
+
+    if cfg.situation_pass:
+        scene_samples = select_situation_frames(samples, cfg.situation_frames)
+        request = build_chat_request(
+            cfg.model,
+            SITUATION_SYSTEM_PROMPT,
+            build_situation_prompt(window, scene_samples, context),
+            [encode_frame_b64(s.path) for s in scene_samples],
+            SITUATION_SCHEMA,
+            cfg.request_timeout_s,
+        )
+        response = send_review(request, deps.transport, history_calls + calls, cfg.daily_call_cap)
+        calls += 1
+        try:
+            situation = parse_situation(response.content)
+        except ParseError as exc:
+            log.info("question situation pass unparseable, answering without it: %s", exc)
+        else:
+            context = merge_context(context, situation.to_context())
+
+    system = build_question_system_prompt(knowledge, situation.phase if situation else None)
+    prompt = build_question_prompt(window, asked_samples, spec, context, situation, knowledge)
+    images = [encode_frame_b64(s.path) for s in asked_samples]
+
+    last_error: ParseError | None = None
+    for attempt in range(2):
+        text = prompt if attempt == 0 else prompt + RETRY_NUDGE
+        request = build_chat_request(
+            cfg.model, system, text, images, ANSWER_SCHEMA, cfg.request_timeout_s
+        )
+        response = send_review(request, deps.transport, history_calls + calls, cfg.daily_call_cap)
+        calls += 1
+        try:
+            return parse_answer(response.content, spec)
+        except ParseError as exc:
+            last_error = exc
+            log.warning("answer attempt %d unparseable: %s", attempt + 1, exc)
+
+    assert last_error is not None
+    raise ParseError(f"could not read an answer after a retry: {last_error}", model_calls=calls)

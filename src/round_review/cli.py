@@ -8,7 +8,7 @@ import os
 import sys
 import time
 from collections.abc import Callable
-from dataclasses import fields, replace
+from dataclasses import asdict, fields, replace
 from pathlib import Path
 from typing import Any
 
@@ -16,10 +16,11 @@ import click
 import uvicorn
 
 from round_review.coaching.context import PlayerContext, context_from_mapping
+from round_review.coaching.question import QuestionSpec
 from round_review.config import Config, default_config_path, default_data_dir, load_config
 from round_review.errors import RoundReviewError
 from round_review.ledger import is_processed, read_ledger, recording_key
-from round_review.pipeline import Deps, make_default_deps, review_file
+from round_review.pipeline import Deps, answer_question, make_default_deps, review_file
 from round_review.server.app import create_app
 from round_review.server.jobs import JobOptions, JobQueue, ProgressFn
 from round_review.validation.scenes import (
@@ -572,7 +573,11 @@ def serve(config: Config, port: int | None) -> None:
         )
         review_file(path, job_deps, context=ctx, force=options.force, on_progress=on_progress)
 
-    jobs = JobQueue(run_review, clock=deps.clock)
+    def run_question(path: Path, ctx: PlayerContext, spec: QuestionSpec) -> dict[str, object]:
+        """One queued question about a moment in a clip."""
+        return asdict(answer_question(path, deps, spec, context=ctx))
+
+    jobs = JobQueue(run_review, clock=deps.clock, run_question=run_question)
     app = create_app(config, jobs)
     uvicorn_run(app, host="127.0.0.1", port=port or config.api_port, log_level="info")
 

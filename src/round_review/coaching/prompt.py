@@ -211,6 +211,12 @@ SITUATION_SYSTEM_PROMPT = (
 )
 
 
+def _clock_range(seconds: float) -> str:
+    """m:ss, for talking to the player about a position in the recording."""
+    total = int(seconds)
+    return f"{total // 60}:{total % 60:02d}"
+
+
 def _captions(samples: Sequence[FrameSample]) -> str:
     return "\n".join(f"Frame {i + 1}: t={s.timestamp_s:.1f}s" for i, s in enumerate(samples))
 

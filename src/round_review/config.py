@@ -53,6 +53,10 @@ class Config:
     # Frames the coach pass carries. 0 = every extracted frame, which is the most detail and
     # the slowest call; lower it if calls are timing out.
     coach_frames: int = 0
+    # Frames a "what should I have done here" question carries, and the longest stretch of
+    # footage one question may cover.
+    question_frames: int = 6
+    max_question_span_s: float = 60.0
     # Keep the model loaded between calls; a review is dozens of calls back to back.
     ollama_keep_alive: str = "30m"
     # Give up after this many windows in a row are skipped before coaching. A model that
@@ -86,6 +90,7 @@ POSITIVE_KEYS: frozenset[str] = frozenset(
         "api_port",
         "num_ctx",
         "buy_phase_max_s",
+        "max_question_span_s",
     }
 )
 # 0 is allowed and means "unlimited"; negative never is.

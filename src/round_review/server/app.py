@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 
 from round_review.coaching.context import context_from_mapping
 from round_review.coaching.knowledge import load_knowledge
+from round_review.coaching.question import QuestionSpec
 from round_review.config import COVERAGE_MODES, Config
 from round_review.errors import LedgerError, RoundReviewError, VideoError
 from round_review.ledger import LedgerEntry, read_ledger
@@ -50,6 +51,16 @@ LEDGER_STATUS_TO_CLIP: dict[str, str] = {
 }
 
 
+class AskQuestion(BaseModel):
+    path: str
+    question: str = Field(min_length=1)
+    start_s: float = Field(ge=0)
+    # Omitted means "about this moment": the pipeline widens a zero-length range.
+    end_s: float | None = None
+
+    context: dict[str, Any] | None = None
+
+
 class SubmitJob(BaseModel):
     path: str
     context: dict[str, Any] | None = None
@@ -64,6 +75,8 @@ def _job_json(job: Job) -> dict[str, Any]:
     data["path"] = str(job.path)
     data["context"] = dataclasses.asdict(job.context)
     data["options"] = dataclasses.asdict(job.options)
+    data["question"] = dataclasses.asdict(job.question) if job.question else None
+    data["answer"] = job.answer
     data["created_at"] = job.created_at.isoformat()
     data["finished_at"] = job.finished_at.isoformat() if job.finished_at else None
     return data
@@ -193,15 +206,20 @@ def create_app(
             )
         return {"clips": items, "warning": None}
 
-    @app.post("/api/jobs", status_code=202)
-    def submit(body: SubmitJob) -> dict[str, Any]:
+    def _clip_path(raw: str) -> Path:
+        """Resolve a requested clip, refusing anything outside the recordings folder."""
         if config.recordings_dir is None:
             raise HTTPException(status_code=400, detail="recordings_dir is not configured")
-        path = Path(body.path).resolve()
+        path = Path(raw).resolve()
         if not path.is_relative_to(config.recordings_dir.resolve()):
             raise HTTPException(status_code=400, detail="path is outside recordings_dir")
         if not path.is_file():
             raise HTTPException(status_code=404, detail="clip not found")
+        return path
+
+    @app.post("/api/jobs", status_code=202)
+    def submit(body: SubmitJob) -> dict[str, Any]:
+        path = _clip_path(body.path)
         options = JobOptions(
             force=body.force,
             coverage=body.coverage,
@@ -233,6 +251,8 @@ def create_app(
             "max_windows": config.max_windows,
             "fps": config.fps,
             "situation_pass": config.situation_pass,
+            "question_frames": config.question_frames,
+            "max_question_span_s": config.max_question_span_s,
             "daily_call_cap": config.daily_call_cap,
             "hud_check": config.hud_check,
             # A HUD check with no learned digits does nothing, so say so rather than
@@ -262,6 +282,22 @@ def create_app(
                 for cat in k.checklist.categories
             ],
         }
+
+    @app.post("/api/ask", status_code=202)
+    def ask(body: AskQuestion) -> dict[str, Any]:
+        """Ask about one stretch of a clip. Queued on the same worker as reviews, so a
+        question never competes with a running review for the GPU."""
+        if not body.question.strip():
+            raise HTTPException(status_code=422, detail="question must not be empty")
+        path = _clip_path(body.path)
+        spec = QuestionSpec(
+            start_s=body.start_s,
+            end_s=body.end_s if body.end_s is not None else body.start_s,
+            question=body.question,
+        )
+        return _job_json(
+            jobs.submit_question(path, key_for(path), spec, context_from_mapping(body.context))
+        )
 
     @app.get("/api/jobs")
     def list_jobs() -> dict[str, Any]:

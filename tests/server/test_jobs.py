@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from round_review.coaching.context import PlayerContext
+from round_review.coaching.question import QuestionSpec
 from round_review.errors import OllamaError
 from round_review.server.jobs import Job, JobOptions, JobQueue, ProgressFn
 
@@ -149,3 +150,68 @@ def test_force_resubmit_of_a_finished_clip_is_a_new_job(tmp_path: Path) -> None:
         assert len(run.calls) == 2
     finally:
         q.stop()
+
+
+def test_a_question_job_runs_on_the_same_worker(tmp_path: Path) -> None:
+    """One worker, so a question never competes with a review for the GPU."""
+    run = FakeRun()
+    asked: list[QuestionSpec] = []
+
+    def run_question(path: Path, context: PlayerContext, spec: QuestionSpec) -> str:
+        asked.append(spec)
+        return "an answer"
+
+    q = JobQueue(run, clock=lambda: NOW, run_question=run_question)
+    q.start()
+    try:
+        job = q.submit_question(tmp_path / "a.mp4", key="ka", spec=QuestionSpec(40.0, 52.0, "why?"))
+        assert job.kind == "question"
+        assert job.question is not None and job.question.question == "why?"
+        run.release.set()
+        assert q.wait_idle(timeout=5)
+        done = q.get(job.id)
+        assert done is not None and done.status == "done"
+        assert done.answer == "an answer"
+        assert asked[0].question == "why?"
+        assert run.calls == []  # no review was started
+    finally:
+        q.stop()
+
+
+def test_two_questions_about_the_same_clip_are_both_answered(tmp_path: Path) -> None:
+    def run_question(path: Path, context: PlayerContext, spec: QuestionSpec) -> str:
+        return f"answer to {spec.question}"
+
+    q = JobQueue(FakeRun(), clock=lambda: NOW, run_question=run_question)
+    q.start()
+    try:
+        first = q.submit_question(tmp_path / "a.mp4", "ka", QuestionSpec(1.0, 2.0, "one"))
+        second = q.submit_question(tmp_path / "a.mp4", "ka", QuestionSpec(3.0, 4.0, "two"))
+        assert first.id != second.id  # never deduplicated: they are different questions
+        assert q.wait_idle(timeout=5)
+        assert q.get(second.id).answer == "answer to two"  # type: ignore[union-attr]
+    finally:
+        q.stop()
+
+
+def test_a_question_that_fails_records_the_error(tmp_path: Path) -> None:
+    def boom(path: Path, context: PlayerContext, spec: QuestionSpec) -> str:
+        raise OllamaError("refused")
+
+    q = JobQueue(FakeRun(), clock=lambda: NOW, run_question=boom)
+    q.start()
+    try:
+        job = q.submit_question(tmp_path / "a.mp4", "ka", QuestionSpec(1.0, 2.0, "why?"))
+        assert q.wait_idle(timeout=5)
+        failed = q.get(job.id)
+        assert failed is not None and failed.status == "failed"
+        assert failed.error == "OllamaError: refused"
+    finally:
+        q.stop()
+
+
+def test_a_review_is_still_deduplicated_while_questions_are_not(tmp_path: Path) -> None:
+    q = JobQueue(FakeRun(), clock=lambda: NOW)
+    a = q.submit(tmp_path / "a.mp4", key="ka")
+    b = q.submit(tmp_path / "a.mp4", key="ka")
+    assert a.id == b.id

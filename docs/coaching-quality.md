@@ -112,6 +112,32 @@ round-review scenes validate scene-labels.json       # scores the model and the 
 including any that made the answer worse, so the veto itself is measurable rather than
 assumed.
 
+## Third Windows run (2026-09-21): cost, and where it goes
+
+A 12:29 Swiftplay reviewed at 91% coverage, 57 windows, `qwen3-vl:4b`: two hours, zero
+findings, 56 of 57 windows skipped (47 buy phase, 9 unreadable). The visible frame at 0:01
+genuinely was the buy phase, so some of those skips were right; 47 of 57 was not.
+
+The two hours were almost entirely spent deciding **not** to coach. Only one window reached
+the coach pass, so ~57 of the ~58 model calls were scene reads, and each carried twelve
+1280px frames. Image tokens, not coaching, were the cost.
+
+Three changes came out of it:
+
+- The scene pass now sends `situation_frames` frames (3 by default) spread across the
+  window instead of all twelve. Measured at 3 images per call against 12 before.
+- Requests set `keep_alive`, so a run of dozens of back-to-back calls does not risk the
+  model being unloaded and reloaded between them.
+- A review that skips `abstain_streak_limit` windows in a row (20 by default) stops and
+  points at `scenes validate`. Establishing that a model cannot read the screen should cost
+  minutes, not hours.
+
+Reviews are also timed into the ledger now, so the clip card carries a plain estimate from
+what past reviews on that machine actually took.
+
+The deeper point stands: full coverage of a real match pays for a great deal of buy phase,
+walking and spectating. Encounter-anchored windows remain the right answer.
+
 ## Next implementation priorities
 
 1. Build the labelled validation set with `scenes scaffold` and run `scenes validate`

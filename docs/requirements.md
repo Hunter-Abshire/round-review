@@ -1,6 +1,6 @@
 # round-review requirements
 
-Version 0.5 (deterministic HUD reading). Last updated 2026-09-21.
+Version 0.6 (review cost). Last updated 2026-09-21.
 
 ## Purpose
 
@@ -47,6 +47,9 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | FR-24 | A review that abstained on most of its windows says so in plain words, counts the reasons, and points at scene validation, instead of being indistinguishable from a review of flawless play. Reports carry `partial` and `stopped_reason`. |
 | FR-25 | The round clock is read deterministically, with no model involved: ffmpeg crops the timer region to a grayscale raster and the digits are segmented and matched against templates learned from the player's own footage. Reading a HUD never fails a review; an unreadable HUD is simply no evidence. |
 | FR-26 | A clock above `buy_phase_max_s` (default 45 s, above both the buy phase and the post-plant spike timer) proves the round is live and pre-plant, and overrides a model phase of `pre_round`, `post_plant`, `retake` or unreadable. `spectating` is never overridden, because the clock belongs to whoever is being watched. Any override is recorded in the report. |
+| FR-28 | The scene-reading pass carries `situation_frames` frames spread across the window rather than every extracted frame, because it runs for every window including the ones it skips. Requests keep the model resident between calls. |
+| FR-29 | Reviews record their window count and duration in the ledger, and each clip shows an estimated review time derived from what past reviews on this machine actually took. |
+| FR-30 | A review that skips `abstain_streak_limit` windows in a row stops, is recorded as partial, and names scene validation as the thing to check. |
 | FR-27 | `round-review hud crop/learn/read` verify the timer region against real footage, teach the digit shapes, and confirm what the clock proves. `scenes validate` scores the HUD clock alongside the model and counts the corrections it makes. The app warns when the HUD check is enabled but untrained, since it would otherwise do nothing silently. |
 | FR-20 | With the situation pass enabled, a detected pre-round, spectating or unreadable phase skips coaching with an explicit note. A parsed finding whose checklist category conflicts with the detected phase is dropped. Crosshair criticism requires a known equipped weapon other than knife, melee, spike or ability. These conservative window-level gates depend on the situation model and do not replace encounter detection. |
 | FR-21 | Coaching prioritizes supported decisions immediately before or during encounters, explaining the practical risk and one action in plain language for beginners. Buy phase, safe travel, and absent context must not become a quota of mistakes. An empty, filtered review is a valid result; only actual parse failures count toward all-windows-unparseable failure. |
@@ -105,6 +108,9 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | `frame_width` | 1280 | |
 | `daily_call_cap` | 0 | 0 means unlimited; a full review is dozens of calls |
 | `situation_pass` | true | Run the describe-first pass before coaching |
+| `situation_frames` | 3 | Frames the scene pass carries; 0 = all of them |
+| `ollama_keep_alive` | 30m | Keep the model resident between calls |
+| `abstain_streak_limit` | 20 | Give up after this many skipped windows in a row; 0 = never |
 | `coverage` | full | `full` tiles the whole recording; `sampled` takes `windows_per_file` windows |
 | `hud_check` | true | Read the round clock deterministically and veto phase misreads |
 | `hud_timer_region` | 0.455,0.020,0.090,0.055 | Timer box as fractions of the frame; verify with `hud crop` |

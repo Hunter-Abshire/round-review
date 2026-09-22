@@ -109,8 +109,14 @@ Do not start with a full 12 minute match. Time one minute first:
 round-review review "C:/path/to/clip.mp4" --first 60 --rank "Gold 2"
 ```
 
-This reviews the first minute of gameplay, roughly five windows, two model calls each. Watch
-how long a window takes. Multiply by 57 to see what a full 12 minute match would cost you.
+This reviews the first minute of gameplay, roughly five windows. Watch how long a window
+takes: a full 12 minute match is about 57 of them, so multiply accordingly. After your first
+completed review the app puts that estimate on each clip card for you.
+
+Expect this to be slow on a small card. Every window costs one call to work out what is on
+screen, plus a second call to coach it if it is worth coaching, and each call carries several
+frames. If it is slower than you can live with, drop `situation_frames` to 1 or use
+`--coverage sampled`.
 
 You should see a report path printed at the end. If you get `OllamaError: cannot reach
 Ollama`, Ollama is not running. If you get zero findings and a warning about the model
@@ -244,7 +250,8 @@ review appends a line to `ledger.jsonl`.
 | Findings are empty or truncated with a big clip | Raise `num_ctx` to 32768, or lower `frame_width` to 960 or `fps` to 0.5. |
 | Video will not play in the app | The clip is HEVC. Findings still work; switch Outplayed to H.264 for playback. |
 | `binary not found on PATH` | ffmpeg or ffprobe is not installed, or set `ffmpeg_path` and `ffprobe_path` in your config. |
-| A review takes forever | Two model calls per 12 second window. Use `--first` or `--coverage sampled`. Setting `situation_pass = false` halves the calls but turns off both the scene read and the clock veto, so only do that once you trust the coaching. |
+| A review takes forever | Every window costs a scene-reading call whether or not it gets coached. Use `--first` or `--coverage sampled`, or lower `situation_frames` to 1. The clip card shows an estimate once you have completed one review. |
+| Review stopped after N windows in a row were skipped | The model is skipping everything, so it gave up rather than spend hours proving it. Do steps 6 and 7. Set `abstain_streak_limit = 0` to review the whole thing anyway. |
 
 ---
 

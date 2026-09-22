@@ -696,3 +696,25 @@ def test_context_established_early_carries_into_later_windows(video: Path, tmp_p
     report = review_file(video, deps)
     assert [r.context.side for r in report.results] == ["defense"] * len(report.results)
     assert {r.context.map for r in report.results} == {"Ascent"}
+
+
+def test_an_unreadable_clock_says_so_instead_of_quietly_tiling(
+    video: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A clip from a different game mode has no round clock where competitive puts one, so
+    rounds coverage silently became full tiling and the report never mentioned it."""
+    import round_review.pipeline as pipeline_module
+
+    monkeypatch.setattr(pipeline_module, "_scan_rounds", lambda *a, **k: ())
+    # Tiling covers the whole clip, so it needs more answers than a sampled review.
+    deps = make_deps(
+        tmp_path, FakeTransport(*[good(35.0)] * 40), coverage="rounds", hud_check=True
+    )
+    report = review_file(video, deps)
+    assert any("round" in w.lower() and "clock" in w.lower() for w in report.warnings)
+
+
+def test_no_such_warning_when_the_rounds_were_found(video: Path, tmp_path: Path) -> None:
+    deps = make_deps(tmp_path, FakeTransport(good(35.0), good(65.0), good(85.0)))
+    report = review_file(video, deps)
+    assert not any("could not be read anywhere" in w for w in report.warnings)

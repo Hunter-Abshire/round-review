@@ -555,6 +555,14 @@ def review_file(
             spans=spans,
             deaths=tuple(d for d in deaths if _in_live_play(spans, d)),
         )
+        if cfg.coverage == "rounds" and not spans:
+            # A clip from another game mode has no round clock where competitive puts one.
+            # Falling back to tiling is right; doing it silently is not.
+            warnings.append(
+                "the round clock could not be read anywhere in this recording, so windows "
+                "were tiled evenly instead of placed on rounds. Either the HUD region is "
+                "wrong for this footage or it is not a mode with a round timer."
+            )
         # Even a tiled review benefits from round labels, so map any window the scan covers.
         if spans:
             windows = [

@@ -31,6 +31,13 @@ export interface Api {
   ) => Promise<Job>;
   getKnowledge: () => Promise<Knowledge>;
   getSettings: () => Promise<Settings>;
+  ask: (
+    path: string,
+    startS: number,
+    endS: number,
+    question: string,
+    context: PlayerContext,
+  ) => Promise<Job>;
   getJob: (id: string) => Promise<Job>;
   getReport: (key: string) => Promise<Report>;
   videoUrl: (key: string) => string;
@@ -70,6 +77,12 @@ export const createApi = (baseUrl: string, fetchFn: FetchLike): Api => {
       }),
     getKnowledge: () => request<Knowledge>('/api/knowledge'),
     getSettings: () => request<Settings>('/api/settings'),
+    ask: (path, startS, endS, question, context) =>
+      request<Job>('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path, start_s: startS, end_s: endS, question, context }),
+      }),
     getJob: id => request<Job>(`/api/jobs/${encodeURIComponent(id)}`),
     getReport: key => request<Report>(`/api/reports/${encodeURIComponent(key)}`),
     videoUrl: key => `${baseUrl}/api/media/${encodeURIComponent(key)}/video`,

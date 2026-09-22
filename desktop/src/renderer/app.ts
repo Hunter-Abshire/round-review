@@ -2,6 +2,8 @@
 import { createApi, type Api } from './api';
 import {
   diagnosisOf,
+  renderAnswers,
+  renderAskBox,
   renderClipList,
   renderCoachPanel,
   renderContextBar,
@@ -45,6 +47,8 @@ const run = (api: Api): void => {
   const coverage = byId('coverage');
   const findingList = byId('finding-list');
   const coach = byId('coach');
+  const askBox = byId('ask');
+  const answers = byId('answers');
   const card = byId('finding');
   const title = byId('review-title');
 
@@ -112,6 +116,13 @@ const run = (api: Api): void => {
       diagnosisOf(report),
     );
     const window_ = marker ? report.windows.find(w => w.index === marker.windowIndex) : undefined;
+    renderAskBox(askBox, state.ask, {
+      onAsk: question => void askCoach(question),
+      onRangeChange: (start_s, end_s) => dispatch({ type: 'ask_range_changed', start_s, end_s }),
+    });
+    renderAnswers(answers, state.answers, seconds => {
+      video.currentTime = seconds;
+    });
     renderFindingCard(card, {
       marker,
       frameUrl:
@@ -165,6 +176,40 @@ const run = (api: Api): void => {
     }
   };
 
+  const askCoach = async (question: string): Promise<void> => {
+    const clip = state.clips.find(c => c.key === state.reviewKey);
+    if (!clip) return;
+    try {
+      const job = await api.ask(
+        clip.path,
+        state.ask.start_s,
+        state.ask.end_s,
+        question,
+        state.context,
+      );
+      dispatch({ type: 'ask_submitted', jobId: job.id });
+    } catch (err) {
+      dispatch({ type: 'ask_failed' });
+      fail(err);
+    }
+  };
+
+  const pollAsk = async (): Promise<void> => {
+    if (state.askJobId === null) return;
+    try {
+      const job = await api.getJob(state.askJobId);
+      if (job.status === 'done' && job.answer) {
+        dispatch({ type: 'answer_received', answer: job.answer });
+      } else if (job.status === 'failed') {
+        dispatch({ type: 'ask_failed' });
+        fail(new Error(job.error ?? 'the question could not be answered'));
+      }
+    } catch (err) {
+      dispatch({ type: 'ask_failed' });
+      fail(err);
+    }
+  };
+
   const select = (id: string): void => {
     dispatch({ type: 'marker_selected', id });
     const marker = state.markers.find(m => m.id === id);
@@ -204,6 +249,20 @@ const run = (api: Api): void => {
   byId('next-finding').addEventListener('click', () => step(1));
 
   // Highlight the marker we are passing while the video plays.
+  // Right-clicking the timeline asks about that moment.
+  timeline.addEventListener('contextmenu', event => {
+    event.preventDefault();
+    const bounds = timeline.getBoundingClientRect();
+    const duration = state.report?.recording.duration_s ?? 0;
+    if (bounds.width > 0 && duration > 0) {
+      const ratio = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width));
+      dispatch({ type: 'ask_around', timestamp_s: ratio * duration });
+    }
+  });
+  byId('ask-here').addEventListener('click', () =>
+    dispatch({ type: 'ask_around', timestamp_s: video.currentTime }),
+  );
+
   video.addEventListener('timeupdate', () => {
     const near = nearestMarker(
       state.markers,
@@ -242,6 +301,7 @@ const run = (api: Api): void => {
   };
 
   window.setInterval(() => void pollJobs(), POLL_MS);
+  window.setInterval(() => void pollAsk(), POLL_MS);
   window.setInterval(() => {
     if (state.view === 'list' && state.activeJobIds.length === 0) void refreshClips();
   }, CLIP_REFRESH_MS);

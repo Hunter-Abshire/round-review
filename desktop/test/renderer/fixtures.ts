@@ -1,8 +1,10 @@
+import type { AskState } from '../../src/renderer/state';
 import {
   EMPTY_CONTEXT,
   type Clip,
   type Finding,
   type Job,
+  type Answer,
   type Habit,
   type PracticeItem,
   type Report,
@@ -111,6 +113,9 @@ export const job = (overrides: Partial<Job> = {}): Job => ({
   finished_at: null,
   context: EMPTY_CONTEXT,
   options: { force: false, coverage: null, max_span_s: null, max_windows: null },
+  kind: 'review',
+  question: null,
+  answer: null,
   ...overrides,
 });
 
@@ -128,6 +133,8 @@ export const settings = (overrides: Partial<Settings> = {}): Settings => ({
   hud_check: true,
   hud_ready: true,
   hud_missing_characters: [],
+  question_frames: 6,
+  max_question_span_s: 60,
   ...overrides,
 });
 
@@ -180,5 +187,31 @@ export const summary = (overrides: Partial<ReportSummary> = {}): ReportSummary =
   also_seen: [],
   strengths: [strengthItem()],
   practice: practiceItem(),
+  ...overrides,
+});
+
+export const answer = (overrides: Partial<Answer> = {}): Answer => ({
+  question: 'How could I have used utility here?',
+  start_s: 100,
+  end_s: 112,
+  answerable: true,
+  answer: 'You pushed that angle with your smoke still up.',
+  what_you_could_see: 'The ability icon is lit at t=104.0s.',
+  what_you_could_not_know: '',
+  assumptions: ['enemy position'],
+  alternatives: [
+    { action: 'Smoke the far angle first.', why: 'It halves the exposure.' },
+    { action: 'Wait for your team to close up.', why: 'It keeps the trade available.' },
+  ],
+  confidence: 0.8,
+  warnings: [],
+  ...overrides,
+});
+
+export const askState = (overrides: Partial<AskState> = {}): AskState => ({
+  start_s: 100,
+  end_s: 112,
+  pending: false,
+  maxSpanS: 60,
   ...overrides,
 });

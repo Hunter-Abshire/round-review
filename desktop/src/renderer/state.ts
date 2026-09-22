@@ -4,6 +4,7 @@ import {
   type Job,
   type Knowledge,
   type PlayerContext,
+  type Answer,
   type Report,
   type ReviewOptions,
   type Settings,
@@ -28,6 +29,26 @@ const PRESET_OPTIONS: Record<Preset, ReviewOptions> = {
   sampled: { coverage: 'sampled', max_span_s: null, max_windows: null },
 };
 
+/** What the player is about to ask about, and whether an answer is on its way. */
+export interface AskState {
+  start_s: number;
+  end_s: number;
+  pending: boolean;
+  maxSpanS: number;
+}
+
+/** Offered as one-click chips, because most questions about a moment are one of these. */
+export const SUGGESTED_QUESTIONS: readonly string[] = [
+  'What should I have done instead?',
+  'How could I have used my utility here?',
+  'Was this peek reasonable?',
+  'Where should I have been standing?',
+  'What did I miss on the minimap?',
+];
+
+// A bare click means "around here": this much footage either side of the playhead.
+const CLICK_HALF_SPAN_S = 6;
+
 export interface State {
   view: View;
   clips: Clip[];
@@ -45,6 +66,9 @@ export interface State {
   settings: Settings | null;
   reviewOptions: ReviewOptions;
   preset: Preset;
+  ask: AskState;
+  answers: Answer[];
+  askJobId: string | null;
 }
 
 export type ContextField = keyof PlayerContext;
@@ -61,6 +85,11 @@ export type Action =
   | { type: 'knowledge_loaded'; knowledge: Knowledge }
   | { type: 'settings_loaded'; settings: Settings }
   | { type: 'review_preset_chosen'; preset: Preset }
+  | { type: 'ask_range_changed'; start_s: number; end_s: number }
+  | { type: 'ask_around'; timestamp_s: number }
+  | { type: 'ask_submitted'; jobId: string }
+  | { type: 'answer_received'; answer: Answer }
+  | { type: 'ask_failed' }
   | { type: 'error'; message: string };
 
 export const initialState: State = {
@@ -80,6 +109,9 @@ export const initialState: State = {
   settings: null,
   reviewOptions: PRESET_OPTIONS.full,
   preset: PRESET.full,
+  ask: { start_s: 0, end_s: 0, pending: false, maxSpanS: 60 },
+  answers: [],
+  askJobId: null,
 };
 
 const ACTIVE_JOB = new Set<string>(['queued', 'running']);
@@ -144,6 +176,9 @@ export const reduce = (state: State, action: Action): State => {
         markers: [],
         coverage: [],
         selectedMarkerId: null,
+        answers: [],
+        askJobId: null,
+        ask: { ...state.ask, pending: false },
       };
     case 'context_changed':
       return {
@@ -162,10 +197,33 @@ export const reduce = (state: State, action: Action): State => {
         settings: action.settings,
         reviewOptions,
         preset: presetFor(reviewOptions),
+        ask: { ...state.ask, maxSpanS: action.settings.max_question_span_s || 60 },
       };
     }
     case 'review_preset_chosen':
       return { ...state, preset: action.preset, reviewOptions: PRESET_OPTIONS[action.preset] };
+    case 'ask_range_changed':
+      return { ...state, ask: { ...state.ask, start_s: action.start_s, end_s: action.end_s } };
+    case 'ask_around':
+      return {
+        ...state,
+        ask: {
+          ...state.ask,
+          start_s: Math.max(0, action.timestamp_s - CLICK_HALF_SPAN_S),
+          end_s: action.timestamp_s + CLICK_HALF_SPAN_S,
+        },
+      };
+    case 'ask_submitted':
+      return { ...state, askJobId: action.jobId, ask: { ...state.ask, pending: true } };
+    case 'answer_received':
+      return {
+        ...state,
+        answers: [...state.answers, action.answer],
+        askJobId: null,
+        ask: { ...state.ask, pending: false },
+      };
+    case 'ask_failed':
+      return { ...state, askJobId: null, ask: { ...state.ask, pending: false } };
     case 'error':
       return { ...state, error: action.message };
   }

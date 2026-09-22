@@ -1,6 +1,6 @@
 import { initialState, reduce, type State } from '../../src/renderer/state';
 import { EMPTY_CONTEXT } from '../../src/shared/types';
-import { clip, job, report, settings } from './fixtures';
+import { answer as answerFixture, clip, job, report, settings } from './fixtures';
 
 const withClips = (): State =>
   reduce(initialState, {
@@ -152,5 +152,54 @@ describe('context, settings and review options', () => {
       reduce(initialState, { type: 'review_preset_chosen', preset: 'first_minute' }).preset,
     ).toBe('first_minute');
     expect(initialState.preset).toBe('full');
+  });
+});
+
+describe('asking about a moment', () => {
+  it('starts with no answers and nothing pending', () => {
+    expect(initialState.answers).toEqual([]);
+    expect(initialState.ask.pending).toBe(false);
+    expect(initialState.askJobId).toBeNull();
+  });
+
+  it('takes the question span from settings', () => {
+    const s = reduce(initialState, {
+      type: 'settings_loaded',
+      settings: settings({ max_question_span_s: 30 }),
+    });
+    expect(s.ask.maxSpanS).toBe(30);
+  });
+
+  it('sets a range around a clicked moment', () => {
+    const s = reduce(initialState, { type: 'ask_around', timestamp_s: 100 });
+    expect(s.ask.start_s).toBe(94);
+    expect(s.ask.end_s).toBe(106);
+  });
+
+  it('never starts the range before the recording', () => {
+    expect(reduce(initialState, { type: 'ask_around', timestamp_s: 2 }).ask.start_s).toBe(0);
+  });
+
+  it('tracks a pending question and collects the answer', () => {
+    let s = reduce(initialState, { type: 'ask_submitted', jobId: 'j9' });
+    expect(s.ask.pending).toBe(true);
+    expect(s.askJobId).toBe('j9');
+    s = reduce(s, { type: 'answer_received', answer: answerFixture() });
+    expect(s.ask.pending).toBe(false);
+    expect(s.askJobId).toBeNull();
+    expect(s.answers).toHaveLength(1);
+  });
+
+  it('clears pending when the question fails', () => {
+    let s = reduce(initialState, { type: 'ask_submitted', jobId: 'j9' });
+    s = reduce(s, { type: 'ask_failed' });
+    expect(s.ask.pending).toBe(false);
+    expect(s.askJobId).toBeNull();
+  });
+
+  it('forgets the answers when you go back to the clip list', () => {
+    let s = reduce(initialState, { type: 'answer_received', answer: answerFixture() });
+    s = reduce(s, { type: 'back_to_list' });
+    expect(s.answers).toEqual([]);
   });
 });

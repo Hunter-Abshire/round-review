@@ -47,6 +47,9 @@ export interface Job {
   finished_at: string | null;
   context: PlayerContext;
   options: JobOptions;
+  kind: 'review' | 'question';
+  question: { start_s: number; end_s: number; question: string } | null;
+  answer: Answer | null;
 }
 
 export interface JobOptions {
@@ -77,6 +80,8 @@ export interface Settings {
   fps: number;
   situation_pass: boolean;
   daily_call_cap: number;
+  question_frames: number;
+  max_question_span_s: number;
   hud_check: boolean;
   hud_ready: boolean;
   hud_missing_characters: string[];
@@ -199,6 +204,25 @@ export interface ReportSummary {
   }>;
   strengths: StrengthItem[];
   practice: PracticeItem | null;
+}
+
+export interface Alternative {
+  action: string;
+  why: string;
+}
+
+export interface Answer {
+  question: string;
+  start_s: number;
+  end_s: number;
+  answerable: boolean;
+  answer: string;
+  what_you_could_see: string;
+  what_you_could_not_know: string;
+  assumptions: string[];
+  alternatives: Alternative[];
+  confidence: number;
+  warnings: string[];
 }
 
 export interface ReportWindow {

@@ -1,4 +1,5 @@
 import type {
+  Answer,
   Clip,
   Habit,
   Knowledge,
@@ -16,6 +17,7 @@ import {
   isLongReview,
   reviewSummary,
 } from './format';
+import { SUGGESTED_QUESTIONS, type AskState } from './state';
 import { formatClock, rulerTicks, type CoverageBand, type Marker } from './timeline';
 
 const el = <K extends keyof HTMLElementTagNameMap>(
@@ -608,4 +610,145 @@ export const renderCoachPanel = (
     practice.append(el('p', 'section-body', summary.practice.success_check));
     root.append(practice);
   }
+};
+
+// --------------------------------------------------------------------------- ask the coach
+
+export interface AskHandlers {
+  onAsk: (question: string) => void;
+  onRangeChange: (startS: number, endS: number) => void;
+}
+
+const numberField = (
+  field: string,
+  value: number,
+  onChange: (value: number) => void,
+): HTMLInputElement => {
+  const input = el('input', 'ask-time');
+  input.type = 'number';
+  input.min = '0';
+  input.step = '1';
+  input.dataset['field'] = field;
+  input.value = String(Math.round(value));
+  input.addEventListener('change', () => onChange(Number(input.value)));
+  return input;
+};
+
+/**
+ * Ask about one stretch of the recording. The range is prefilled from wherever the video is,
+ * so the common case is: pause on the moment, pick a suggestion, send.
+ */
+export const renderAskBox = (root: HTMLElement, ask: AskState, handlers: AskHandlers): void => {
+  root.replaceChildren();
+  root.append(el('h3', 'coach-heading', 'Ask about a moment'));
+
+  const range = el('div', 'ask-range');
+  range.append(el('span', 'ask-label', 'From'));
+  range.append(
+    numberField('start', ask.start_s, value => handlers.onRangeChange(value, ask.end_s)),
+  );
+  range.append(el('span', 'ask-label', 'to'));
+  range.append(numberField('end', ask.end_s, value => handlers.onRangeChange(ask.start_s, value)));
+  range.append(
+    el('span', 'ask-clock', `seconds  (${formatClock(ask.start_s)} to ${formatClock(ask.end_s)})`),
+  );
+  root.append(range);
+
+  if (ask.end_s - ask.start_s > ask.maxSpanS) {
+    const warning = el(
+      'p',
+      'ask-warning',
+      `That is longer than one question covers, so only the first ${formatClock(ask.maxSpanS)} will be looked at.`,
+    );
+    warning.dataset['rangeWarning'] = 'true';
+    warning.setAttribute('data-range-warning', 'true');
+    root.append(warning);
+  }
+
+  const input = el('textarea', 'ask-input');
+  input.dataset['field'] = 'question';
+  input.rows = 2;
+  input.placeholder = 'What should I have done instead?';
+  input.disabled = ask.pending;
+  root.append(input);
+
+  const chips = el('div', 'ask-suggestions');
+  for (const suggestion of SUGGESTED_QUESTIONS) {
+    const chip = el('button', 'chip', suggestion);
+    chip.dataset['suggestion'] = suggestion;
+    chip.addEventListener('click', () => {
+      input.value = suggestion;
+      input.focus();
+    });
+    chips.append(chip);
+  }
+  root.append(chips);
+
+  const actions = el('div', 'ask-actions');
+  const send = el('button', 'btn', ask.pending ? 'Thinking…' : 'Ask');
+  send.dataset['action'] = 'ask';
+  send.disabled = ask.pending;
+  send.addEventListener('click', () => {
+    const question = input.value.trim();
+    if (question) handlers.onAsk(question);
+  });
+  actions.append(send);
+  if (ask.pending) {
+    actions.append(
+      el(
+        'span',
+        'ask-pending',
+        'Thinking about that moment. This takes about as long as one window of a review.',
+      ),
+    );
+  }
+  root.append(actions);
+};
+
+const answerCard = (answer: Answer, onSeek: (timestampS: number) => void): HTMLElement => {
+  const card = el('article', answer.answerable ? 'answer' : 'answer unanswerable');
+  if (!answer.answerable) card.dataset['unanswerable'] = 'true';
+
+  const head = el('div', 'answer-head');
+  const question = el('h4', 'answer-question', answer.question);
+  question.dataset['answerQuestion'] = 'true';
+  head.append(question);
+  const jump = el('button', 'jump', formatClock(answer.start_s));
+  jump.dataset['answerJump'] = 'true';
+  jump.title = `Back to ${formatClock(answer.start_s)}–${formatClock(answer.end_s)}`;
+  jump.addEventListener('click', () => onSeek(answer.start_s));
+  head.append(jump);
+  card.append(head);
+
+  card.append(el('p', 'answer-body', answer.answer));
+
+  for (const alternative of answer.alternatives) {
+    const option = el('div', 'alternative');
+    option.append(el('p', 'alternative-action', alternative.action));
+    option.append(el('p', 'alternative-why', alternative.why));
+    card.append(option);
+  }
+
+  if (answer.what_you_could_see) {
+    card.append(section('What you could see', answer.what_you_could_see));
+  }
+  if (answer.what_you_could_not_know.trim()) {
+    card.append(
+      section("What you couldn't have known", answer.what_you_could_not_know, 'section later'),
+    );
+  }
+  if (answer.assumptions.length > 0) {
+    card.append(el('p', 'answer-assumed', `Assumed, not seen: ${answer.assumptions.join(', ')}`));
+  }
+  return card;
+};
+
+/** Newest first, so the answer you just waited for is at the top. */
+export const renderAnswers = (
+  root: HTMLElement,
+  answers: Answer[],
+  onSeek: (timestampS: number) => void,
+): void => {
+  root.replaceChildren();
+  for (const answer of [...answers].reverse()) root.append(answerCard(answer, onSeek));
 };

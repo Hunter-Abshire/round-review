@@ -14,6 +14,7 @@ import type {
 } from '../shared/types';
 import {
   formatBytes,
+  formatPlayedAt,
   formatDuration,
   formatRelativeTime,
   isLongReview,
@@ -119,9 +120,19 @@ export const renderClipList = (root: HTMLElement, props: ClipListProps): void =>
     const meta = [
       formatDuration(clip.duration_s),
       formatBytes(clip.size_bytes),
-      formatRelativeTime(clip.mtime, props.now),
-    ].join('  ·  ');
+      formatPlayedAt(clip.played_at) || formatRelativeTime(clip.mtime, props.now),
+    ]
+      .filter(Boolean)
+      .join('  ·  ');
     card.append(el('p', 'card-meta', meta));
+
+    // What the clip is, once a review has worked it out. Never guessed at.
+    const identity = [clip.agent, clip.map, clip.side].filter(Boolean).join(' · ');
+    if (identity) {
+      const line = el('p', 'card-identity', identity);
+      line.dataset['identity'] = 'true';
+      card.append(line);
+    }
 
     if (NEVER_REVIEWED.has(clip.status) && props.settings) {
       const plan = el('p', 'card-plan', reviewSummary(clip, props.options, props.settings));

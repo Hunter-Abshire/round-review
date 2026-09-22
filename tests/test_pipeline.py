@@ -625,3 +625,27 @@ def test_giving_up_can_be_switched_off(video: Path, tmp_path: Path) -> None:
     report = review_file(video, deps)
     assert len(report.results) == 5  # every window, however pointless
     assert report.partial is False
+
+
+def test_a_finished_review_records_what_the_clip_was(video: Path, tmp_path: Path) -> None:
+    from round_review.config import identities_file
+    from round_review.identity import read_identities
+    from tests.coaching.test_review import SITUATION
+
+    transport = FakeTransport(SITUATION, good(35.0), SITUATION, good(65.0), SITUATION, good(85.0))
+    deps = make_deps(tmp_path, transport, situation_pass=True)
+    review_file(video, deps)
+    identities = read_identities(identities_file(deps.config))
+    (identity,) = identities.values()
+    assert identity.agent == "Jett"
+    assert identity.map == "Ascent"
+    assert identity.side == "attack"
+
+
+def test_a_review_that_identified_nothing_writes_no_identity(video: Path, tmp_path: Path) -> None:
+    from round_review.config import identities_file
+    from round_review.identity import read_identities
+
+    deps = make_deps(tmp_path, FakeTransport(good(35.0), good(65.0), good(85.0)))
+    review_file(video, deps)
+    assert read_identities(identities_file(deps.config)) == {}

@@ -31,7 +31,7 @@ from round_review.coaching.question import (
 from round_review.coaching.review import WindowResult, review_window
 from round_review.coaching.session import build_session_summary
 from round_review.coaching.situation import Situation, parse_situation
-from round_review.config import Config
+from round_review.config import Config, identities_file
 from round_review.diagnosis import abstention_warning
 from round_review.errors import (
     AlreadyProcessed,
@@ -42,6 +42,7 @@ from round_review.errors import (
     RoundReviewError,
     VideoError,
 )
+from round_review.identity import identity_index, write_identity
 from round_review.ledger import (
     LedgerEntry,
     Status,
@@ -336,6 +337,10 @@ def review_file(
     )
     report_path = write_report(report, out_dir)
     write_report_json(report, out_dir)
+    # Record what the clip was, so the library can show it without another model call.
+    identity = identity_index(key, results)
+    if identity:
+        write_identity(identities_file(cfg), identity)
     _record(
         deps,
         key,

@@ -1279,3 +1279,11 @@ video {
 .review-grid {
   grid-template-columns: minmax(0, 1fr) 380px;
 }
+
+.card-identity {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9fb0c9;
+  text-transform: capitalize;
+}

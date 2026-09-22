@@ -19,6 +19,10 @@ export interface Clip {
   size_bytes: number;
   mtime: number;
   duration_s: number | null;
+  played_at: string | null;
+  agent: string | null;
+  map: string | null;
+  side: string | null;
   estimated_windows: number | null;
   estimated_seconds: number | null;
   estimated_time: string | null;

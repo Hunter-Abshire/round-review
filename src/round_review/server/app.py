@@ -23,10 +23,12 @@ from round_review.config import (
     FIELDS,
     GROUPS,
     Config,
+    identities_file,
     load_config,
     write_config,
 )
 from round_review.errors import LedgerError, RoundReviewError, VideoError
+from round_review.identity import played_at_from, read_identities
 from round_review.ledger import LedgerEntry, read_ledger
 from round_review.llm.models import list_models
 from round_review.pacing import estimate_seconds, format_duration
@@ -189,6 +191,7 @@ def create_app(
             entries = read_ledger(config.ledger_path)
         except LedgerError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
+        identities = read_identities(identities_file(config))
         items: list[dict[str, Any]] = []
         for path in list_candidates(config.recordings_dir):
             try:
@@ -197,6 +200,7 @@ def create_app(
             except (OSError, VideoError):
                 continue
             status, job_id, error = _clip_status(jobs, entries, key)
+            played = played_at_from(path, st.st_mtime)
             duration_s = duration_of(path, key)
             windows = (
                 estimate_window_count(
@@ -221,6 +225,14 @@ def create_app(
                     "key": key,
                     "size_bytes": st.st_size,
                     "mtime": st.st_mtime,
+                    "played_at": (
+                        played.isoformat()
+                        if (played := played_at_from(path, st.st_mtime))
+                        else None
+                    ),
+                    "agent": identities[key].agent if key in identities else None,
+                    "map": identities[key].map if key in identities else None,
+                    "side": identities[key].side if key in identities else None,
                     "duration_s": duration_s,
                     "estimated_windows": windows,
                     "estimated_seconds": estimated,

@@ -525,3 +525,30 @@ def test_clearing_a_setting_restores_its_default(client: TestClient) -> None:
     assert client.get("/api/settings").json()["max_span_s"] == 60.0
     client.put("/api/config", json={"values": {"max_span_s": None}})
     assert client.get("/api/settings").json()["max_span_s"] == 0.0
+
+
+def test_clips_carry_the_date_and_what_was_identified(
+    client: TestClient, cfg: Config, tmp_path: Path
+) -> None:
+    from round_review.config import identities_file
+    from round_review.identity import ClipIdentity, write_identity
+
+    assert cfg.recordings_dir is not None
+    named = cfg.recordings_dir / "Valorant_09-21-2026_22-04-48-733.mp4"
+    named.write_bytes(b"\x00" * 2000)
+    write_identity(identities_file(cfg), ClipIdentity(key_for(named), "Jett", "Ascent", "attack"))
+
+    item = next(c for c in client.get("/api/clips").json()["clips"] if c["name"] == named.name)
+    assert item["agent"] == "Jett"
+    assert item["map"] == "Ascent"
+    assert item["side"] == "attack"
+    assert item["played_at"].startswith("2026-09-21T22:04")
+
+
+def test_a_clip_with_nothing_known_says_so_rather_than_guessing(
+    client: TestClient, clip: Path
+) -> None:
+    item = next(c for c in client.get("/api/clips").json()["clips"] if c["name"] == clip.name)
+    assert item["agent"] is None
+    assert item["map"] is None
+    assert item["played_at"] is not None  # the file's own time always works

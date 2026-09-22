@@ -22,6 +22,8 @@ class Config:
     reports_dir: Path
     ledger_path: Path
     recordings_dir: Path | None = None
+    # Where what-each-clip-is is remembered. Defaults beside the ledger.
+    identities_path: Path | None = None
     ffmpeg_path: str = "ffmpeg"
     ffprobe_path: str = "ffprobe"
     ollama_url: str = "http://localhost:11434"
@@ -83,6 +85,11 @@ class Config:
     buy_phase_max_s: float = 45.0
 
 
+def identities_file(config: Config) -> Path:
+    """Where clip identities live: the configured path, else beside the ledger."""
+    return config.identities_path or config.ledger_path.parent / "identities.json"
+
+
 # Keys whose values must be strictly positive. Everything else is a path or string.
 POSITIVE_KEYS: frozenset[str] = frozenset(
     {
@@ -112,7 +119,14 @@ NON_NEGATIVE_KEYS: frozenset[str] = frozenset(
     }
 )
 PATH_KEYS: frozenset[str] = frozenset(
-    {"recordings_dir", "reports_dir", "ledger_path", "hud_templates_path", "notes_dir"}
+    {
+        "recordings_dir",
+        "reports_dir",
+        "ledger_path",
+        "identities_path",
+        "hud_templates_path",
+        "notes_dir",
+    }
 )
 COVERAGE_MODES: frozenset[str] = frozenset({"full", "sampled"})
 
@@ -138,7 +152,14 @@ class FieldSpec:
 # Derived, internal or write-once locations: changing these from a settings form would move
 # where past reviews live, so they stay in the file for anyone who really wants them.
 EXCLUDED_FROM_UI: frozenset[str] = frozenset(
-    {"reports_dir", "ledger_path", "hud_templates_path", "api_port", "player_notes"}
+    {
+        "reports_dir",
+        "ledger_path",
+        "identities_path",
+        "hud_templates_path",
+        "api_port",
+        "player_notes",
+    }
 )
 
 GROUPS: tuple[str, ...] = (

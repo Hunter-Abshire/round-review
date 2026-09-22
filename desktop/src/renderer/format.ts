@@ -58,3 +58,13 @@ export const reviewSummary = (clip: Clip, options: ReviewOptions, settings: Sett
   const time = clip.estimated_time ? `, ${clip.estimated_time}` : '';
   return `whole clip, ${windows} windows of ${settings.window_s}s${time}`;
 };
+
+/** "21 Sep, 22:04" — enough to find the match you mean, short enough for a card. */
+export const formatPlayedAt = (iso: string | null): string => {
+  if (!iso) return '';
+  const when = new Date(iso);
+  if (Number.isNaN(when.getTime())) return '';
+  const day = when.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  const time = when.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  return `${day}, ${time}`;
+};

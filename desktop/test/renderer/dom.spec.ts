@@ -401,3 +401,39 @@ describe('renderHudHint', () => {
     expect(root.hidden).toBe(true);
   });
 });
+
+describe('renderClipList, what each clip is', () => {
+  const options = { coverage: 'full' as const, max_span_s: null, max_windows: null };
+  const props = (clips: ReturnType<typeof clip>[]) => ({
+    clips,
+    jobs: {},
+    options,
+    settings: settings(),
+    now: NOW,
+    handlers: noopHandlers,
+  });
+
+  it('shows the agent, map and when it was played', () => {
+    const root = document.createElement('div');
+    renderClipList(root, props([clip()]));
+    const card = root.querySelector('[data-clip]')!;
+    expect(card.textContent).toContain('Jett');
+    expect(card.textContent).toContain('Ascent');
+    expect(card.querySelector('[data-identity]')).not.toBeNull();
+  });
+
+  it('says nothing about identity before a clip has been reviewed', () => {
+    const root = document.createElement('div');
+    renderClipList(root, props([clip({ agent: null, map: null, side: null })]));
+    expect(root.querySelector('[data-identity]')).toBeNull();
+  });
+
+  it('prefers the played date over the file time, in the local format', () => {
+    const root = document.createElement('div');
+    renderClipList(root, props([clip({ played_at: '2026-09-21T22:04:48+00:00' })]));
+    const text = root.querySelector('[data-clip]')?.textContent ?? '';
+    expect(text).toMatch(/Sep/);
+    expect(text).toMatch(/\b21\b/);
+    expect(text).not.toContain('ago'); // not the relative file time
+  });
+});

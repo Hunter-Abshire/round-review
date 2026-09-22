@@ -211,7 +211,10 @@ npm start
 app starts the review engine itself on a loopback port; you do not run `serve` separately.
 
 In the app: pick how much to review, hit **Analyze** on a clip, watch the window counter, then
-**Open review**. The timeline under the video shades the stretches that were reviewed and puts
+**Open review**. You can also ask about a specific moment: pause where you want, press **Ask
+about this moment** or right-click the timeline, pick a suggested question or type your own,
+and it answers that one question about that stretch of footage with a couple of alternatives
+you could have chosen instead. The timeline under the video shades the stretches that were reviewed and puts
 a numbered pin on each finding. Click a pin to jump there. Shift plus the arrow keys steps
 between findings.
 

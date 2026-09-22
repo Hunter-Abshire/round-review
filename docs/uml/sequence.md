@@ -214,7 +214,46 @@ sequenceDiagram
     CLI-->>Player: table + warning if the model always said one phase
 ```
 
-## 6. Desktop: Analyze a clip and view markers
+## 6. Asking about a moment
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Player
+    participant R as Electron renderer
+    participant API as FastAPI (127.0.0.1)
+    participant Q as JobQueue worker
+    participant P as pipeline.answer_question
+    participant FF as ffmpeg
+    participant T as Transport (Ollama)
+
+    Player->>R: pauses on a moment, picks a suggestion, presses Ask
+    R->>API: POST /api/ask {path, start_s, end_s, question, context}
+    API->>Q: submit_question(path, key, spec, context)
+    API-->>R: 202 {id, kind: "question", question}
+    Note over Q: the same single worker as reviews, so no GPU contention
+    Q->>P: answer_question(path, deps, spec, context)
+    P->>P: clamp_span to the recording and max_question_span_s
+    P->>FF: extract frames for just that range
+    opt situation_pass
+        P->>T: read the scene (situation_frames images)
+        T-->>P: agent, map, side, phase, HUD state
+    end
+    P->>T: answer the question (question_frames images, ANSWER_SCHEMA)
+    alt parses
+        T-->>P: answer, evidence, assumptions, up to 3 alternatives
+    else unparseable
+        P->>T: retry once with a JSON-only nudge, then raise
+    end
+    P-->>Q: Answer
+    loop every 2 s
+        R->>API: GET /api/jobs/{id}
+    end
+    API-->>R: done, with the answer
+    R->>R: show it newest first, with a jump back to the moment
+```
+
+## 7. Desktop: Analyze a clip and view markers
 
 ```mermaid
 sequenceDiagram

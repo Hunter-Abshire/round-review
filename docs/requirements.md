@@ -1,6 +1,6 @@
 # round-review requirements
 
-Version 0.7 (coaching report). Last updated 2026-09-21.
+Version 0.8 (ask about a moment). Last updated 2026-09-21.
 
 ## Purpose
 
@@ -47,6 +47,10 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | FR-24 | A review that abstained on most of its windows says so in plain words, counts the reasons, and points at scene validation, instead of being indistinguishable from a review of flawless play. Reports carry `partial` and `stopped_reason`. |
 | FR-25 | The round clock is read deterministically, with no model involved: ffmpeg crops the timer region to a grayscale raster and the digits are segmented and matched against templates learned from the player's own footage. Reading a HUD never fails a review; an unreadable HUD is simply no evidence. |
 | FR-26 | A clock above `buy_phase_max_s` (default 45 s, above both the buy phase and the post-plant spike timer) proves the round is live and pre-plant, and overrides a model phase of `pre_round`, `post_plant`, `retake` or unreadable. `spectating` is never overridden, because the clock belongs to whoever is being watched. Any override is recorded in the report. |
+| FR-38 | The player can ask a free-text question about a chosen time range of a clip, or about a single moment, which widens to a few seconds either side. The range is clamped to the recording and to `max_question_span_s`. |
+| FR-39 | An answer gives the answer first, then what was visible, then what only became clear later, then its assumptions, then up to three alternatives each with a reason. It may state that the frames do not support an answer rather than guessing. |
+| FR-40 | Questions are queued on the same single worker as reviews, so a question never competes with a review for the GPU, and are never deduplicated. |
+| FR-41 | The review view has an ask box prefilled from the playhead with suggested questions, and lists answers newest first, each linking back to the moment it was about. |
 | FR-31 | Each window may report up to two strengths: specific, evidence-bound things the player did right. Praise that is vague, filler, or shorter than a phrase is dropped rather than shown, and zero strengths is a valid result. |
 | FR-32 | Findings sharing a checklist id are merged into one habit carrying every instance and timestamp. Habits are ranked by recurrence and by what the category of mistake costs, and the action set is capped at three. |
 | FR-33 | The report is ordered verdict, corrections, strengths, hindsight-dependent findings, everything else, practice. Corrections precede praise deliberately. |
@@ -119,6 +123,8 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | `ollama_keep_alive` | 30m | Keep the model resident between calls |
 | `abstain_streak_limit` | 20 | Give up after this many skipped windows in a row; 0 = never |
 | `coach_frames` | 0 | Frames the coach pass carries; 0 = all of them |
+| `question_frames` | 6 | Frames one asked question carries |
+| `max_question_span_s` | 60 | Longest stretch one question may cover |
 | `coverage` | full | `full` tiles the whole recording; `sampled` takes `windows_per_file` windows |
 | `hud_check` | true | Read the round clock deterministically and veto phase misreads |
 | `hud_timer_region` | 0.455,0.020,0.090,0.055 | Timer box as fractions of the frame; verify with `hud crop` |

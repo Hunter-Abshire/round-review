@@ -298,6 +298,26 @@ classDiagram
         +float confidence
     }
 
+    class QuestionSpec {
+        +float start_s
+        +float end_s
+        +str question
+    }
+    class Answer {
+        +str question
+        +bool answerable
+        +str answer
+        +str what_you_could_see
+        +str what_you_could_not_know
+        +tuple~str~ assumptions
+        +tuple~Alternative~ alternatives
+        +float confidence
+    }
+    class Alternative {
+        +str action
+        +str why
+    }
+
     class JobOptions {
         +bool force
         +str coverage
@@ -334,6 +354,8 @@ classDiagram
     Deps o-- Transport
     JobQueue o-- Job
     Job o-- JobOptions
+    Job o-- QuestionSpec
+    Answer o-- Alternative
     SceneReport o-- SceneOutcome
     SceneOutcome o-- SceneCase
     SceneOutcome ..> Situation
@@ -393,6 +415,7 @@ classDiagram
 | `coaching.situation` | `Situation` | `parse_situation` |
 | `coaching.prompt` | `FINDING_SCHEMA`, `SITUATION_SCHEMA` | `build_system_prompt(knowledge, phase)`, `build_situation_prompt`, `build_coach_prompt` |
 | `coaching.parse` | `Finding` | `parse_findings(text, window)`, `extract_json(text)` |
+| `coaching.question` | `QuestionSpec`, `Answer`, `Alternative` | `clamp_span`, `build_question_prompt`, `parse_answer`: one question about one moment |
 | `coaching.session` | `Habit`, `SessionSummary`, `PracticeItem` | `build_session_summary`: merge, rank, cap, choose one thing to practise |
 | `coaching.frames` | | `select_situation_frames`: the frame budget per pass |
 | `coaching.review` | `WindowResult` | `review_window(..., context, knowledge, situation_pass)`: pass 1 situation, pass 2 coach with one retry |

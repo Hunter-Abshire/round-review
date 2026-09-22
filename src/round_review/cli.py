@@ -36,6 +36,7 @@ from round_review.validation.scenes import (
     write_cases,
 )
 from round_review.video.probe import Recording, SubprocessRunner, probe
+from round_review.vision.agent_icons import AgentTemplates, read_kit
 from round_review.vision.digits import DigitTemplates
 from round_review.vision.hud import (
     HudRead,
@@ -282,6 +283,12 @@ def _templates_path(config: Config, override: Path | None) -> Path:
     return override or config.hud_templates_path or default_data_dir() / "hud-digits.json"
 
 
+def agent_templates_path(config: Config, override: Path | None = None) -> Path:
+    return (
+        override or config.hud_agent_templates_path or default_data_dir() / "hud-agent-icons.json"
+    )
+
+
 @hud.command("crop")
 @click.argument("file", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option("--at", "timestamp_s", type=float, required=True, help="Timestamp to crop.")
@@ -418,6 +425,53 @@ def hud_read(
             f"  clock {read.clock_text} ({read.clock_s:.0f}s), confidence {read.confidence:.0%}"
         )
         click.echo(f"  {proof}")
+
+
+@hud.command("learn-agent")
+@click.argument("file", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--at", "timestamps", type=float, multiple=True, required=True)
+@click.option("--agent", required=True, help="Which agent you were playing in these frames.")
+@click.option("--store", type=click.Path(dir_okay=False, path_type=Path), default=None)
+@click.pass_obj
+def hud_learn_agent(
+    config: Config, file: Path, timestamps: tuple[float, ...], agent: str, store: Path | None
+) -> None:
+    """Teach the ability icons for one agent, so the agent stops being a guess.
+
+    Run it once per agent you play, on a frame where every ability is still unspent.
+    """
+    path = agent_templates_path(config, store)
+    try:
+        recording = probe(file, SubprocessRunner(config.ffprobe_path))
+        abilities = parse_regions(config.hud_ability_regions)
+        templates = AgentTemplates.load(path)
+    except RoundReviewError as exc:
+        _fail(exc)
+        return
+    if not abilities:
+        click.echo("hud_ability_regions is not set, so there are no icons to learn.", err=True)
+        return
+    learned = 0
+    for timestamp in timestamps:
+        kit = read_kit(
+            recording,
+            timestamp,
+            abilities,
+            SubprocessRunner(config.ffmpeg_path),
+            out_dir=path.parent / "agent-icons",
+            threshold=config.hud_threshold,
+        )
+        if not kit:
+            click.echo(f"  t={timestamp:.1f}s: could not crop every icon, skipped", err=True)
+            continue
+        templates = templates.learn(agent, kit)
+        learned += 1
+    if not learned:
+        click.echo("Nothing learned.", err=True)
+        return
+    templates.save(path)
+    click.echo(f"Learned {learned} icon set(s) for {agent}. Known agents: {templates.agents()}")
+    click.echo(f"Stored in {path}")
 
 
 @hud.command("state")

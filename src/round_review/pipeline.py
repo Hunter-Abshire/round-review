@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -31,7 +31,7 @@ from round_review.coaching.question import (
 from round_review.coaching.review import WindowResult, review_window
 from round_review.coaching.session import build_session_summary
 from round_review.coaching.situation import Situation, parse_situation
-from round_review.config import Config, identities_file
+from round_review.config import Config, default_data_dir, identities_file
 from round_review.diagnosis import abstention_warning
 from round_review.errors import (
     AlreadyProcessed,
@@ -61,6 +61,7 @@ from round_review.report.markdown import Report, write_report
 from round_review.video.frames import encode_frame_b64, extract_frames, extract_single_frame
 from round_review.video.probe import CommandRunner, Recording, SubprocessRunner, probe
 from round_review.video.windows import Window, plan_windows
+from round_review.vision.agent_icons import AgentTemplates, identify_from_frames
 from round_review.vision.digits import DigitTemplates
 from round_review.vision.hud import HudRead, optional_region, parse_region, parse_regions, read_hud
 from round_review.vision.state import HudState, find_deaths, read_state
@@ -195,6 +196,46 @@ def _read_window_hud(
         min_confidence=cfg.hud_min_confidence,
         threshold=cfg.hud_threshold,
     )
+
+
+def _identify_agent(
+    recording: Recording, deps: Deps, windows: Sequence[Window], out_dir: Path
+) -> str | None:
+    """Name the agent from the ability icons, when they have been learned.
+
+    This is the same argument as the clock: which agent is on screen is a fact the HUD
+    renders, so it should not be left to a model reading a portrait at thumbnail size.
+    """
+    cfg = deps.config
+    if not cfg.hud_check:
+        return None
+    templates = AgentTemplates.load(
+        cfg.hud_agent_templates_path or default_data_dir() / "hud-agent-icons.json"
+    )
+    if not templates.agents_to_kits:
+        return None
+    try:
+        abilities = parse_regions(cfg.hud_ability_regions)
+    except RoundReviewError as exc:
+        log.warning("hud_ability_regions is unusable, not identifying the agent: %s", exc)
+        return None
+    if not abilities:
+        return None
+    # A handful of moments spread across the clip, so one obscured frame cannot decide it.
+    moments = [(w.start_s + w.end_s) / 2 for w in windows[:: max(1, len(windows) // 5)]][:5]
+    name, score = identify_from_frames(
+        recording,
+        moments,
+        abilities,
+        deps.ffmpeg_runner,
+        templates,
+        out_dir=out_dir / "agent-icons",
+        min_confidence=cfg.hud_agent_min_confidence,
+        threshold=cfg.hud_threshold,
+    )
+    if name:
+        log.info("ability icons identify the agent as %s (%.0f%%)", name, score * 100)
+    return name
 
 
 def _scan_deaths(
@@ -364,6 +405,13 @@ def review_file(
     except VideoError as exc:
         _record(deps, key, path, "failed", 0, None, exc, 0, time.monotonic() - started)
         raise
+
+    # Before any model call: the icons name the agent, and a told agent still wins.
+    if context.agent is None:
+        detected = _identify_agent(recording, deps, windows, out_dir)
+        if detected:
+            context = replace(context, agent=detected)
+            warnings.append(f"agent read from the ability icons as {detected}")
 
     log.info("%s: %.1fs, reviewing %d window(s)", path.name, recording.duration_s, len(windows))
     if on_progress:

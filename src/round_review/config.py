@@ -93,6 +93,9 @@ class Config:
     hud_ability_regions: str = ""
     hud_lit_threshold: int = 128
     hud_lit_min_fraction: float = 0.25
+    # Ability-icon templates that name the agent. Learned with `hud learn-agent`.
+    hud_agent_templates_path: Path | None = None
+    hud_agent_min_confidence: float = 0.75
 
 
 def identities_file(config: Config) -> Path:
@@ -135,6 +138,7 @@ PATH_KEYS: frozenset[str] = frozenset(
         "ledger_path",
         "identities_path",
         "hud_templates_path",
+        "hud_agent_templates_path",
         "notes_dir",
     }
 )
@@ -167,6 +171,7 @@ EXCLUDED_FROM_UI: frozenset[str] = frozenset(
         "ledger_path",
         "identities_path",
         "hud_templates_path",
+        "hud_agent_templates_path",
         "api_port",
         "player_notes",
     }
@@ -398,6 +403,17 @@ FIELDS: tuple[FieldSpec, ...] = (
         "Ability icon regions",
         "One x,y,w,h region per ability slot, separated by semicolons. Empty turns it off.",
         "text",
+        advanced=True,
+    ),
+    FieldSpec(
+        "hud_agent_min_confidence",
+        "Round clock",
+        "Agent match confidence",
+        "How closely the ability icons must match a learned agent before the agent is "
+        "taken as read rather than asked of the model.",
+        "float",
+        minimum=0,
+        maximum=1,
         advanced=True,
     ),
     FieldSpec(

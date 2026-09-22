@@ -76,7 +76,7 @@ def read_number(
     return int(text)
 
 
-def _crop(
+def crop_gray(
     recording: Recording,
     timestamp_s: float,
     region: Region,
@@ -119,7 +119,7 @@ def read_state(
         if region is None:
             numbers[name] = None
             continue
-        gray = _crop(recording, timestamp_s, region, runner, out_dir / stem / f"{name}.pgm")
+        gray = crop_gray(recording, timestamp_s, region, runner, out_dir / stem / f"{name}.pgm")
         if gray is None:
             numbers[name] = None
             errors.append(f"{name} crop failed")
@@ -128,7 +128,7 @@ def read_state(
 
     lit: list[bool] = []
     for i, region in enumerate(ability_regions):
-        gray = _crop(recording, timestamp_s, region, runner, out_dir / stem / f"ability{i}.pgm")
+        gray = crop_gray(recording, timestamp_s, region, runner, out_dir / stem / f"ability{i}.pgm")
         if gray is None:
             errors.append(f"ability {i} crop failed")
             continue

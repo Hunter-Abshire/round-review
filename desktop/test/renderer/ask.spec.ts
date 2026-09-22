@@ -145,3 +145,20 @@ describe('renderAnswers', () => {
     expect(root.childElementCount).toBe(0);
   });
 });
+
+describe('renderAnswers, sources', () => {
+  it('names what the answer was looked up from', () => {
+    const root = document.createElement('div');
+    renderAnswers(root, [answer()], () => undefined);
+    const sources = root.querySelector('[data-sources]')!;
+    expect(sources.textContent).toContain('Viper (controller)');
+    expect(sources.textContent).toContain('Bind');
+    expect(sources.textContent?.toLowerCase()).toContain('looked up');
+  });
+
+  it('says nothing about sources when there were none', () => {
+    const root = document.createElement('div');
+    renderAnswers(root, [answer({ sources: [] })], () => undefined);
+    expect(root.querySelector('[data-sources]')).toBeNull();
+  });
+});

@@ -740,6 +740,12 @@ const answerCard = (answer: Answer, onSeek: (timestampS: number) => void): HTMLE
   if (answer.assumptions.length > 0) {
     card.append(el('p', 'answer-assumed', `Assumed, not seen: ${answer.assumptions.join(', ')}`));
   }
+  if (answer.sources.length > 0) {
+    // Naming the references keeps an answer auditable: you can check what it read.
+    const sources = el('p', 'answer-sources', `Looked up: ${answer.sources.join(' · ')}`);
+    sources.dataset['sources'] = 'true';
+    card.append(sources);
+  }
   return card;
 };
 

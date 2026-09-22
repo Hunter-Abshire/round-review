@@ -223,6 +223,7 @@ export interface Answer {
   alternatives: Alternative[];
   confidence: number;
   warnings: string[];
+  sources: string[];
 }
 
 export interface ReportWindow {

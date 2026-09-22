@@ -298,6 +298,23 @@ classDiagram
         +float confidence
     }
 
+    class Passage {
+        +str id
+        +str kind
+        +str title
+        +str text
+        +tuple~str~ tags
+    }
+    class Index {
+        +tuple~Passage~ passages
+        +dict document_frequencies
+        +float average_length
+    }
+    class Hit {
+        +Passage passage
+        +float score
+    }
+
     class QuestionSpec {
         +float start_s
         +float end_s
@@ -356,6 +373,9 @@ classDiagram
     Job o-- JobOptions
     Job o-- QuestionSpec
     Answer o-- Alternative
+    Index o-- Passage
+    Hit o-- Passage
+    Answer ..> Hit : sources
     SceneReport o-- SceneOutcome
     SceneOutcome o-- SceneCase
     SceneOutcome ..> Situation
@@ -415,6 +435,8 @@ classDiagram
 | `coaching.situation` | `Situation` | `parse_situation` |
 | `coaching.prompt` | `FINDING_SCHEMA`, `SITUATION_SCHEMA` | `build_system_prompt(knowledge, phase)`, `build_situation_prompt`, `build_coach_prompt` |
 | `coaching.parse` | `Finding` | `parse_findings(text, window)`, `extract_json(text)` |
+| `reference.corpus` | `Passage` | `build_corpus`, `load_notes`: the bundled knowledge and the player's own notes as retrievable passages |
+| `reference.search` | `Index`, `Hit` | `tokenize`, `build_index`, `search`: BM25 in pure Python, tag-boosted, character-budgeted |
 | `coaching.question` | `QuestionSpec`, `Answer`, `Alternative` | `clamp_span`, `build_question_prompt`, `parse_answer`: one question about one moment |
 | `coaching.session` | `Habit`, `SessionSummary`, `PracticeItem` | `build_session_summary`: merge, rank, cap, choose one thing to practise |
 | `coaching.frames` | | `select_situation_frames`: the frame budget per pass |

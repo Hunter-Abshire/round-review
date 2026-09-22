@@ -1,6 +1,6 @@
 # round-review requirements
 
-Version 0.8 (ask about a moment). Last updated 2026-09-21.
+Version 0.9 (local retrieval). Last updated 2026-09-21.
 
 ## Purpose
 
@@ -47,6 +47,10 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | FR-24 | A review that abstained on most of its windows says so in plain words, counts the reasons, and points at scene validation, instead of being indistinguishable from a review of flawless play. Reports carry `partial` and `stopped_reason`. |
 | FR-25 | The round clock is read deterministically, with no model involved: ffmpeg crops the timer region to a grayscale raster and the digits are segmented and matched against templates learned from the player's own footage. Reading a HUD never fails a review; an unreadable HUD is simply no evidence. |
 | FR-26 | A clock above `buy_phase_max_s` (default 45 s, above both the buy phase and the post-plant spike timer) proves the round is live and pre-plant, and overrides a model phase of `pre_round`, `post_plant`, `retake` or unreadable. `spectating` is never overridden, because the clock belongs to whoever is being watched. Any override is recorded in the report. |
+| FR-42 | An asked question retrieves reference passages from the whole bundled knowledge base (one per agent, map, check and category drill) plus the sections of any files in `notes_dir`, ranked by keyword relevance with no embedding model, vector store or network access. |
+| FR-43 | Passages about the agent and map in play are favoured, but a favoured passage can never outrank relevance: tags reorder matches, they do not create them. |
+| FR-44 | The prompt states that notes are the player's own and correct about their setups, and that reference material describes the game rather than these frames. |
+| FR-45 | Every answer carries the titles of the passages it was given, shown in the app, so an answer can be audited against what it read. A notes folder that cannot be read costs the references, never the answer. |
 | FR-38 | The player can ask a free-text question about a chosen time range of a clip, or about a single moment, which widens to a few seconds either side. The range is clamped to the recording and to `max_question_span_s`. |
 | FR-39 | An answer gives the answer first, then what was visible, then what only became clear later, then its assumptions, then up to three alternatives each with a reason. It may state that the frames do not support an answer rather than guessing. |
 | FR-40 | Questions are queued on the same single worker as reviews, so a question never competes with a review for the GPU, and are never deduplicated. |
@@ -125,6 +129,9 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | `coach_frames` | 0 | Frames the coach pass carries; 0 = all of them |
 | `question_frames` | 6 | Frames one asked question carries |
 | `max_question_span_s` | 60 | Longest stretch one question may cover |
+| `notes_dir` | none | Folder of your own markdown or text notes, searched for questions |
+| `reference_passages` | 4 | Passages one question may carry; 0 switches retrieval off |
+| `max_reference_chars` | 4000 | Size budget for retrieved passages |
 | `coverage` | full | `full` tiles the whole recording; `sampled` takes `windows_per_file` windows |
 | `hud_check` | true | Read the round clock deterministically and veto phase misreads |
 | `hud_timer_region` | 0.455,0.020,0.090,0.055 | Timer box as fractions of the frame; verify with `hud crop` |

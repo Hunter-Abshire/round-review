@@ -205,6 +205,7 @@ export const answer = (overrides: Partial<Answer> = {}): Answer => ({
   ],
   confidence: 0.8,
   warnings: [],
+  sources: ['Viper (controller)', 'Bind'],
   ...overrides,
 });
 

@@ -19,7 +19,7 @@ from round_review.coaching.context import PlayerContext, context_from_mapping
 from round_review.coaching.knowledge import load_knowledge
 from round_review.coaching.question import QuestionSpec
 from round_review.config import Config, default_config_path, default_data_dir, load_config
-from round_review.errors import RoundReviewError
+from round_review.errors import HudError, RoundReviewError
 from round_review.ledger import is_processed, read_ledger, recording_key
 from round_review.pipeline import Deps, _utc_now, answer_question, make_default_deps, review_file
 from round_review.reference.corpus import build_corpus, load_notes
@@ -37,16 +37,19 @@ from round_review.validation.scenes import (
 )
 from round_review.video.probe import Recording, SubprocessRunner, probe
 from round_review.vision.agent_icons import AgentTemplates, read_kit
+from round_review.vision.calibrate import best_threshold, score_thresholds
 from round_review.vision.digits import DigitTemplates
 from round_review.vision.hud import (
     HudRead,
     Region,
+    build_crop_args,
     learn_from_crop,
     optional_region,
     parse_region,
     parse_regions,
     read_hud,
 )
+from round_review.vision.raster import Gray, parse_pgm
 from round_review.vision.state import find_deaths, read_state
 from round_review.vision.timeline import scan_clock, scan_numbers, segment_rounds
 from round_review.watcher import stat_snapshot, watch_loop
@@ -425,6 +428,80 @@ def hud_read(
             f"  clock {read.clock_text} ({read.clock_s:.0f}s), confidence {read.confidence:.0%}"
         )
         click.echo(f"  {proof}")
+
+
+@hud.command("calibrate")
+@click.argument("file", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option(
+    "--reads",
+    "readings",
+    multiple=True,
+    required=True,
+    metavar="SECONDS=CLOCK",
+    help="A timestamp and what the clock reads there, e.g. --reads 25=1:39. Give 6 or more.",
+)
+@click.option("--region", default=None)
+@click.pass_obj
+def hud_calibrate(
+    config: Config, file: Path, readings: tuple[str, ...], region: str | None
+) -> None:
+    """Find the brightness cutoff that reads your HUD, by testing it against clocks you read.
+
+    The adaptive cutoff moves with whatever scenery sits behind the translucent timer plate,
+    so on real footage it reads the clock correctly in about a third of frames. Run this
+    once, put the number in hud_threshold, and then teach the digits.
+    """
+    box = _hud_region(config, region)
+    try:
+        recording = probe(file, SubprocessRunner(config.ffprobe_path))
+    except RoundReviewError as exc:
+        _fail(exc)
+        return
+
+    runner = SubprocessRunner(config.ffmpeg_path)
+    out_dir = default_data_dir() / "hud-calibrate"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    samples: list[tuple[Gray, int]] = []
+    labels: list[str] = []
+    for reading in readings:
+        stamp, _, text = reading.partition("=")
+        if not text:
+            _fail(HudError(f"--reads wants SECONDS=CLOCK, got {reading!r}"))
+            return
+        try:
+            timestamp = float(stamp)
+        except ValueError:
+            _fail(HudError(f"--reads wants a number of seconds, got {stamp!r}"))
+            return
+        crop = out_dir / f"cal_{timestamp:.0f}.pgm"
+        try:
+            runner.run(build_crop_args(file, timestamp, box, recording, crop))
+            samples.append((parse_pgm(crop.read_bytes()), len(text)))
+        except (RoundReviewError, OSError) as exc:
+            click.echo(f"  t={timestamp:.0f}s: could not crop ({exc})", err=True)
+            continue
+        labels.append(f"t={timestamp:.0f}s {text}")
+
+    if len(samples) < 2:
+        _fail(HudError("need at least two readable timestamps to calibrate"))
+        return
+
+    scores = score_thresholds(samples, labels=labels)
+    click.echo(f"{'cutoff':>7}  {'reads':>7}")
+    for score in scores:
+        flag = "  <-- works" if score.perfect else ""
+        click.echo(f"{score.threshold:>7}  {score.exact:>3}/{score.total}{flag}")
+
+    pick = best_threshold(scores)
+    if pick is None:
+        click.echo(
+            "\nNo cutoff read every sample. The region is probably wrong: check it with "
+            "`hud crop --region` before calibrating.",
+            err=True,
+        )
+        return
+    click.echo(f"\nSet this in your config:\n\n    hud_threshold = {pick}\n")
+    click.echo("Then teach the digits with `hud learn`.")
 
 
 @hud.command("learn-agent")

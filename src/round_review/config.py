@@ -91,8 +91,11 @@ class Config:
     hud_credits_region: str = ""
     # Semicolon-separated x,y,w,h regions, one per ability slot, left to right.
     hud_ability_regions: str = ""
-    hud_lit_threshold: int = 128
-    hud_lit_min_fraction: float = 0.25
+    # Measured on real 720p footage: an available icon is a white glyph on a dark plate,
+    # so only ~15-27% of the crop is lit, and an unavailable one is under 0.5%. The old
+    # 0.25 default read three of four available abilities as spent.
+    hud_lit_threshold: int = 180
+    hud_lit_min_fraction: float = 0.05
     # Ability-icon templates that name the agent. Learned with `hud learn-agent`.
     hud_agent_templates_path: Path | None = None
     hud_agent_min_confidence: float = 0.75

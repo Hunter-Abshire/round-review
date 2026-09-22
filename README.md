@@ -150,6 +150,20 @@ to 255. Relearn the templates after changing this setting or the crop.
 Then teach it the digits. Pick timestamps where you can read the clock yourself, and tell it
 what you see:
 
+First find the brightness cutoff, or `hud learn` will keep failing with the wrong number
+of glyphs. Read four or five clocks off the video with your own eyes and tell it:
+
+```powershell
+round-review hud calibrate "C:/path/to/clip.mp4" --reads 25=1:39 --reads 27=1:37 --reads 120=0:17 --reads 200=0:25 --reads 280=0:23
+```
+
+It prints which cutoffs agree with you and gives you a number to put in `hud_threshold`.
+Do this before teaching digits. The automatic cutoff moves with whatever scenery is behind
+the translucent timer plate, and on real footage it only reads about a third of frames
+correctly.
+
+Then teach the digits:
+
 ```powershell
 round-review hud learn "C:/path/to/clip.mp4" --at 45 --reads 1:39
 round-review hud learn "C:/path/to/clip.mp4" --at 70 --reads 1:02

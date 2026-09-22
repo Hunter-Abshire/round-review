@@ -181,7 +181,7 @@ describe('asking about a moment', () => {
   });
 
   it('tracks a pending question and collects the answer', () => {
-    let s = reduce(initialState, { type: 'ask_submitted', jobId: 'j9' });
+    let s = reduce(initialState, { type: 'ask_submitted', jobId: 'j9', question: 'why?' });
     expect(s.ask.pending).toBe(true);
     expect(s.askJobId).toBe('j9');
     s = reduce(s, { type: 'answer_received', answer: answerFixture() });
@@ -191,7 +191,7 @@ describe('asking about a moment', () => {
   });
 
   it('clears pending when the question fails', () => {
-    let s = reduce(initialState, { type: 'ask_submitted', jobId: 'j9' });
+    let s = reduce(initialState, { type: 'ask_submitted', jobId: 'j9', question: 'why?' });
     s = reduce(s, { type: 'ask_failed' });
     expect(s.ask.pending).toBe(false);
     expect(s.askJobId).toBeNull();
@@ -256,5 +256,71 @@ describe('settings', () => {
 
   it('toggles advanced settings', () => {
     expect(reduce(initialState, { type: 'advanced_toggled' }).showAdvanced).toBe(true);
+  });
+});
+
+describe('review sidebar', () => {
+  it('starts on the findings list with nothing open', () => {
+    expect(initialState.sidePanel).toBe('findings');
+    expect(initialState.detailOpen).toBe(false);
+  });
+
+  it('opens the detail when a finding is picked and closes on back', () => {
+    let s = reduce(initialState, { type: 'report_loaded', key: 'k', report: report() });
+    s = reduce(s, { type: 'marker_opened', id: 'w1-f0' });
+    expect(s.detailOpen).toBe(true);
+    expect(s.selectedMarkerId).toBe('w1-f0');
+    expect(s.sidePanel).toBe('findings');
+    s = reduce(s, { type: 'detail_closed' });
+    expect(s.detailOpen).toBe(false);
+  });
+
+  it('following the video highlights without opening the detail', () => {
+    let s = reduce(initialState, { type: 'report_loaded', key: 'k', report: report() });
+    s = reduce(s, { type: 'marker_selected', id: 'w1-f0' });
+    expect(s.detailOpen).toBe(false);
+  });
+
+  it('switching to ask leaves the detail closed', () => {
+    let s = reduce(initialState, { type: 'report_loaded', key: 'k', report: report() });
+    s = reduce(s, { type: 'marker_opened', id: 'w1-f0' });
+    s = reduce(s, { type: 'side_panel_picked', panel: 'ask' });
+    expect(s.sidePanel).toBe('ask');
+    expect(s.detailOpen).toBe(false);
+  });
+
+  it('opening a report starts on the findings list again', () => {
+    let s = reduce(initialState, { type: 'side_panel_picked', panel: 'ask' });
+    s = reduce(s, { type: 'report_loaded', key: 'k', report: report() });
+    expect(s.sidePanel).toBe('findings');
+  });
+});
+
+describe('asking, pending state', () => {
+  it('remembers the question while it is being answered', () => {
+    let s = reduce(initialState, { type: 'ask_submitted', jobId: 'j1', question: 'why?' });
+    expect(s.ask.pendingQuestion).toBe('why?');
+    s = reduce(s, { type: 'answer_received', answer: answerFixture() });
+    expect(s.ask.pendingQuestion).toBeNull();
+  });
+
+  it('forgets the pending question when the ask fails', () => {
+    let s = reduce(initialState, { type: 'ask_submitted', jobId: 'j1', question: 'why?' });
+    s = reduce(s, { type: 'ask_failed' });
+    expect(s.ask.pendingQuestion).toBeNull();
+  });
+
+  it('opening the ask panel sets the range around where the video is', () => {
+    const s = reduce(
+      { ...initialState, ask: { ...initialState.ask, start_s: 0, end_s: 0 } },
+      { type: 'side_panel_picked', panel: 'ask', timestamp_s: 100 },
+    );
+    expect(s.ask.start_s).toBe(94);
+    expect(s.ask.end_s).toBe(106);
+  });
+
+  it('switching to another panel leaves the range alone', () => {
+    const s = reduce(initialState, { type: 'side_panel_picked', panel: 'coach', timestamp_s: 100 });
+    expect(s.ask.start_s).toBe(0);
   });
 });

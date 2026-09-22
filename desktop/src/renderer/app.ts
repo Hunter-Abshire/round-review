@@ -2,20 +2,29 @@
 import { createApi, type Api } from './api';
 import {
   diagnosisOf,
+  renderFindingDetail,
+  renderGroupedFindings,
+  renderSideTabs,
   renderAnswers,
   renderAskBox,
   renderClipList,
   renderCoachPanel,
   renderContextBar,
   renderCoverageSummary,
-  renderFindingCard,
-  renderFindingList,
   renderHudHint,
   renderPresetPicker,
   renderSettings,
   renderTimeline,
 } from './dom';
-import { initialState, reduce, type Action, type Preset, type State } from './state';
+import {
+  initialState,
+  reduce,
+  type Action,
+  type Preset,
+  type SidePanel,
+  type State,
+} from './state';
+import { renderOverlay, videoContentRect } from './overlay';
 import { nearestMarker } from './timeline';
 
 declare global {
@@ -46,12 +55,10 @@ const run = (api: Api): void => {
   const video = byId('video') as HTMLVideoElement;
   const timeline = byId('timeline');
   const coverage = byId('coverage');
-  const findingList = byId('finding-list');
-  const coach = byId('coach');
+  const sideTabs = byId('side-tabs');
+  const sideBody = byId('side-body');
+  const overlay = byId('overlay') as unknown as SVGSVGElement;
   const settingsView = byId('settings-view');
-  const askBox = byId('ask');
-  const answers = byId('answers');
-  const card = byId('finding');
   const title = byId('review-title');
 
   const dispatch = (action: Action): void => {
@@ -86,53 +93,107 @@ const run = (api: Api): void => {
     });
   };
 
-  const renderReview = (): void => {
+  const drawOverlay = (): void => {
+    const marker = state.markers.find(m => m.id === state.selectedMarkerId);
+    const shapes = state.detailOpen && marker ? marker.finding.focus : [];
+    const rect = videoContentRect(
+      video.clientWidth,
+      video.clientHeight,
+      video.videoWidth,
+      video.videoHeight,
+    );
+    overlay.style.width = `${video.clientWidth}px`;
+    overlay.style.height = `${video.clientHeight}px`;
+    renderOverlay(overlay, shapes, rect);
+  };
+
+  const renderSideBody = (): void => {
     const report = state.report;
     if (!report || !state.reviewKey) return;
     const marker = state.markers.find(m => m.id === state.selectedMarkerId) ?? null;
+
+    if (state.sidePanel === 'ask') {
+      sideBody.replaceChildren();
+      const askPanel = document.createElement('div');
+      const answersPanel = document.createElement('div');
+      renderAskBox(askPanel, state.ask, {
+        onAsk: question => void askCoach(question),
+        onRangeChange: (start_s, end_s) => dispatch({ type: 'ask_range_changed', start_s, end_s }),
+      });
+      renderAnswers(
+        answersPanel,
+        state.answers,
+        seconds => {
+          video.currentTime = seconds;
+        },
+        state.ask.pendingQuestion,
+      );
+      sideBody.append(askPanel, answersPanel);
+      return;
+    }
+    if (state.sidePanel === 'coach') {
+      if (report.summary) {
+        renderCoachPanel(sideBody, report.summary, seconds => {
+          video.currentTime = seconds;
+          void video.play();
+        });
+      } else {
+        sideBody.replaceChildren();
+      }
+      return;
+    }
+    if (state.detailOpen && marker) {
+      renderFindingDetail(
+        sideBody,
+        {
+          marker,
+          frameUrl: marker.finding.evidence_frame
+            ? api.frameUrl(state.reviewKey, marker.finding.evidence_frame)
+            : null,
+          ordinalOf: marker.ordinal,
+          total: state.markers.length,
+        },
+        {
+          onBack: () => dispatch({ type: 'detail_closed' }),
+          onStep: direction => step(direction),
+        },
+      );
+      return;
+    }
+    renderGroupedFindings(
+      sideBody,
+      state.markers,
+      state.selectedMarkerId,
+      id => open_finding(id),
+      diagnosisOf(report),
+    );
+  };
+
+  const renderReview = (): void => {
+    const report = state.report;
+    if (!report || !state.reviewKey) return;
     const findingCount = state.markers.length;
     title.textContent = `${report.recording.name} — ${findingCount} finding${findingCount === 1 ? '' : 's'}`;
     renderCoverageSummary(coverage, report);
-    if (report.summary) {
-      renderCoachPanel(coach, report.summary, seconds => {
-        video.currentTime = seconds;
-        void video.play();
-      });
-    }
-    coach.hidden = report.summary === null;
     renderTimeline(timeline, {
       markers: state.markers,
       coverage: state.coverage,
       durationS: report.recording.duration_s,
       selectedId: state.selectedMarkerId,
-      onSelect: select,
+      onSelect: open_finding,
       onSeek: seconds => {
         video.currentTime = seconds;
       },
     });
-    renderFindingList(
-      findingList,
-      state.markers,
-      state.selectedMarkerId,
-      select,
-      diagnosisOf(report),
+    renderSideTabs(sideTabs, state.sidePanel, findingCount, panel =>
+      dispatch({
+        type: 'side_panel_picked',
+        panel: panel as SidePanel,
+        timestamp_s: video.currentTime,
+      }),
     );
-    const window_ = marker ? report.windows.find(w => w.index === marker.windowIndex) : undefined;
-    renderAskBox(askBox, state.ask, {
-      onAsk: question => void askCoach(question),
-      onRangeChange: (start_s, end_s) => dispatch({ type: 'ask_range_changed', start_s, end_s }),
-    });
-    renderAnswers(answers, state.answers, seconds => {
-      video.currentTime = seconds;
-    });
-    renderFindingCard(card, {
-      marker,
-      frameUrl:
-        marker?.finding.evidence_frame && state.reviewKey
-          ? api.frameUrl(state.reviewKey, marker.finding.evidence_frame)
-          : null,
-      situationSummary: window_?.situation?.summary ?? null,
-    });
+    renderSideBody();
+    drawOverlay();
   };
 
   const renderSettingsView = (): void => {
@@ -169,7 +230,7 @@ const run = (api: Api): void => {
       const [config, settings] = await Promise.all([api.getConfig(), api.getSettings()]);
       dispatch({ type: 'config_saved', config });
       dispatch({ type: 'settings_loaded', settings });
-      void refreshClips(); // window estimates depend on the coverage settings
+      void refreshClips();
     } catch (err) {
       dispatch({ type: 'config_save_failed' });
       fail(err);
@@ -232,7 +293,7 @@ const run = (api: Api): void => {
         question,
         state.context,
       );
-      dispatch({ type: 'ask_submitted', jobId: job.id });
+      dispatch({ type: 'ask_submitted', jobId: job.id, question });
     } catch (err) {
       dispatch({ type: 'ask_failed' });
       fail(err);
@@ -255,8 +316,9 @@ const run = (api: Api): void => {
     }
   };
 
-  const select = (id: string): void => {
-    dispatch({ type: 'marker_selected', id });
+  /** Opening a finding seeks to it and shows it in the sidebar. */
+  const open_finding = (id: string): void => {
+    dispatch({ type: 'marker_opened', id });
     const marker = state.markers.find(m => m.id === id);
     if (marker) video.currentTime = marker.timestamp_s;
   };
@@ -306,9 +368,10 @@ const run = (api: Api): void => {
       dispatch({ type: 'ask_around', timestamp_s: ratio * duration });
     }
   });
-  byId('ask-here').addEventListener('click', () =>
-    dispatch({ type: 'ask_around', timestamp_s: video.currentTime }),
-  );
+  byId('ask-here').addEventListener('click', () => {
+    dispatch({ type: 'ask_around', timestamp_s: video.currentTime });
+    dispatch({ type: 'side_panel_picked', panel: 'ask', timestamp_s: video.currentTime });
+  });
 
   video.addEventListener('timeupdate', () => {
     const near = nearestMarker(
@@ -320,6 +383,8 @@ const run = (api: Api): void => {
     if (near && near.id !== state.selectedMarkerId)
       dispatch({ type: 'marker_selected', id: near.id });
   });
+  video.addEventListener('loadedmetadata', () => drawOverlay());
+  window.addEventListener('resize', () => drawOverlay());
   video.addEventListener('error', () => {
     fail(
       'This clip cannot be played here (unsupported codec, likely HEVC). The findings below still apply.',

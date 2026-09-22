@@ -28,6 +28,7 @@ export const finding = (overrides: Partial<Finding> = {}): Finding => ({
   suggested_alternative: 'Tighten the angle.',
   confidence: 0.8,
   evidence_frame: 'frames/w00_004.jpg',
+  focus: [],
   ...overrides,
 });
 
@@ -155,6 +156,7 @@ export const habit = (overrides: Partial<Habit> = {}): Habit => ({
   assumption_flags: ['enemy position'],
   suggested_alternative: 'Swing from the opposite side of the choke instead.',
   evidence_frame: 'frames/e00_01.jpg',
+  focus: [],
   ...overrides,
 });
 
@@ -168,6 +170,7 @@ export const strengthItem = (overrides: Partial<StrengthItem> = {}): StrengthIte
   why_it_worked: 'It removed the angle that usually punishes that entry.',
   confidence: 0.8,
   evidence_frame: null,
+  focus: [],
   ...overrides,
 });
 
@@ -216,6 +219,7 @@ export const askState = (overrides: Partial<AskState> = {}): AskState => ({
   end_s: 112,
   pending: false,
   maxSpanS: 60,
+  pendingQuestion: null,
   ...overrides,
 });
 

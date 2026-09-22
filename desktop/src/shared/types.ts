@@ -138,6 +138,17 @@ export interface Situation {
   summary: string;
 }
 
+export interface Shape {
+  kind: 'box' | 'point' | 'arrow';
+  label: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  x2: number;
+  y2: number;
+}
+
 export interface Finding {
   timestamp_s: number;
   check_id: string;
@@ -151,6 +162,7 @@ export interface Finding {
   suggested_alternative: string;
   confidence: number;
   evidence_frame: string | null;
+  focus: Shape[];
 }
 
 export interface StrengthItem {
@@ -163,6 +175,7 @@ export interface StrengthItem {
   why_it_worked: string;
   confidence: number;
   evidence_frame: string | null;
+  focus: Shape[];
 }
 
 /** One habit: a checklist item and every time it came up in this review. */
@@ -180,6 +193,7 @@ export interface Habit {
   information_revealed_later: string;
   assumption_flags: string[];
   suggested_alternative: string;
+  focus: Shape[];
   evidence_frame: string | null;
 }
 

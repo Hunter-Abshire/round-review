@@ -60,20 +60,32 @@
 
         <div class="review-grid">
           <div class="stage">
-            <video id="video" controls preload="metadata"></video>
+            <div class="video-wrap">
+              <video id="video" controls preload="metadata"></video>
+              <svg id="overlay" class="overlay" aria-hidden="true">
+                <defs>
+                  <marker
+                    id="overlay-arrowhead"
+                    viewBox="0 0 10 10"
+                    refX="9"
+                    refY="5"
+                    markerWidth="6"
+                    markerHeight="6"
+                    orient="auto-start-reverse"
+                  >
+                    <path d="M 0 0 L 10 5 L 0 10 z" />
+                  </marker>
+                </defs>
+              </svg>
+            </div>
             <div id="timeline" class="timeline"></div>
             <div id="coverage" class="coverage-wrap"></div>
           </div>
           <aside class="side">
-            <h4 class="side-title">Findings</h4>
-            <div id="finding-list" class="finding-list"></div>
+            <div id="side-tabs" class="side-tabs"></div>
+            <div id="side-body" class="side-body"></div>
           </aside>
         </div>
-
-        <div id="coach" class="coach" hidden></div>
-        <div id="ask" class="ask"></div>
-        <div id="answers" class="answers"></div>
-        <div id="finding" class="finding-card"></div>
       </section>
     </main>
 

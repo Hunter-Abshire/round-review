@@ -756,8 +756,22 @@ export const renderAnswers = (
   root: HTMLElement,
   answers: Answer[],
   onSeek: (timestampS: number) => void,
+  pendingQuestion?: string | null,
 ): void => {
   root.replaceChildren();
+  if (pendingQuestion) {
+    const pending = el('article', 'answer pending');
+    pending.dataset['pendingAnswer'] = 'true';
+    pending.append(el('h4', 'answer-question', pendingQuestion));
+    pending.append(
+      el(
+        'p',
+        'answer-body',
+        'Working on it. A question costs about as long as one window of a review, and it waits for any review already running.',
+      ),
+    );
+    root.append(pending);
+  }
   for (const answer of [...answers].reverse()) root.append(answerCard(answer, onSeek));
 };
 
@@ -926,4 +940,161 @@ export const renderSettings = (
   root.append(
     el('p', 'settings-path', `Saved to ${document_.path}. You can edit that file by hand too.`),
   );
+};
+
+// ------------------------------------------------------------------ review sidebar
+
+const SIDE_TABS: ReadonlyArray<[string, string]> = [
+  ['findings', 'Findings'],
+  ['coach', 'Coach'],
+  ['ask', 'Ask'],
+];
+
+export const renderSideTabs = (
+  root: HTMLElement,
+  active: string,
+  findingCount: number,
+  onPick: (panel: string) => void,
+): void => {
+  root.replaceChildren();
+  for (const [panel, title] of SIDE_TABS) {
+    const label = panel === 'findings' && findingCount > 0 ? `${title} ${findingCount}` : title;
+    const tab = el('button', 'side-tab', label);
+    tab.dataset['tab'] = panel;
+    tab.setAttribute('aria-pressed', String(panel === active));
+    tab.addEventListener('click', () => onPick(panel));
+    root.append(tab);
+  }
+};
+
+/**
+ * Findings grouped under one heading per category, in the order the categories first appear.
+ * The previous list re-printed a heading every time the category changed down the timeline,
+ * so "positioning" appeared four times.
+ */
+export const renderGroupedFindings = (
+  root: HTMLElement,
+  markers: Marker[],
+  selectedId: string | null,
+  onSelect: (id: string) => void,
+  emptyReason?: string | null,
+): void => {
+  root.replaceChildren();
+  if (markers.length === 0) {
+    root.append(
+      el(
+        'p',
+        'empty',
+        emptyReason ?? 'No findings in the reviewed windows. Check the review notes for why.',
+      ),
+    );
+    return;
+  }
+  const categories: string[] = [];
+  for (const marker of markers) {
+    if (!categories.includes(marker.finding.category)) categories.push(marker.finding.category);
+  }
+  for (const category of categories) {
+    const inCategory = markers.filter(m => m.finding.category === category);
+    const heading = el('h5', 'finding-group', `${category} · ${inCategory.length}`);
+    heading.dataset['category'] = category;
+    root.append(heading);
+    for (const marker of inCategory) {
+      const row = el('button', 'finding-row');
+      row.dataset['finding'] = marker.id;
+      row.setAttribute('aria-pressed', String(marker.id === selectedId));
+      if (marker.id === selectedId) row.classList.add('selected');
+      row.append(el('span', 'finding-index', String(marker.ordinal)));
+      const body = el('span', 'finding-body');
+      body.append(el('span', 'finding-time', formatClock(marker.timestamp_s)));
+      body.append(el('span', 'finding-text', marker.finding.observation));
+      row.append(body);
+      row.addEventListener('click', () => onSelect(marker.id));
+      root.append(row);
+    }
+  }
+};
+
+export interface FindingDetailProps {
+  marker: Marker;
+  frameUrl: string | null;
+  ordinalOf: number;
+  total: number;
+}
+
+export interface FindingDetailHandlers {
+  onBack: () => void;
+  onStep: (direction: 1 | -1) => void;
+}
+
+/**
+ * The selected finding, shown in the sidebar beside the video. It used to render at the
+ * bottom of the page, so every click meant scrolling past the whole coaching summary.
+ */
+export const renderFindingDetail = (
+  root: HTMLElement,
+  props: FindingDetailProps,
+  handlers: FindingDetailHandlers,
+): void => {
+  root.replaceChildren();
+  const finding = props.marker.finding;
+
+  const bar = el('div', 'detail-bar');
+  const back = el('button', 'btn ghost', '← All findings');
+  back.dataset['action'] = 'back';
+  back.addEventListener('click', () => handlers.onBack());
+  bar.append(back);
+  bar.append(el('span', 'detail-count', `${props.ordinalOf} of ${props.total}`));
+  const prev = el('button', 'btn ghost', '‹');
+  prev.dataset['action'] = 'prev';
+  prev.title = 'Previous finding';
+  prev.addEventListener('click', () => handlers.onStep(-1));
+  const next = el('button', 'btn ghost', '›');
+  next.dataset['action'] = 'next';
+  next.title = 'Next finding';
+  next.addEventListener('click', () => handlers.onStep(1));
+  bar.append(prev, next);
+  root.append(bar);
+
+  root.append(
+    el('h4', 'detail-title', `${formatClock(finding.timestamp_s)} · ${finding.category}`),
+  );
+  if (finding.check_label) root.append(el('p', 'check', finding.check_label));
+  root.append(el('p', 'observation', finding.observation));
+
+  const fix = el('div', 'section fix');
+  fix.append(el('span', 'section-label', 'Try instead'));
+  fix.append(el('p', 'section-body', finding.suggested_alternative));
+  root.append(fix);
+
+  if (finding.focus.length > 0) {
+    root.append(
+      el(
+        'p',
+        'detail-drawn',
+        `The model has marked on the video what it is looking at: ${finding.focus
+          .map(shape => shape.label)
+          .join(', ')}.`,
+      ),
+    );
+  }
+  if (props.frameUrl) {
+    const figure = el('figure', 'evidence');
+    const img = el('img');
+    img.src = props.frameUrl;
+    img.alt = `Frame at ${formatClock(finding.timestamp_s)}`;
+    figure.append(img);
+    root.append(figure);
+  }
+  root.append(section('What you could see', finding.visible_evidence));
+  root.append(section('What you knew', finding.information_available_to_player));
+  if (finding.information_revealed_later.trim()) {
+    root.append(
+      section("What you couldn't have known", finding.information_revealed_later, 'section later'),
+    );
+  }
+  if (finding.assumption_flags.length > 0) {
+    root.append(section('Assumed, not seen', finding.assumption_flags.join(', ')));
+  }
+  root.append(el('p', 'confidence', `Confidence: ${Math.round(finding.confidence * 100)}%`));
 };

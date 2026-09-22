@@ -21,6 +21,9 @@ import {
 export const VIEW = { list: 'list', review: 'review', settings: 'settings' } as const;
 export type View = (typeof VIEW)[keyof typeof VIEW];
 
+export const SIDE_PANEL = { findings: 'findings', coach: 'coach', ask: 'ask' } as const;
+export type SidePanel = (typeof SIDE_PANEL)[keyof typeof SIDE_PANEL];
+
 export const PRESET = { full: 'full', first_minute: 'first_minute', sampled: 'sampled' } as const;
 export type Preset = (typeof PRESET)[keyof typeof PRESET];
 
@@ -36,6 +39,8 @@ export interface AskState {
   end_s: number;
   pending: boolean;
   maxSpanS: number;
+  // The question being answered, so the panel can show it working rather than looking dead.
+  pendingQuestion: string | null;
 }
 
 /** Offered as one-click chips, because most questions about a moment are one of these. */
@@ -76,6 +81,10 @@ export interface State {
   showAdvanced: boolean;
   // The view to come back to when settings close.
   previousView: View;
+  sidePanel: SidePanel;
+  // Whether the sidebar is showing one finding rather than the list. Following the video
+  // highlights a finding without opening it, so playback never hijacks what you are reading.
+  detailOpen: boolean;
 }
 
 export type ContextField = keyof PlayerContext;
@@ -86,6 +95,9 @@ export type Action =
   | { type: 'job_updated'; job: Job }
   | { type: 'report_loaded'; key: string; report: Report }
   | { type: 'marker_selected'; id: string }
+  | { type: 'marker_opened'; id: string }
+  | { type: 'detail_closed' }
+  | { type: 'side_panel_picked'; panel: SidePanel; timestamp_s?: number }
   | { type: 'marker_stepped'; direction: 1 | -1 }
   | { type: 'back_to_list' }
   | { type: 'context_changed'; field: ContextField; value: string }
@@ -94,7 +106,7 @@ export type Action =
   | { type: 'review_preset_chosen'; preset: Preset }
   | { type: 'ask_range_changed'; start_s: number; end_s: number }
   | { type: 'ask_around'; timestamp_s: number }
-  | { type: 'ask_submitted'; jobId: string }
+  | { type: 'ask_submitted'; jobId: string; question: string }
   | { type: 'answer_received'; answer: Answer }
   | { type: 'ask_failed' }
   | { type: 'settings_opened' }
@@ -124,7 +136,7 @@ export const initialState: State = {
   settings: null,
   reviewOptions: PRESET_OPTIONS.full,
   preset: PRESET.full,
-  ask: { start_s: 0, end_s: 0, pending: false, maxSpanS: 60 },
+  ask: { start_s: 0, end_s: 0, pending: false, maxSpanS: 60, pendingQuestion: null },
   answers: [],
   askJobId: null,
   config: null,
@@ -132,6 +144,8 @@ export const initialState: State = {
   configSaving: false,
   showAdvanced: false,
   previousView: VIEW.list,
+  sidePanel: SIDE_PANEL.findings,
+  detailOpen: false,
 };
 
 const ACTIVE_JOB = new Set<string>(['queued', 'running']);
@@ -176,6 +190,8 @@ export const reduce = (state: State, action: Action): State => {
         markers,
         coverage: coverageBands(action.report),
         selectedMarkerId: markers[0]?.id ?? null,
+        sidePanel: SIDE_PANEL.findings,
+        detailOpen: false,
         error: null,
       };
     }
@@ -183,6 +199,29 @@ export const reduce = (state: State, action: Action): State => {
       return state.markers.some(m => m.id === action.id)
         ? { ...state, selectedMarkerId: action.id }
         : state;
+    case 'marker_opened':
+      return state.markers.some(m => m.id === action.id)
+        ? {
+            ...state,
+            selectedMarkerId: action.id,
+            detailOpen: true,
+            sidePanel: SIDE_PANEL.findings,
+          }
+        : state;
+    case 'detail_closed':
+      return { ...state, detailOpen: false };
+    case 'side_panel_picked': {
+      // Opening Ask points it at whatever you are watching, rather than at 0:00.
+      const ask =
+        action.panel === SIDE_PANEL.ask && action.timestamp_s !== undefined
+          ? {
+              ...state.ask,
+              start_s: Math.max(0, action.timestamp_s - CLICK_HALF_SPAN_S),
+              end_s: action.timestamp_s + CLICK_HALF_SPAN_S,
+            }
+          : state.ask;
+      return { ...state, sidePanel: action.panel, detailOpen: false, ask };
+    }
     case 'marker_stepped': {
       const marker = nextMarker(state.markers, state.selectedMarkerId, action.direction);
       return marker ? { ...state, selectedMarkerId: marker.id } : state;
@@ -198,7 +237,7 @@ export const reduce = (state: State, action: Action): State => {
         selectedMarkerId: null,
         answers: [],
         askJobId: null,
-        ask: { ...state.ask, pending: false },
+        ask: { ...state.ask, pending: false, pendingQuestion: null },
       };
     case 'context_changed':
       return {
@@ -234,16 +273,24 @@ export const reduce = (state: State, action: Action): State => {
         },
       };
     case 'ask_submitted':
-      return { ...state, askJobId: action.jobId, ask: { ...state.ask, pending: true } };
+      return {
+        ...state,
+        askJobId: action.jobId,
+        ask: { ...state.ask, pending: true, pendingQuestion: action.question },
+      };
     case 'answer_received':
       return {
         ...state,
         answers: [...state.answers, action.answer],
         askJobId: null,
-        ask: { ...state.ask, pending: false },
+        ask: { ...state.ask, pending: false, pendingQuestion: null },
       };
     case 'ask_failed':
-      return { ...state, askJobId: null, ask: { ...state.ask, pending: false } };
+      return {
+        ...state,
+        askJobId: null,
+        ask: { ...state.ask, pending: false, pendingQuestion: null },
+      };
     case 'settings_opened':
       return {
         ...state,

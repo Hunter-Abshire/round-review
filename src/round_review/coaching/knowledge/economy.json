@@ -4,52 +4,248 @@
     "cap": 9000,
     "kill": 200,
     "round_win": 3000,
-    "loss_ladder": [1900, 2400, 2900],
+    "loss_ladder": [
+      1900,
+      2400,
+      2900
+    ],
     "spike_plant": 300,
     "spike_defuse": 0,
     "survivor_payout": 1000,
     "rules": [
       "A win resets the loss ladder to 1,900, so the round after a win is often the poorest.",
       "Attackers who lose, survive and did not plant, and defenders who lose and survive after the spike goes off, are paid 1,000 flat with no loss bonus. Surviving a lost round therefore costs 900 to 1,900 credits.",
-      "Saving only pays when the gun kept is worth more than the bonus given up: a rifle always, a Spectre about break-even at the 2,900 tier, a pistol never.",
       "Survive and your weapon and armor carry over. Die and you keep any bought-but-unused abilities but lose the gun.",
-      "Everything resets to 800 at halftime, so unspent credits in the last round of a half are burned.",
-      "Overtime resets every player to 5,000 each round."
+      "Everything resets to 800 at halftime, so unspent credits in the last round of a half are burned."
     ]
   },
   "armor": [
-    {"name": "Light Shield", "cost": 400, "effective_hp": 125, "note": "Absorbs 66% of damage until spent. Buys about one extra bullet against SMGs and rifles; changes no headshot outcome."},
-    {"name": "Regen Shield", "cost": 650, "effective_hp": 175, "note": "Absorbs 100% until broken, then refills after a gap. Better than heavy for anchors taking separate fights, worse for one sustained duel. Consensus is soft."},
-    {"name": "Heavy Shield", "cost": 1000, "effective_hp": 150, "note": "Against a Vandal or a close Phantom, light and heavy are both four body shots. It pays against 26-35 damage weapons and against headshots in the 125-150 band."}
+    {
+      "name": "Light Shield",
+      "cost": 400,
+      "effective_hp": 125,
+      "note": "Absorbs 66% of damage until spent. Buys about one extra bullet against SMGs and rifles; changes no headshot outcome."
+    },
+    {
+      "name": "Regen Shield",
+      "cost": 650,
+      "effective_hp": 175,
+      "note": "Absorbs 100% until broken, then refills after a gap. Better than heavy for anchors taking separate fights, worse for one sustained duel. Consensus is soft."
+    },
+    {
+      "name": "Heavy Shield",
+      "cost": 1000,
+      "effective_hp": 150,
+      "note": "Against a Vandal or a close Phantom, light and heavy are both four body shots. It pays against 26-35 damage weapons and against headshots in the 125-150 band."
+    }
   ],
   "weapons": [
-    {"name": "Classic", "cost": 0, "head": 78, "body": 26, "tier": "pistol"},
-    {"name": "Shorty", "cost": 300, "head": 22, "body": 11, "tier": "pistol", "note": "Per pellet, 15 pellets under 7m."},
-    {"name": "Frenzy", "cost": 450, "head": 78, "body": 26, "tier": "pistol"},
-    {"name": "Ghost", "cost": 500, "head": 105, "body": 30, "tier": "pistol", "note": "Best eco pistol at low ranks: one-taps an unshielded head to 30m and a 13-round magazine forgives misses."},
-    {"name": "Bandit", "cost": 600, "head": 152, "body": 39, "tier": "pistol", "note": "One-taps light shields to 30m and heavy inside 10m. Eight rounds punishes spray."},
-    {"name": "Sheriff", "cost": 800, "head": 159, "body": 55, "tier": "pistol", "note": "The only sub-1,000 gun that one-taps through heavy shields inside 30m. Below Gold a Ghost plus shield and utility is usually worth more."},
-    {"name": "Bucky", "cost": 850, "head": 34, "body": 17, "tier": "half", "note": "Per pellet under 8m. Close-corner anchor buy."},
-    {"name": "Marshal", "cost": 950, "head": 202, "body": 101, "tier": "half", "note": "Best pure-eco primary: 101 body kills an unshielded enemy outright, and players on an anti-eco often skip shields."},
-    {"name": "Stinger", "cost": 1100, "head": 67, "body": 27, "tier": "half", "note": "Only worth the 500 saved over a Spectre if the fight is inside 15m."},
-    {"name": "Spectre", "cost": 1600, "head": 78, "body": 26, "tier": "half", "note": "The default half-buy gun at every rank."},
-    {"name": "Ares", "cost": 1600, "head": 75, "body": 30, "tier": "half", "note": "Under-bought at low ranks: a machine gun on an SMG budget, 50 rounds and strong wall penetration."},
-    {"name": "Judge", "cost": 1850, "head": 34, "body": 17, "tier": "half", "note": "Per pellet under 10m. Full-buy money on a half-buy budget; wins its intended fight and loses every other one."},
-    {"name": "Bulldog", "cost": 2050, "head": 115, "body": 35, "tier": "half", "note": "The safer of the two sub-rifle options at low ranks."},
-    {"name": "Guardian", "cost": 2250, "head": 195, "body": 65, "tier": "half", "note": "One-taps through heavy at any range, but three body shots through heavy. A skill check."},
-    {"name": "Outlaw", "cost": 2400, "head": 238, "body": 140, "tier": "half", "note": "One body shot kills through no shield and light, but leaves a heavy-shielded target at 10 HP. That is the whole decision."},
-    {"name": "Phantom", "cost": 2900, "head": 156, "body": 39, "tier": "rifle", "note": "Silenced, 30 rounds, 11 shots a second. Past 20m a headshot leaves a heavy-shielded enemy at 10 HP and body shots go from four to five. Favours close angles and messy spray."},
-    {"name": "Vandal", "cost": 2900, "head": 160, "body": 40, "tier": "rifle", "note": "One-taps through heavy at any range and four body shots at any range. Favours long sightlines."},
-    {"name": "Warden", "cost": 2900, "head": 200, "body": 50, "tier": "rifle", "note": "Added in patch 13.06. Two body shots unshielded, three through any shield, at 6.5 shots a second. Too new for a verdict: do not tell the player it is right or wrong to buy."},
-    {"name": "Odin", "cost": 3200, "head": 95, "body": 38, "tier": "rifle", "note": "A wallbang specialist that costs more than a rifle and loses most open duels."},
-    {"name": "Operator", "cost": 4700, "head": 255, "body": 150, "tier": "rifle", "note": "Needs the team near the credit cap, because the buyer cannot also afford utility and needs teammates covering flanks."}
+    {
+      "name": "Classic",
+      "cost": 0,
+      "head": 78,
+      "body": 26,
+      "tier": "pistol",
+      "key": false
+    },
+    {
+      "name": "Shorty",
+      "cost": 300,
+      "head": 22,
+      "body": 11,
+      "tier": "pistol",
+      "note": "Per pellet, 15 pellets under 7m.",
+      "key": false
+    },
+    {
+      "name": "Frenzy",
+      "cost": 450,
+      "head": 78,
+      "body": 26,
+      "tier": "pistol",
+      "key": false
+    },
+    {
+      "name": "Ghost",
+      "cost": 500,
+      "head": 105,
+      "body": 30,
+      "tier": "pistol",
+      "note": "Best eco pistol at low ranks: one-taps an unshielded head to 30m and a 13-round magazine forgives misses.",
+      "key": false
+    },
+    {
+      "name": "Bandit",
+      "cost": 600,
+      "head": 152,
+      "body": 39,
+      "tier": "pistol",
+      "note": "One-taps light shields to 30m and heavy inside 10m. Eight rounds punishes spray.",
+      "key": false
+    },
+    {
+      "name": "Sheriff",
+      "cost": 800,
+      "head": 159,
+      "body": 55,
+      "tier": "pistol",
+      "note": "The only sub-1,000 gun that one-taps through heavy shields inside 30m. Below Gold a Ghost plus shield and utility is usually worth more.",
+      "key": true
+    },
+    {
+      "name": "Bucky",
+      "cost": 850,
+      "head": 34,
+      "body": 17,
+      "tier": "half",
+      "note": "Per pellet under 8m. Close-corner anchor buy.",
+      "key": false
+    },
+    {
+      "name": "Marshal",
+      "cost": 950,
+      "head": 202,
+      "body": 101,
+      "tier": "half",
+      "note": "Best pure-eco primary: 101 body kills an unshielded enemy outright, and players on an anti-eco often skip shields.",
+      "key": true
+    },
+    {
+      "name": "Stinger",
+      "cost": 1100,
+      "head": 67,
+      "body": 27,
+      "tier": "half",
+      "note": "Only worth the 500 saved over a Spectre if the fight is inside 15m.",
+      "key": false
+    },
+    {
+      "name": "Spectre",
+      "cost": 1600,
+      "head": 78,
+      "body": 26,
+      "tier": "half",
+      "note": "The default half-buy gun at every rank.",
+      "key": true
+    },
+    {
+      "name": "Ares",
+      "cost": 1600,
+      "head": 75,
+      "body": 30,
+      "tier": "half",
+      "note": "Under-bought at low ranks: a machine gun on an SMG budget, 50 rounds and strong wall penetration.",
+      "key": false
+    },
+    {
+      "name": "Judge",
+      "cost": 1850,
+      "head": 34,
+      "body": 17,
+      "tier": "half",
+      "note": "Per pellet under 10m. Full-buy money on a half-buy budget; wins its intended fight and loses every other one.",
+      "key": false
+    },
+    {
+      "name": "Bulldog",
+      "cost": 2050,
+      "head": 115,
+      "body": 35,
+      "tier": "half",
+      "note": "The safer of the two sub-rifle options at low ranks.",
+      "key": false
+    },
+    {
+      "name": "Guardian",
+      "cost": 2250,
+      "head": 195,
+      "body": 65,
+      "tier": "half",
+      "note": "One-taps through heavy at any range, but three body shots through heavy. A skill check.",
+      "key": false
+    },
+    {
+      "name": "Outlaw",
+      "cost": 2400,
+      "head": 238,
+      "body": 140,
+      "tier": "half",
+      "note": "One body shot kills through no shield and light, but leaves a heavy-shielded target at 10 HP. That is the whole decision.",
+      "key": true
+    },
+    {
+      "name": "Phantom",
+      "cost": 2900,
+      "head": 156,
+      "body": 39,
+      "tier": "rifle",
+      "note": "Silenced, 30 rounds, 11 shots a second. Past 20m a headshot leaves a heavy-shielded enemy at 10 HP and body shots go from four to five. Favours close angles and messy spray.",
+      "key": true
+    },
+    {
+      "name": "Vandal",
+      "cost": 2900,
+      "head": 160,
+      "body": 40,
+      "tier": "rifle",
+      "note": "One-taps through heavy at any range and four body shots at any range. Favours long sightlines.",
+      "key": true
+    },
+    {
+      "name": "Warden",
+      "cost": 2900,
+      "head": 200,
+      "body": 50,
+      "tier": "rifle",
+      "note": "Added in patch 13.06. Two body shots unshielded, three through any shield, at 6.5 shots a second. Too new for a verdict: do not tell the player it is right or wrong to buy.",
+      "key": true
+    },
+    {
+      "name": "Odin",
+      "cost": 3200,
+      "head": 95,
+      "body": 38,
+      "tier": "rifle",
+      "note": "A wallbang specialist that costs more than a rifle and loses most open duels.",
+      "key": false
+    },
+    {
+      "name": "Operator",
+      "cost": 4700,
+      "head": 255,
+      "body": 150,
+      "tier": "rifle",
+      "note": "Needs the team near the credit cap, because the buyer cannot also afford utility and needs teammates covering flanks.",
+      "key": true
+    }
   ],
   "buy_types": [
-    {"name": "Full buy", "from": 3900, "shape": "Rifle 2,900 plus heavy shield 1,000. 4,400 to 4,900 is the real target once abilities are included; 3,900 is a full buy only if utility carried over from last round."},
-    {"name": "Half buy", "from": 2000, "to": 3900, "shape": "Spectre 1,600 plus light shield 400 is exactly 2,000. Other shapes: Marshal plus heavy, Bulldog plus light plus one ability, Sheriff plus heavy plus utility."},
-    {"name": "Force buy", "from": 2000, "to": 3900, "shape": "Spending everything below the full-buy line on purpose. Gated on being at the 2,400 tier or higher, four of five able to afford a gun and some shield, and the enemy not on a full buy."},
-    {"name": "Eco", "to": 2000, "shape": "Spend 500 or less. Classic or Ghost, maybe one ability, usually no shield. The point is that all five clear 3,900 next round."},
-    {"name": "Bonus", "shape": "The round after winning an eco, carrying picked-up enemy rifles. Buy shields and utility only and bank the 2,900 you would have spent on a gun."}
+    {
+      "name": "Full buy",
+      "from": 3900,
+      "shape": "Rifle 2,900 plus heavy shield 1,000. 4,400 to 4,900 is the real target once abilities are included; 3,900 is a full buy only if utility carried over from last round."
+    },
+    {
+      "name": "Half buy",
+      "from": 2000,
+      "to": 3900,
+      "shape": "Spectre 1,600 plus light shield 400 is exactly 2,000. Other shapes: Marshal plus heavy, Bulldog plus light plus one ability, Sheriff plus heavy plus utility."
+    },
+    {
+      "name": "Force buy",
+      "from": 2000,
+      "to": 3900,
+      "shape": "Spending everything below the full-buy line on purpose. Gated on being at the 2,400 tier or higher, four of five able to afford a gun and some shield, and the enemy not on a full buy."
+    },
+    {
+      "name": "Eco",
+      "to": 2000,
+      "shape": "Spend 500 or less. Classic or Ghost, maybe one ability, usually no shield. The point is that all five clear 3,900 next round."
+    },
+    {
+      "name": "Bonus",
+      "shape": "The round after winning an eco, carrying picked-up enemy rifles. Buy shields and utility only and bank the 2,900 you would have spent on a gun."
+    }
   ],
   "priorities": [
     "Buy with the team or do not buy. Five Spectres beat one Vandal and four Classics; a lone rifle inside a team eco is one kill reward for the enemy and a free gun when they pick it up.",
@@ -58,13 +254,11 @@
     "Abilities beat the armor upgrade when the ability creates or denies a fight: a smoke across an Operator sightline, a flash that turns a duel into a free kill, recon that prevents walking into three people.",
     "Never buy a rifle with no shield and no utility on a full-buy round.",
     "An attacker taking a site wants the gun first; a defender anchoring a close site wants shield and utility first.",
-    "Read the enemy economy. Full-buying with heavy shields into an obvious enemy eco wastes credits that should have been saved.",
     "Check MIN NEXT ROUND in the buy menu. That number is the game telling you whether saving works."
   ],
   "dropping": [
     "The poorer player right-clicks the weapon they want, which posts a Request beside their name; a richer teammate right-clicks the same weapon to buy it for them.",
     "Buying for someone who has not requested does not work through the menu. The fallback is buying a second gun and pressing G near them.",
-    "A requested weapon keeps the receiver's skin; a dropped one carries the dropper's. A weapon dropped with G can no longer be refunded.",
     "Drop from the biggest surplus to the most gun-dependent role. Dropping to a player who will lurk passively is a waste.",
     "Sitting near the 9,000 cap while teammates are under-equipped is hoarding: those credits should have been guns."
   ],
@@ -74,5 +268,32 @@
     "https://playvalorant.com/en-us/news/dev/valorant-data-drop-phantom-vs-vandal/",
     "https://dignitas.gg/articles/a-detailed-valorant-economy-guide",
     "https://www.thespike.gg/valorant/beginner-guides/valorant-economy-guide"
+  ],
+  "map_weapons": {
+    "abyss": "The Operator map of the current pool (22% buy rate, highest in rotation) and the highest Outlaw buy. Long mid through Library and Catwalk, and a B site built for snipers. SMGs die early: a Spectre falls to 22 body past 15m.",
+    "ascent": "Mid-tier for the Operator, not top: Mid Doors is about 20m, so rifles can contest. The worst shotgun map in the game by a distance, with the lowest Bucky buy rate and win rate anywhere. Second-highest Marshal buy. The most defence-sided map in the pool.",
+    "haven": "Three sites dilute a single Operator: one sniper covers one of three. A Long, C Long and Mid Window are the angles. Highest Stinger buy in the pool, which is a mistake in itself.",
+    "lotus": "Mid-pack for the Operator, so the folk claim that Lotus kills it is not supported. Worst Judge win rate in the game despite the tight spaces: the rotating doors hand the enemy a 3-5m fight on their timing, not yours.",
+    "split": "The SMG map: highest Spectre buy in the pool and the best Judge win rate. The Operator is not dead here, it is a two-angle weapon, Heaven and Mid at 15-20m and nothing else. Marshal buy rate is at the floor. Since patch 12.09 rope accuracy is gutted, so a shotgun bought for a rope drop no longer works.",
+    "sunset": "The anti-sniper map: lowest Operator and Outlaw buy rates in the pool, with almost every fight compressed to 10-15m. Guides call it a shotgun map and the ladder disagrees, so treat that claim as unsupported. SMGs stay viable late.",
+    "summit": "New in patch 13.00, so the evidence is thin and no engagement ranges are published. Three droppable walls each permanently seal a route for the rest of the round when their switch is shot, which makes an Operator angle worth full price before the wall falls and nothing after it."
+  },
+  "sides": [
+    "Attackers are paid 300 each for planting, even in a lost round, and attackers who lose, survive and did not plant take the flat 1,000 instead of their loss bonus. So an attacker save is only cheap if the spike went down: plant then save, never hide and survive.",
+    "A defender who gives up a round and walks away keeps the weapon and the full loss bonus. Defender saves are free, which is the structural reason defence tolerates cheaper buys.",
+    "Attack needs the full utility kit before the weapon upgrade, because an execute without smokes walks into crossfire. A rifle and heavy shield with no utility is defensible on defence and bad on attack.",
+    "A retake needs utility and numbers and a hold does not, so defenders can bank on quiet rounds and spend on contact."
+  ],
+  "round_context": [
+    "Pistol round is 800 credits and light shield is 400, so a bought pistol and armor do not fit together: Ghost plus light is 900, Frenzy plus light is 850, Bandit plus light is 1,000. Only the free Classic leaves room for both. A player holding a bought pistol and light armor in round 1 was given a drop.",
+    "After winning the pistol, half buy and never save: a Spectre and light shield leaves about 1,000 banked, and losing still funds a rifle next round.",
+    "After losing the pistol, save round 2 and buy round 3. The bonus goes 1,900 then 2,400, which is 4,300 together and a real full buy. A half buy in round 2 turns one lost round into two.",
+    "Against an enemy eco their players are unarmored at 100 HP, which moves kill breakpoints: a Marshal body shot kills outright and a Spectre needs four body shots rather than five. Losing an 850 shotgun to them also costs a quarter of losing a rifle, and anything you drop carries into their next round.",
+    "Buy the Operator only when the team is near 6,000 together, nobody else has one, and the map gives a single long line you can hold and step off. Keep about 2,000 in reserve so a zero-kill death still funds next round."
+  ],
+  "weapon_rules": [
+    "The Spectre beats the Stinger on every map by five to ten points of win rate, and the Stinger is under 50% on all of them since patch 11.08. The 500 credits saved is not worth it.",
+    "Since patch 12.09 every shotgun is much less accurate while moving and rope accuracy was gutted. A shotgun is a stand-still-and-hold buy now; bought for a running push or a rope drop it is wasted.",
+    "Judge the buy on prices, the damage breakpoints and the map's geometry. Do not judge it on a weapon's win rate: the Shorty has the highest win rate on every map because it is what people hold when already ahead."
   ]
 }

@@ -459,6 +459,41 @@
           "common_mistake": "Buying rifle plus heavy shield against a team that just lost two rounds and died holding pistols.",
           "fix": "Against an eco, buy what wins the round and bank the rest; the credits matter more next round than the third extra advantage this one.",
           "visible_in_frames": true
+        },
+        {
+          "id": "economy.pistol_round_fit",
+          "check": "In a pistol round, does the buy actually fit 800 credits? A bought pistol and light shield do not: Ghost plus light is 900, Frenzy plus light is 850, Bandit plus light is 1,000. Only the free Classic leaves room for both.",
+          "common_mistake": "Planning a Ghost and armor, then ending up with neither the utility nor the shield.",
+          "fix": "Pick one shape and commit: Ghost with 300 of utility and no armor, or Classic with light shield and 400 of utility. A teammate holding a bought pistol and armor was given a drop.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "economy.attacker_save_no_plant",
+          "check": "On attack in a round the team is losing, does the player go for the plant before giving up on it? Attackers who lose, survive and did not plant take a flat 1,000 instead of the 1,900 to 2,900 loss bonus.",
+          "common_mistake": "Three attackers hiding out a lost round with no spike down, costing the team thousands in forfeited bonus to save two guns.",
+          "fix": "Plant first, then save. The plant pays 300 to all five and protects the loss bonus for everyone who survives. Hiding without a plant is the largest single credit leak in a match.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "economy.map_weapon_fit",
+          "check": "Does the weapon suit the map's engagement ranges: an Operator on a map with a long line to hold rather than on Sunset, and shotguns kept off Ascent and Lotus?",
+          "common_mistake": "An Operator on a map where nearly every fight is inside 15m, or a Bucky on Ascent, which has the lowest shotgun buy rate and win rate in the game.",
+          "fix": "Match the buy to the sightlines. On a close map the same credits buy a rifle and full utility instead of one angle you may never get to hold.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "economy.stinger_over_spectre",
+          "check": "On a half buy, did the player take a Stinger to save 500 credits over a Spectre?",
+          "common_mistake": "Buying the Stinger because it is cheaper.",
+          "fix": "Take the Spectre. Since patch 11.08 the Stinger has been the worst primary buy on every map, and the Spectre beats it by five to ten points of win rate everywhere.",
+          "visible_in_frames": true
+        },
+        {
+          "id": "economy.shotgun_is_a_hold",
+          "check": "When the player buys a shotgun, do they then hold a tight angle with it rather than running or dropping a rope into fights?",
+          "common_mistake": "Buying a Judge and pushing with it, or taking it down a rope.",
+          "fix": "Since patch 12.09 every shotgun is much less accurate while moving and rope accuracy was gutted. A shotgun is a stand-still-and-wait buy; if the plan is to push, buy something else.",
+          "visible_in_frames": true
         }
       ]
     },

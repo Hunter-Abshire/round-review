@@ -355,7 +355,7 @@ def build_coach_prompt(
     # Prices and thresholds, only where a purchase is being judged. Everywhere else it is
     # 1,500 tokens spent on a decision the player is not making.
     if buy_phase:
-        sections.append(render_economy_brief(knowledge.economy))
+        sections.append(render_economy_brief(knowledge.economy, context.map))
     if situation:
         sections.append(situation.describe())
     # The clock already overruled the phase field, but the model's own summary still says

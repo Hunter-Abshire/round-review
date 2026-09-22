@@ -244,6 +244,8 @@ class Weapon:
     body: int
     tier: str
     note: str
+    # Whether the note states a breakpoint worth the prompt space.
+    key: bool
 
     def shots_to_kill(self, effective_hp: int) -> int:
         """Body shots to kill a target with this much effective HP (100/125/150).
@@ -287,6 +289,10 @@ class EconomyBrief:
     buy_types: tuple[BuyType, ...]
     priorities: tuple[str, ...]
     dropping: tuple[str, ...]
+    sides: tuple[str, ...]
+    round_context: tuple[str, ...]
+    weapon_rules: tuple[str, ...]
+    map_weapons: Mapping[str, str]
 
 
 def parse_economy(data: Mapping[str, Any]) -> EconomyBrief:
@@ -307,6 +313,7 @@ def parse_economy(data: Mapping[str, Any]) -> EconomyBrief:
                 body=int(_field(raw, "body", f"weapon {name}")),
                 tier=str(_field(raw, "tier", f"weapon {name}")),
                 note=str(raw.get("note", "")),
+                key=bool(raw.get("key", False)),
             )
         )
     if not weapons:
@@ -344,6 +351,10 @@ def parse_economy(data: Mapping[str, Any]) -> EconomyBrief:
         buy_types=buy_types,
         priorities=_strings(data, "priorities", where),
         dropping=_strings(data, "dropping", where),
+        sides=_strings(data, "sides", where),
+        round_context=_strings(data, "round_context", where),
+        weapon_rules=_strings(data, "weapon_rules", where),
+        map_weapons={str(k): str(v) for k, v in dict(_field(data, "map_weapons", where)).items()},
     )
 
 
@@ -493,7 +504,7 @@ def render_agent_brief(agent: AgentBrief) -> str:
     return "\n".join(lines)
 
 
-def render_economy_brief(economy: EconomyBrief) -> str:
+def render_economy_brief(economy: EconomyBrief, map_id: str | None = None) -> str:
     """The prices, rewards and thresholds a buy decision turns on.
 
     Sent only on buy windows. Everywhere else it is 3,000 characters of prompt spent on a
@@ -525,7 +536,17 @@ def render_economy_brief(economy: EconomyBrief) -> str:
     lines += [f"  - {rule}" for rule in economy.priorities]
     lines.append("  Dropping:")
     lines += [f"  - {rule}" for rule in economy.dropping]
-    notable = [w for w in economy.weapons if w.note and w.cost >= 850]
+    lines.append("  Sides:")
+    lines += [f"  - {rule}" for rule in economy.sides]
+    lines.append("  Round context:")
+    lines += [f"  - {rule}" for rule in economy.round_context]
+    lines.append("  Weapon rules:")
+    lines += [f"  - {rule}" for rule in economy.weapon_rules]
+    # Only the map in play: the other six are prompt spent on a game nobody is playing.
+    for_map = economy.map_weapons.get(_slug(map_id or ""))
+    if for_map:
+        lines.append(f"  On this map: {for_map}")
+    notable = [w for w in economy.weapons if w.note and w.key]
     lines.append("  Weapon notes:")
     lines += [f"  - {w.name}: {w.note}" for w in notable]
     return "\n".join(lines)

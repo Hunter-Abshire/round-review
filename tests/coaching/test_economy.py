@@ -63,10 +63,12 @@ class TestBrief:
         assert "survive" in text.lower()
 
     def test_the_brief_stays_within_its_budget(self) -> None:
-        # About 1,500 tokens. It only ever goes out on a buy window, which carries the
-        # economy checks alone and no situation timeline, so the room is there. If this
-        # ever needs raising, cut a weapon note rather than the thresholds.
-        assert len(render_economy_brief(KNOWLEDGE.economy)) < 7000
+        # Under 2,000 tokens, carrying prices, armor, rewards, buy shapes, the side
+        # asymmetry, round context, weapon rules and one map line. It only goes out on a buy
+        # window, which carries the economy checks alone and no situation timeline. Raising
+        # this again means cutting content, not widening the number: a small model holding
+        # 2,000 tokens of reference is already at the edge of useful.
+        assert len(render_economy_brief(KNOWLEDGE.economy, map_id="ascent")) < 8000
 
     def test_the_brief_does_not_pass_judgement_on_the_new_rifle(self) -> None:
         # Warden shipped in 13.06 with no meta consensus; the note says so rather than
@@ -74,3 +76,32 @@ class TestBrief:
         text = render_economy_brief(KNOWLEDGE.economy)
         assert "Warden" in text
         assert "too new" in text.lower()
+
+
+class TestMapAndSide:
+    def test_every_map_in_rotation_has_buy_guidance(self) -> None:
+        rotation = {m.id for m in KNOWLEDGE.maps.values() if m.in_competitive_rotation}
+        assert rotation <= set(KNOWLEDGE.economy.map_weapons)
+
+    def test_the_brief_carries_only_the_map_being_played(self) -> None:
+        text = render_economy_brief(KNOWLEDGE.economy, map_id="sunset")
+        assert "anti-sniper map" in text
+        assert "Operator map of the current pool" not in text  # that is Abyss
+
+    def test_an_unknown_map_drops_the_map_line_rather_than_guessing(self) -> None:
+        text = render_economy_brief(KNOWLEDGE.economy, map_id="nonesuch")
+        assert "anti-sniper" not in text
+
+    def test_the_side_asymmetry_is_stated(self) -> None:
+        text = render_economy_brief(KNOWLEDGE.economy)
+        assert "plant" in text.lower()
+        assert "defender" in text.lower()
+
+    def test_the_pistol_round_arithmetic_is_in_the_brief(self) -> None:
+        text = render_economy_brief(KNOWLEDGE.economy)
+        assert "800" in text
+        assert "drop" in text.lower()
+
+    def test_win_rate_is_explicitly_not_a_buy_signal(self) -> None:
+        # Per-weapon win rate is a selection statistic; the Shorty tops every map.
+        assert "win rate" in render_economy_brief(KNOWLEDGE.economy).lower()

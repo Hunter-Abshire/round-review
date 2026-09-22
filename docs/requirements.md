@@ -1,6 +1,6 @@
 # round-review requirements
 
-Version 1.0 (settings in the app). Last updated 2026-09-22.
+Version 1.1 (review layout, drawings, clip identity). Last updated 2026-09-22.
 
 ## Purpose
 
@@ -47,6 +47,13 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | FR-24 | A review that abstained on most of its windows says so in plain words, counts the reasons, and points at scene validation, instead of being indistinguishable from a review of flawless play. Reports carry `partial` and `stopped_reason`. |
 | FR-25 | The round clock is read deterministically, with no model involved: ffmpeg crops the timer region to a grayscale raster and the digits are segmented and matched against templates learned from the player's own footage. Reading a HUD never fails a review; an unreadable HUD is simply no evidence. |
 | FR-26 | A clock above `buy_phase_max_s` (default 45 s, above both the buy phase and the post-plant spike timer) proves the round is live and pre-plant, and overrides a model phase of `pre_round`, `post_plant`, `retake` or unreadable. `spectating` is never overridden, because the clock belongs to whoever is being watched. Any override is recorded in the report. |
+| FR-51 | A finding or strength may carry focus shapes (box, point, arrow) in fractions of the frame with a label. Shapes outside the frame or without a label are dropped, and never cost the finding they came with. |
+| FR-52 | The app draws those shapes over the video, mapped to the letterboxed picture rather than the element, so they land correctly whatever the clip's aspect ratio. |
+| FR-53 | The review view is a video and a tabbed sidebar (findings, coach, ask). Opening a finding shows it in the sidebar with previous and next, so reading a finding never means leaving the video. Findings are grouped under one heading per category. |
+| FR-54 | Following playback highlights a finding without opening it, so the video cannot hijack what the player is reading. |
+| FR-55 | A finished review records what the clip was (agent, map, side), taking the most common answer across windows. The played date comes from the recorder's filename, falling back to the file's own time. An unreviewed clip shows no identity rather than a guess. |
+| FR-56 | Trade-distance findings are dropped when no enemy was on screen: being far from a teammate while crossing an empty map is not an untradeable death. |
+| FR-57 | The empty-review diagnosis fires only when the coached windows produced little. A review that skipped most of a match but produced findings says what was skipped without calling itself broken. |
 | FR-46 | Every editable setting carries a group, label, plain-language help, type, bounds, unit and where its choices come from, so a settings screen can render all of them without knowing what any of them mean. Derived or write-once paths are explicitly excluded. |
 | FR-47 | Settings are readable and writable over the API. A write validates before touching the file, so an invalid value changes nothing, and the file is rewritten grouped and commented. |
 | FR-48 | A saved setting applies to the next queued job without restarting the app. |

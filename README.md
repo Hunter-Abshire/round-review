@@ -213,8 +213,12 @@ npm start
 `npm install` downloads Electron, about 100 MB, once. `npm start` builds and launches. The
 app starts the review engine itself on a loopback port; you do not run `serve` separately.
 
+Clips show the agent, map and when they were played once they have been reviewed.
+
 In the app: pick how much to review, hit **Analyze** on a clip, watch the window counter, then
-**Open review**. You can also ask about a specific moment: pause where you want, press **Ask
+**Open review**. The review is a video with a sidebar: **Findings** grouped by category,
+**Coach** for the summary, **Ask** for a question. Clicking a finding opens it beside the
+video, and where the model marked something on the frame you see it drawn there. You can also ask about a specific moment: pause where you want, press **Ask
 about this moment** or right-click the timeline, pick a suggested question or type your own,
 and it answers that one question about that stretch of footage with a couple of alternatives
 you could have chosen instead. The timeline under the video shades the stretches that were reviewed and puts

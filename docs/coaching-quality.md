@@ -194,6 +194,24 @@ the one thing a per-match human review structurally cannot give. Tagging a habit
 REPEAT / IMPROVING / PERSISTENT needs history the ledger could carry, and it would make the
 "recurring" section far stronger than within-match repetition alone.
 
+## Fourth Windows run (2026-09-22): what was wrong with the output
+
+A 5:10 clip, 21 windows, 22 findings, `qwen3-vl:8b`. Three real faults:
+
+- The review warned it had "little or nothing to say" while carrying 22 findings, because
+  the diagnosis only looked at the share of skipped windows. It now also requires the coached
+  windows to have produced little, so a match that is genuinely mostly buy phase and
+  spectating reads as normal rather than broken.
+- Positioning and trading findings were raised about a player crossing the map alone: told
+  to stay in trade range of teammates half a map away. Trade-distance findings are now
+  dropped when no enemy was on screen, and the prompt says that moving with nobody visible is
+  rotating, not holding an angle.
+- Clicking a finding rendered it below the coaching summary, so reading one meant scrolling
+  past everything. The review view is now a video and a tabbed sidebar.
+
+Also added: the model may mark what it means with boxes, points and arrows on the frame, and
+a finished review records the agent and map so the library is browsable.
+
 ## Next implementation priorities
 
 1. Build the labelled validation set with `scenes scaffold` and run `scenes validate`

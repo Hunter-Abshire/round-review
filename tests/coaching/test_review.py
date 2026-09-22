@@ -399,3 +399,83 @@ def test_other_categories_are_untouched_by_that_rule(samples: list[FrameSample])
 def test_without_a_situation_read_nothing_is_dropped(samples: list[FrameSample]) -> None:
     transport = FakeTransport(_coach("trading", "trading.stay_tradeable"))
     assert len(review(transport, samples, situation_pass=False).findings) == 1
+
+
+def _situation(**overrides: object) -> str:
+    base = json.loads(SITUATION)
+    base.update(overrides)
+    return json.dumps(base)
+
+
+def _findings(**overrides: object) -> str:
+    base = json.loads(GOOD)
+    base["findings"][0].update(overrides)
+    return json.dumps(base)
+
+
+def test_user_agent_overrides_a_misread_portrait(samples: list[FrameSample]) -> None:
+    transport = FakeTransport(_situation(agent="Omen"), GOOD)
+    result = review(transport, samples, context=PlayerContext(agent="Veto"))
+    assert result.situation is not None
+    # One story in the prompt: the brief and the situation read must not disagree.
+    assert result.situation.agent == "Veto"
+    assert "agent=Veto" in transport.calls[1].prompt
+    assert "agent=Omen" not in transport.calls[1].prompt
+    assert any("Veto" in w and "Omen" in w for w in result.warnings)
+
+
+def test_situation_agent_is_kept_when_the_user_gave_none(samples: list[FrameSample]) -> None:
+    transport = FakeTransport(_situation(agent="Omen"), GOOD)
+    result = review(transport, samples)
+    assert result.situation is not None and result.situation.agent == "Omen"
+
+
+def test_finding_naming_another_agents_ability_is_dropped(samples: list[FrameSample]) -> None:
+    transport = FakeTransport(
+        _situation(agent="Veto"),
+        _findings(suggested_alternative="Use Shrouded Step to take the off-angle."),
+    )
+    result = review(transport, samples, context=PlayerContext(agent="Veto"))
+    assert result.findings == ()
+    assert any("Shrouded Step" in w for w in result.warnings)
+
+
+def test_finding_naming_the_players_own_ability_survives(samples: list[FrameSample]) -> None:
+    transport = FakeTransport(
+        _situation(agent="Veto"),
+        _findings(suggested_alternative="Chokehold the choke before you push."),
+    )
+    result = review(transport, samples, context=PlayerContext(agent="Veto"))
+    assert len(result.findings) == 1
+
+
+def test_a_decided_round_is_not_coached(samples: list[FrameSample]) -> None:
+    # 5 alive against 1, nobody on screen: standing still is running the clock down, not
+    # a positioning mistake.
+    transport = FakeTransport(
+        _situation(teammates_alive=4, enemies_alive=1, enemies_visible=0),
+        _findings(check_id="positioning.off_angle_static", category="positioning"),
+    )
+    result = review(transport, samples)
+    assert result.findings == ()
+    assert any("advantage" in w.lower() for w in result.warnings)
+
+
+def test_an_even_round_is_still_coached(samples: list[FrameSample]) -> None:
+    transport = FakeTransport(
+        _situation(teammates_alive=4, enemies_alive=4, enemies_visible=0),
+        _findings(check_id="positioning.off_angle_static", category="positioning"),
+    )
+    result = review(transport, samples)
+    assert len(result.findings) == 1
+
+
+def test_a_visible_enemy_keeps_coaching_alive_despite_the_advantage(
+    samples: list[FrameSample],
+) -> None:
+    transport = FakeTransport(
+        _situation(teammates_alive=4, enemies_alive=1, enemies_visible=1),
+        _findings(check_id="positioning.off_angle_static", category="positioning"),
+    )
+    result = review(transport, samples)
+    assert len(result.findings) == 1

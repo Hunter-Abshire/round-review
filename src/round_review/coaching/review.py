@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 
+from round_review.coaching.abilities import foreign_abilities
 from round_review.coaching.context import PlayerContext, merge_context
 from round_review.coaching.frames import select_situation_frames
-from round_review.coaching.knowledge import CoachingKnowledge, relevant_categories
+from round_review.coaching.knowledge import (
+    AgentBrief,
+    CoachingKnowledge,
+    find_agent,
+    relevant_categories,
+)
 from round_review.coaching.parse import Finding, Strength, parse_findings, parse_strengths
 from round_review.coaching.prompt import (
     FINDING_SCHEMA,
@@ -34,24 +40,66 @@ log = logging.getLogger(__name__)
 # it is a guess about where people might be, which is exactly what the player cannot act on.
 CONTACT_ONLY_CATEGORIES: frozenset[str] = frozenset({"trading"})
 
+# Categories that tell the player to act: move, hold elsewhere, spend utility, trade. With
+# the round already decided on numbers there is nothing to act on, so the advice is noise.
+ACTION_CATEGORIES: frozenset[str] = frozenset(
+    {"positioning", "timing", "trading", "peeking", "utility", "info"}
+)
+# Two more bodies than the enemy with nobody on screen. Deliberately blunt: a 4v3 is still
+# a round worth coaching, and the counts come from a model reading a scoreboard.
+DECISIVE_ADVANTAGE = 2
+
 
 def _needs_contact(finding: Finding) -> bool:
     category = finding.check_id.partition(".")[0]
     return category in CONTACT_ONLY_CATEGORIES or finding.category in CONTACT_ONLY_CATEGORIES
 
 
+def _decided_round(situation: Situation | None) -> bool:
+    """True when the player's side is far enough ahead that waiting wins the round."""
+    if situation is None or situation.enemies_visible:
+        return False
+    enemies = situation.enemies_alive
+    mates = situation.teammates_alive
+    if enemies is None or mates is None:
+        return False
+    # teammates_alive may or may not count the player, so compare on the pessimistic reading.
+    return mates - enemies >= DECISIVE_ADVANTAGE
+
+
 def _relevant_findings(
-    findings: list[Finding], situation: Situation | None
+    findings: list[Finding],
+    situation: Situation | None,
+    agent: str | None = None,
+    agents: Mapping[str, AgentBrief] | None = None,
 ) -> tuple[list[Finding], list[str]]:
     allowed = relevant_categories(situation.phase if situation else None)
+    decided = _decided_round(situation)
     kept: list[Finding] = []
     warnings: list[str] = []
     for finding in findings:
         # Check ids carry the authoritative category; model labels can disagree.
         category = finding.check_id.partition(".")[0]
         reason = None
-        if allowed is not None and category != "other" and category not in allowed:
+        foreign = (
+            foreign_abilities(
+                f"{finding.observation}\n{finding.suggested_alternative}", agent, agents
+            )
+            if agents is not None
+            else ()
+        )
+        if foreign:
+            reason = (
+                f"names {', '.join(foreign)}, which {agent} does not have; "
+                "the agent was probably misread"
+            )
+        elif allowed is not None and category != "other" and category not in allowed:
             reason = "check does not apply to the detected round phase"
+        elif decided and (category in ACTION_CATEGORIES or finding.category in ACTION_CATEGORIES):
+            reason = (
+                "the player's side held a decisive numbers advantage with no enemy on "
+                "screen, so waiting was the correct play"
+            )
         elif _needs_contact(finding) and situation is not None and not situation.enemies_visible:
             reason = "no enemy was on screen, so trade distance is a guess about this moment"
         elif category == "crosshair" or finding.category == "crosshair":
@@ -136,6 +184,16 @@ def review_window(
             log.warning("window %d situation pass unparseable: %s", window.index, exc)
             warnings.append(f"situation pass unparseable, coaching without it: {exc}")
         else:
+            # The player knows which agent they picked; the model is reading a portrait at
+            # 1280px. Correct the read so the brief and the situation tell one story.
+            told = find_agent(knowledge.agents, context.agent)
+            read = find_agent(knowledge.agents, situation.agent)
+            if context.agent and situation.agent and told is not read:
+                warnings.append(
+                    f"situation pass read the agent as {situation.agent}; using "
+                    f"{context.agent} as given"
+                )
+                situation = replace(situation, agent=context.agent)
             context = merge_context(context, situation.to_context())
 
         if situation is not None:
@@ -188,7 +246,9 @@ def review_window(
             warnings.append(f"coach attempt {attempt + 1} unparseable, retry issued: {exc}")
             continue
         if situation_pass:
-            findings, relevance_warnings = _relevant_findings(findings, situation)
+            findings, relevance_warnings = _relevant_findings(
+                findings, situation, context.agent, knowledge.agents
+            )
             parse_warnings.extend(relevance_warnings)
         return WindowResult(
             window,

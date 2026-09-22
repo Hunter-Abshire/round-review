@@ -293,7 +293,18 @@ def test_scenes_describe_prints_the_situation_json(
     from round_review.validation.scenes import SceneCase, SceneOutcome, SceneReport
 
     situation = Situation(
-        "Jett", "Ascent", "attack", "early", "Vandal", (), None, None, 0, (), "Live round."
+        "Jett",
+        "Ascent",
+        "attack",
+        "early",
+        "Vandal",
+        (),
+        None,
+        None,
+        None,
+        0,
+        (),
+        "Live round.",
     )
     report = SceneReport(
         "m",

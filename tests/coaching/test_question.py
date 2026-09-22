@@ -114,17 +114,18 @@ class TestPrompt:
 
     def test_the_situation_read_is_included_when_available(self) -> None:
         situation = Situation(
-            "Jett",
-            "Ascent",
-            "attack",
-            "mid",
-            "Vandal",
-            ("Tailwind",),
-            3900,
-            4,
-            1,
-            ((100.0, "walks A main"),),
-            "Mid round on A.",
+            agent="Jett",
+            map="Ascent",
+            side="attack",
+            phase="mid",
+            weapon="Vandal",
+            abilities_available=("Tailwind",),
+            credits=3900,
+            teammates_alive=4,
+            enemies_alive=4,
+            enemies_visible=1,
+            timeline=((100.0, "walks A main"),),
+            summary="Mid round on A.",
         )
         text = build_question_prompt(
             WINDOW,

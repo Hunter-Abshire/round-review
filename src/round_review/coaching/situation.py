@@ -30,6 +30,7 @@ class Situation:
     abilities_available: tuple[str, ...]
     credits: int | None
     teammates_alive: int | None
+    enemies_alive: int | None
     enemies_visible: int
     timeline: tuple[tuple[float, str], ...]
     summary: str
@@ -48,6 +49,7 @@ class Situation:
             f"credits={self.credits if self.credits is not None else 'unknown'}",
             "teammates alive="
             f"{self.teammates_alive if self.teammates_alive is not None else 'unknown'}",
+            f"enemies alive={self.enemies_alive if self.enemies_alive is not None else 'unknown'}",
             f"enemies visible={self.enemies_visible}",
         ]
         lines = ["Situation read (from pass 1): " + "; ".join(facts), f"Summary: {self.summary}"]
@@ -66,6 +68,7 @@ class Situation:
             "abilities_available": list(self.abilities_available),
             "credits": self.credits,
             "teammates_alive": self.teammates_alive,
+            "enemies_alive": self.enemies_alive,
             "enemies_visible": self.enemies_visible,
             "timeline": [{"t": t, "event": e} for t, e in self.timeline],
             "summary": self.summary,
@@ -125,6 +128,7 @@ def parse_situation(text: str) -> Situation:
         abilities_available=tuple(str(a) for a in abilities) if isinstance(abilities, list) else (),
         credits=_int(raw.get("credits")),
         teammates_alive=_int(raw.get("teammates_alive")),
+        enemies_alive=_int(raw.get("enemies_alive")),
         enemies_visible=_int(raw.get("enemies_visible")) or 0,
         timeline=tuple(timeline),
         summary=str(raw["summary"]),

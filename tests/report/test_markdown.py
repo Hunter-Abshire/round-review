@@ -38,6 +38,7 @@ def build_report(out_dir: Path, findings: bool = True) -> Report:
         ("Tailwind",),
         3900,
         4,
+        4,
         0,
         ((60.0, "walking A main"),),
         "Entering A main with dash up.",

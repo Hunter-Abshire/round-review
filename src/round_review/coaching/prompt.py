@@ -112,7 +112,14 @@ way as a finding. Generic praise is worse than none, so never write "good job", 
 aim" or any other vague or filler compliment, and report no strengths at all rather than
 inventing one. Being alive, winning the fight, or the enemy playing badly are not strengths.
 
-13. You may add a focus list to any finding or strength, marking what to look at on the
+13. A player who is stopped is usually holding an angle on purpose, and a round that is
+already won or already lost is not coached. When the player's side has a decisive numbers
+advantage, or the round clock has nearly run out and nothing is contested, waiting is the
+correct play: do not ask for a push, a rotate, or a better angle. Criticise a held angle
+only when you can name what is wrong with that angle, not merely that the player stood in
+one place.
+
+14. You may add a focus list to any finding or strength, marking what to look at on the
 frame at that timestamp. Use x and y as fractions of the frame's width and height, measured
 from the top left, so 0.5, 0.5 is the centre. A box needs w and h, an arrow needs an end
 point at x2, y2, a point needs nothing more. Give every shape a short label. Only mark
@@ -205,6 +212,7 @@ SITUATION_SCHEMA: dict[str, Any] = {
         "abilities_available": {"type": "array", "items": {"type": "string"}},
         "credits": {"type": ["integer", "null"]},
         "teammates_alive": {"type": ["integer", "null"]},
+        "enemies_alive": {"type": ["integer", "null"]},
         "enemies_visible": {"type": "integer"},
         "timeline": {
             "type": "array",
@@ -225,6 +233,7 @@ SITUATION_SCHEMA: dict[str, Any] = {
         "abilities_available",
         "credits",
         "teammates_alive",
+        "enemies_alive",
         "enemies_visible",
         "timeline",
         "summary",
@@ -280,11 +289,19 @@ def build_situation_prompt(
 ) -> str:
     known = context.describe()
     known_line = f"What the player told us: {known}\n\n" if known else ""
+    # A told agent is not a question. Left open, a misread portrait becomes the whole
+    # coach pass reasoning about somebody else's kit.
+    if context.agent:
+        known_line += (
+            f"The agent is {context.agent}. Report that in the agent field and do not "
+            "name a different one.\n\n"
+        )
     return (
         f"{known_line}{_window_line(window, samples)}\n\n"
         "Describe the situation: which agent the player is using (portrait and ability icons), "
         "which map (minimap and scenery), attack or defense, the phase of the round, the weapon, "
-        "which abilities are still available (lit icons), credits, teammates alive, enemies "
+        "which abilities are still available (lit icons), credits, how many teammates and how "
+        "many enemies are still alive (the round counters beside the scoreboard), enemies "
         "visible, and a short timeline of what the player does frame by frame. Finish with a "
         "two-sentence summary."
     )
@@ -307,6 +324,11 @@ def build_coach_prompt(
     agent = find_agent(knowledge.agents, context.agent)
     if agent:
         sections.append(render_agent_brief(agent))
+        kit = ", ".join(f"{name} ({key})" for key, name, _purpose in agent.abilities)
+        sections.append(
+            f"{agent.name} has exactly these abilities: {kit}. Any other ability belongs to "
+            "an agent the player is not using, so never suggest one."
+        )
     game_map = find_map(knowledge.maps, context.map)
     if game_map:
         sections.append(render_map_brief(game_map))

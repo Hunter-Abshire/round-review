@@ -279,3 +279,27 @@ def test_an_unread_hud_changes_nothing(samples: list[FrameSample]) -> None:
     buy_phase["phase"] = "pre_round"
     result = review(FakeTransport(json.dumps(buy_phase)), samples, hud=HudRead(None, None, 0.0, 0))
     assert result.abstained is True
+
+
+def test_the_situation_pass_carries_only_its_frame_budget(samples: list[FrameSample]) -> None:
+    transport = FakeTransport(SITUATION, GOOD)
+    review(transport, samples, situation_frames=2)
+    # pass 1 gets the budget, pass 2 still gets everything the coach needs
+    assert len(transport.calls[0].images_b64) == 2
+    assert len(transport.calls[1].images_b64) == 3
+
+
+def test_a_budget_of_zero_sends_every_frame(samples: list[FrameSample]) -> None:
+    transport = FakeTransport(SITUATION, GOOD)
+    review(transport, samples, situation_frames=0)
+    assert len(transport.calls[0].images_b64) == 3
+
+
+def test_the_situation_prompt_describes_the_frames_it_was_given(
+    samples: list[FrameSample],
+) -> None:
+    transport = FakeTransport(SITUATION, GOOD)
+    review(transport, samples, situation_frames=2)
+    prompt = transport.calls[0].prompt
+    assert "2 frames" in prompt
+    assert prompt.count("t=") == 2 + 2  # two captions plus the window bounds

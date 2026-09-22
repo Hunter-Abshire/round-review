@@ -522,3 +522,28 @@ def test_hud_check_off_never_reads_the_hud(
     )
     deps = make_deps(tmp_path, FakeTransport(good(35.0), good(65.0), good(85.0)), hud_check=False)
     assert len(review_file(video, deps).results) == 3
+
+
+def test_the_ledger_records_the_windows_and_how_long_it_took(
+    video: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import round_review.pipeline as pipeline_module
+
+    ticks = iter([1000.0, 1123.5])  # the review starts, then finishes 123.5s later
+    monkeypatch.setattr(pipeline_module.time, "monotonic", lambda: next(ticks, 1123.5))
+    transport = FakeTransport(good(35.0), good(65.0), good(85.0))
+    deps = make_deps(tmp_path, transport)
+    review_file(video, deps)
+    (entry,) = read_ledger(deps.config.ledger_path)
+    assert entry.windows == 3
+    assert entry.duration_s == pytest.approx(123.5)
+    assert entry.seconds_per_window() == pytest.approx(123.5 / 3)
+
+
+def test_a_failed_review_still_records_what_it_spent(video: Path, tmp_path: Path) -> None:
+    deps = make_deps(tmp_path, FakeTransport(OllamaError("refused")))
+    with pytest.raises(OllamaError):
+        review_file(video, deps)
+    (entry,) = read_ledger(deps.config.ledger_path)
+    assert entry.duration_s >= 0.0
+    assert entry.windows == 0

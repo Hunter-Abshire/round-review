@@ -45,6 +45,11 @@ class Config:
     api_port: int = 8765
     # Two model calls per window (situation read, then coaching). Off = coaching only.
     situation_pass: bool = True
+    # How many frames the situation pass carries. It runs for every window, including the
+    # ones it then skips, so its images dominate the cost of a review. 0 = every frame.
+    situation_frames: int = 3
+    # Keep the model loaded between calls; a review is dozens of calls back to back.
+    ollama_keep_alive: str = "30m"
     player_notes: str = ""
     # Deterministic HUD reading. The clock is the one fact a vision model cannot argue with,
     # so it vetoes phase misreads. The region is x,y,w,h as fractions of the frame; check it
@@ -73,7 +78,9 @@ POSITIVE_KEYS: frozenset[str] = frozenset(
     }
 )
 # 0 is allowed and means "unlimited"; negative never is.
-NON_NEGATIVE_KEYS: frozenset[str] = frozenset({"daily_call_cap", "max_windows", "max_span_s"})
+NON_NEGATIVE_KEYS: frozenset[str] = frozenset(
+    {"daily_call_cap", "max_windows", "max_span_s", "situation_frames"}
+)
 PATH_KEYS: frozenset[str] = frozenset(
     {"recordings_dir", "reports_dir", "ledger_path", "hud_templates_path"}
 )

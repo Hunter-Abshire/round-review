@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
@@ -64,7 +65,9 @@ def make_default_deps(config: Config) -> Deps:
         config=config,
         probe_runner=SubprocessRunner(config.ffprobe_path),
         ffmpeg_runner=SubprocessRunner(config.ffmpeg_path),
-        transport=UrllibTransport(config.ollama_url, num_ctx=config.num_ctx),
+        transport=UrllibTransport(
+            config.ollama_url, num_ctx=config.num_ctx, keep_alive=config.ollama_keep_alive
+        ),
         clock=_utc_now,
     )
 
@@ -90,6 +93,8 @@ def _record(
     model_calls: int,
     report_path: Path | None,
     error: RoundReviewError | None,
+    windows: int = 0,
+    duration_s: float = 0.0,
 ) -> None:
     append_entry(
         deps.config.ledger_path,
@@ -101,6 +106,8 @@ def _record(
             report_path=str(report_path) if report_path else None,
             status=status,
             error=f"{type(error).__name__}: {error}" if error else None,
+            windows=windows,
+            duration_s=duration_s,
         ),
     )
 
@@ -185,6 +192,7 @@ def review_file(
     unparseable_windows = 0
     warnings: list[str] = []
     knowledge = load_knowledge()
+    started = time.monotonic()
     hud_templates = (
         DigitTemplates.load(cfg.hud_templates_path)
         if cfg.hud_check and cfg.situation_pass and cfg.hud_templates_path
@@ -203,7 +211,7 @@ def review_file(
             max_span_s=cfg.max_span_s,
         )
     except VideoError as exc:
-        _record(deps, key, path, "failed", 0, None, exc)
+        _record(deps, key, path, "failed", 0, None, exc, 0, time.monotonic() - started)
         raise
 
     log.info("%s: %.1fs, reviewing %d window(s)", path.name, recording.duration_s, len(windows))
@@ -232,6 +240,7 @@ def review_file(
                 hud=_read_window_hud(recording, window, deps, hud_templates, frames_dir),
                 buy_phase_max_s=cfg.buy_phase_max_s,
                 hud_min_confidence=cfg.hud_min_confidence,
+                situation_frames=cfg.situation_frames,
             )
         except ParseError as exc:
             # One unreadable window is a warning; every window unreadable fails the file.
@@ -268,7 +277,7 @@ def review_file(
     if stopped is not None:
         if not results:
             status: Status = "skipped" if isinstance(stopped, CapExceeded) else "failed"
-            _record(deps, key, path, status, calls, None, stopped)
+            _record(deps, key, path, status, calls, None, stopped, 0, time.monotonic() - started)
             raise stopped
         warnings.append(
             f"review stopped after {len(results)} of {len(windows)} windows "
@@ -276,7 +285,7 @@ def review_file(
         )
     elif windows and unparseable_windows == len(windows):
         unreadable = ParseError(f"{path.name}: all {len(windows)} windows unparseable")
-        _record(deps, key, path, "failed", calls, None, unreadable)
+        _record(deps, key, path, "failed", calls, None, unreadable, 0, time.monotonic() - started)
         raise unreadable
 
     report = Report(
@@ -289,5 +298,15 @@ def review_file(
     )
     report_path = write_report(report, out_dir)
     write_report_json(report, out_dir)
-    _record(deps, key, path, "partial" if stopped else "ok", calls, report_path, None)
+    _record(
+        deps,
+        key,
+        path,
+        "partial" if stopped else "ok",
+        calls,
+        report_path,
+        None,
+        len(results),
+        time.monotonic() - started,
+    )
     return report

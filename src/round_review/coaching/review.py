@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 
 from round_review.coaching.context import PlayerContext, merge_context
+from round_review.coaching.frames import select_situation_frames
 from round_review.coaching.knowledge import CoachingKnowledge, relevant_categories
 from round_review.coaching.parse import Finding, parse_findings
 from round_review.coaching.prompt import (
@@ -89,6 +90,7 @@ def review_window(
     hud: HudRead | None = None,
     buy_phase_max_s: float = 45.0,
     hud_min_confidence: float = 0.8,
+    situation_frames: int = 3,
 ) -> WindowResult:
     """Pass 1 (optional) asks the model to describe what is on screen; a failed pass 1 is a
     warning. Pass 2 coaches against the checklist and retries once with a JSON-only nudge;
@@ -102,11 +104,12 @@ def review_window(
     hud_override = False
 
     if situation_pass:
+        scene_samples = select_situation_frames(samples, situation_frames)
         request = build_chat_request(
             model,
             SITUATION_SYSTEM_PROMPT,
-            build_situation_prompt(window, samples, context),
-            images,
+            build_situation_prompt(window, scene_samples, context),
+            [encode_frame_b64(s.path) for s in scene_samples],
             SITUATION_SCHEMA,
             timeout_s,
         )

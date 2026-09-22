@@ -44,7 +44,9 @@ def _default_opener(req: urllib.request.Request, timeout: float) -> Any:
     return urllib.request.urlopen(req, timeout=timeout)
 
 
-def build_body(request: ChatRequest, num_ctx: int = DEFAULT_NUM_CTX) -> dict[str, Any]:
+def build_body(
+    request: ChatRequest, num_ctx: int = DEFAULT_NUM_CTX, keep_alive: str = ""
+) -> dict[str, Any]:
     body: dict[str, Any] = {
         "model": request.model,
         "stream": False,
@@ -58,6 +60,10 @@ def build_body(request: ChatRequest, num_ctx: int = DEFAULT_NUM_CTX) -> dict[str
     if request.format is not None:
         body["format"] = request.format
         body["think"] = False
+    if keep_alive:
+        # A review is dozens of calls in a row; reloading the model between them would cost
+        # more than the inference.
+        body["keep_alive"] = keep_alive
     return body
 
 
@@ -94,12 +100,13 @@ class UrllibTransport:
     base_url: str
     opener: Opener = field(default=_default_opener)
     num_ctx: int = DEFAULT_NUM_CTX
+    keep_alive: str = ""
 
     def chat(self, request: ChatRequest) -> ChatResponse:
         url = self.base_url.rstrip("/") + "/api/chat"
         req = urllib.request.Request(
             url,
-            data=json.dumps(build_body(request, self.num_ctx)).encode("utf-8"),
+            data=json.dumps(build_body(request, self.num_ctx, self.keep_alive)).encode("utf-8"),
             headers={"Content-Type": "application/json"},
             method="POST",
         )

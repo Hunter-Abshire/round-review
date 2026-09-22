@@ -24,6 +24,14 @@ class LedgerEntry:
     report_path: str | None
     status: Status
     error: str | None
+    # How much work the review did and how long it took, so the next one can be estimated.
+    windows: int = 0
+    duration_s: float = 0.0
+
+    def seconds_per_window(self) -> float | None:
+        if self.windows <= 0 or self.duration_s <= 0:
+            return None
+        return self.duration_s / self.windows
 
 
 def recording_key(path: Path, size_bytes: int, mtime: float) -> str:
@@ -52,6 +60,8 @@ def _from_json(line: str, lineno: int, path: Path) -> LedgerEntry:
             report_path=payload.get("report_path"),
             status=status,
             error=payload.get("error"),
+            windows=int(payload.get("windows", 0)),
+            duration_s=float(payload.get("duration_s", 0.0)),
         )
     except (KeyError, ValueError, TypeError) as exc:
         raise LedgerError(f"{path}: line {lineno}: {exc}") from exc

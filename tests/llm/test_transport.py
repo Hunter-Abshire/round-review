@@ -161,3 +161,15 @@ def test_malformed_response_is_ollama_error() -> None:
     _, opener = capture_opener({"unexpected": True})
     with pytest.raises(OllamaError, match=r"message\.content"):
         UrllibTransport("http://x", opener=opener).chat(make_request())
+
+
+def test_keeps_the_model_resident_between_calls() -> None:
+    seen, opener = capture_opener(OK_PAYLOAD)
+    UrllibTransport("http://x", opener=opener, keep_alive="30m").chat(make_request())
+    assert json.loads(seen[0][0].data)["keep_alive"] == "30m"
+
+
+def test_keep_alive_is_omitted_when_unset() -> None:
+    seen, opener = capture_opener(OK_PAYLOAD)
+    UrllibTransport("http://x", opener=opener, keep_alive="").chat(make_request())
+    assert "keep_alive" not in json.loads(seen[0][0].data)

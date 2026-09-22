@@ -99,3 +99,43 @@ def test_recording_key_is_stable_and_distinct() -> None:
     assert k1 == k2
     assert k1 != k3
     assert len(k1) == 16
+
+
+def test_entries_record_how_long_the_review_took(tmp_path: Path) -> None:
+    path = tmp_path / "ledger.jsonl"
+    entry = LedgerEntry(
+        key="k",
+        path="/v/a.mp4",
+        processed_at=datetime(2026, 9, 21, tzinfo=UTC),
+        model_calls=58,
+        report_path="/r/report.md",
+        status="ok",
+        error=None,
+        windows=57,
+        duration_s=7200.0,
+    )
+    append_entry(path, entry)
+    (loaded,) = read_ledger(path)
+    assert loaded == entry
+    assert loaded.seconds_per_window() == pytest.approx(7200.0 / 57)
+
+
+def test_older_entries_without_timings_still_load(tmp_path: Path) -> None:
+    path = tmp_path / "ledger.jsonl"
+    path.write_text(
+        '{"key":"k","path":"/v/a.mp4","processed_at":"2026-09-20T10:00:00+00:00",'
+        '"model_calls":3,"report_path":null,"status":"ok","error":null}\n'
+    )
+    (loaded,) = read_ledger(path)
+    assert loaded.windows == 0
+    assert loaded.duration_s == 0.0
+    assert loaded.seconds_per_window() is None
+
+
+def test_seconds_per_window_needs_both_numbers() -> None:
+    base = make_entry()
+    assert base.seconds_per_window() is None
+    from dataclasses import replace
+
+    assert replace(base, windows=0, duration_s=60.0).seconds_per_window() is None
+    assert replace(base, windows=4, duration_s=0.0).seconds_per_window() is None

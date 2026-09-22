@@ -50,6 +50,9 @@ def coached(index: int, findings: int = 1) -> WindowResult:
     )
 
 
+coached_window = coached
+
+
 def test_no_warning_when_the_review_produced_findings() -> None:
     assert abstention_warning([coached(0), abstained(1, "buy phase")]) is None
 
@@ -104,3 +107,36 @@ def test_spectating_alone_is_not_a_misread_diagnosis() -> None:
     assert warning is not None
     assert "spectating" in warning
     assert "misreading" not in warning
+
+
+class TestASkippedButProductiveReview:
+    """13 of 21 windows skipped while 22 findings came out is not a broken review."""
+
+    def results(self, coached: int, skipped: int, findings_each: int = 3) -> list[WindowResult]:
+        out = [coached_window(i, findings_each) for i in range(coached)]
+        out += [abstained(coached + i, "buy phase") for i in range(skipped)]
+        return out
+
+    def test_a_review_with_real_findings_is_not_called_empty(self) -> None:
+        warning = abstention_warning(self.results(coached=8, skipped=13))
+        assert warning is not None
+        assert "misreading" not in warning
+        assert "nothing to say" not in warning
+        # it still says what was skipped, because that is worth knowing
+        assert "13 of 21" in warning
+        assert "buy phase" in warning
+
+    def test_an_empty_review_still_gets_the_full_diagnosis(self) -> None:
+        warning = abstention_warning([abstained(i, "buy phase") for i in range(8)])
+        assert warning is not None
+        assert "misreading the screen" in warning
+        assert "scenes validate" in warning
+
+    def test_a_barely_productive_review_is_still_flagged(self) -> None:
+        # one finding out of twenty windows is not a working review either
+        warning = abstention_warning(self.results(coached=1, skipped=19, findings_each=1))
+        assert warning is not None
+        assert "misreading" in warning
+
+    def test_a_review_with_few_skips_says_nothing(self) -> None:
+        assert abstention_warning(self.results(coached=18, skipped=3)) is None

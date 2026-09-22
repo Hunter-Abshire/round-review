@@ -28,6 +28,7 @@ def _habit_to_dict(habit: Habit, base_dir: Path, checklist: Checklist) -> dict[s
         "visible_evidence": habit.lead.visible_evidence,
         "information_revealed_later": habit.lead.information_revealed_later,
         "assumption_flags": list(habit.lead.assumption_flags),
+        "focus": [_asdict(shape) for shape in habit.lead.focus],
         "suggested_alternative": habit.lead.suggested_alternative,
         "evidence_frame": _relative(habit.lead.evidence_frame, base_dir),
     }
@@ -56,6 +57,7 @@ def _summary_to_dict(report: Report, base_dir: Path) -> dict[str, Any]:
             {
                 **{k: v for k, v in _asdict(s).items() if k != "evidence_frame"},
                 "check_label": check_label(checklist, s.check_id),
+                "focus": [_asdict(shape) for shape in s.focus],
                 "evidence_frame": _relative(s.evidence_frame, base_dir),
             }
             for s in summary.strengths
@@ -93,6 +95,7 @@ def report_to_dict(report: Report, base_dir: Path) -> dict[str, Any]:
                 "strengths": [
                     {
                         **{k: v for k, v in _asdict(s).items() if k != "evidence_frame"},
+                        "focus": [_asdict(shape) for shape in s.focus],
                         "evidence_frame": _relative(s.evidence_frame, base_dir),
                     }
                     for s in r.strengths
@@ -102,6 +105,7 @@ def report_to_dict(report: Report, base_dir: Path) -> dict[str, Any]:
                         **{k: v for k, v in _asdict(f).items() if k != "evidence_frame"},
                         "check_label": check_label(checklist, f.check_id),
                         "assumption_flags": list(f.assumption_flags),
+                        "focus": [_asdict(shape) for shape in f.focus],
                         "evidence_frame": _relative(f.evidence_frame, base_dir),
                     }
                     for f in r.findings

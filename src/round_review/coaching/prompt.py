@@ -42,6 +42,27 @@ CATEGORIES: tuple[str, ...] = (
 
 MAX_FINDINGS_PER_WINDOW = 4
 MAX_STRENGTHS_PER_WINDOW = 2
+MAX_FOCUS_SHAPES = 4
+
+# Shapes the model may draw over the frame, in fractions of its width and height.
+FOCUS_SCHEMA: dict[str, Any] = {
+    "type": "array",
+    "maxItems": MAX_FOCUS_SHAPES,
+    "items": {
+        "type": "object",
+        "properties": {
+            "kind": {"type": "string", "enum": ["box", "point", "arrow"]},
+            "label": {"type": "string"},
+            "x": {"type": "number", "minimum": 0, "maximum": 1},
+            "y": {"type": "number", "minimum": 0, "maximum": 1},
+            "w": {"type": "number", "minimum": 0, "maximum": 1},
+            "h": {"type": "number", "minimum": 0, "maximum": 1},
+            "x2": {"type": "number", "minimum": 0, "maximum": 1},
+            "y2": {"type": "number", "minimum": 0, "maximum": 1},
+        },
+        "required": ["kind", "label", "x", "y"],
+    },
+}
 
 PERSONA = (
     "You are an experienced Valorant coach who has reviewed thousands of ranked VODs from Iron "
@@ -77,11 +98,26 @@ purposeful utility, and objective timing when the frames support them. Do not in
 sound cues, comms, enemy locations, or actions between sampled frames. For a new or
 unranked player explain the reason and the next action in plain language.
 
-10. Also report up to two strengths: things the player did right that are worth keeping.
+10. Moving through the map with no enemy on screen and no contact in the timeline is
+rotating or repositioning, not holding an angle. Do not criticise the position, the angles
+covered, or the distance to teammates in that case: a player crossing the map alone is
+meant to be alone, and trade distance only matters where contact is happening or plainly
+imminent. Judge positioning where the player chooses to stop, hold, or enter.
+11. Do not tell the player to be somewhere you cannot see, or to be with teammates whose
+positions are not visible. If your reason rests on where you assume enemies or teammates
+are, either say that in the assumptions and lower your confidence, or leave it out.
+12. Also report up to two strengths: things the player did right that are worth keeping.
 A strength must name the specific behaviour and why it worked, in the same evidence-bound
 way as a finding. Generic praise is worse than none, so never write "good job", "nice
 aim" or any other vague or filler compliment, and report no strengths at all rather than
 inventing one. Being alive, winning the fight, or the enemy playing badly are not strengths.
+
+13. You may add a focus list to any finding or strength, marking what to look at on the
+frame at that timestamp. Use x and y as fractions of the frame's width and height, measured
+from the top left, so 0.5, 0.5 is the centre. A box needs w and h, an arrow needs an end
+point at x2, y2, a point needs nothing more. Give every shape a short label. Only mark
+something you can actually see in the frame, and leave the focus list out entirely rather
+than guessing at coordinates.
 
 Respond with JSON only, matching the schema you are given. No prose outside the JSON."""
 
@@ -109,6 +145,7 @@ FINDING_SCHEMA: dict[str, Any] = {
                     "assumption_flags": {"type": "array", "items": {"type": "string"}},
                     "suggested_alternative": {"type": "string"},
                     "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                    "focus": FOCUS_SCHEMA,
                 },
                 "required": [
                     "timestamp_s",
@@ -137,6 +174,7 @@ FINDING_SCHEMA: dict[str, Any] = {
                     "visible_evidence": {"type": "string"},
                     "why_it_worked": {"type": "string"},
                     "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                    "focus": FOCUS_SCHEMA,
                 },
                 "required": [
                     "timestamp_s",

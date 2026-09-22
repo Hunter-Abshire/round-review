@@ -94,3 +94,28 @@ def test_window_strengths_reach_the_json(tmp_path: Path) -> None:
     base = replace(build_report(tmp_path), results=tuple(results))
     window = report_to_dict(base, base_dir=tmp_path)["windows"][0]
     assert window["strengths"][0]["why_it_worked"] == "it denied the angle"
+
+
+def test_focus_shapes_reach_the_json(tmp_path: Path) -> None:
+    from dataclasses import replace
+
+    from round_review.coaching.parse import Shape
+    from tests.coaching.test_session import finding, result
+
+    marked = replace(
+        finding("positioning.cover", "positioning", 5.0),
+        focus=(Shape("box", "the exposed angle", 0.4, 0.3, w=0.2, h=0.25),),
+    )
+    base = replace(build_report(tmp_path), results=(result(0, [marked]),))
+    window = report_to_dict(base, base_dir=tmp_path)["windows"][0]
+    (shape,) = window["findings"][0]["focus"]
+    assert shape == {
+        "kind": "box",
+        "label": "the exposed angle",
+        "x": 0.4,
+        "y": 0.3,
+        "w": 0.2,
+        "h": 0.25,
+        "x2": 0.0,
+        "y2": 0.0,
+    }

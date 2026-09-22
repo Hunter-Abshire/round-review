@@ -16,6 +16,12 @@ BENIGN_REASONS: frozenset[str] = frozenset({"spectating another player"})
 
 # Below this share of abstained windows the review is simply a quiet one.
 DOMINANT_SHARE = 0.6
+# A review that produced at least this many findings per coached window is working, however
+# much of the recording it skipped: a match really is mostly buy phase and spectating.
+PRODUCTIVE_FINDINGS_PER_WINDOW = 1.0
+# ...and enough windows were coached to mean anything. One good window out of twenty is
+# still a review that mostly failed.
+MIN_COACHED_WINDOWS = 3
 
 
 def abstention_warning(results: Sequence[WindowResult]) -> str | None:
@@ -30,6 +36,11 @@ def abstention_warning(results: Sequence[WindowResult]) -> str | None:
     if findings > 0 and share < DOMINANT_SHARE:
         return None
 
+    coached = len(results) - len(abstained)
+    productive = (
+        coached >= MIN_COACHED_WINDOWS and findings / coached >= PRODUCTIVE_FINDINGS_PER_WINDOW
+    )
+
     counts: dict[str, int] = {}
     for result in abstained:
         reason = result.abstained_reason or "unknown"
@@ -41,6 +52,13 @@ def abstention_warning(results: Sequence[WindowResult]) -> str | None:
         f"{len(abstained)} of {len(results)} reviewed windows were skipped before coaching "
         f"({breakdown})"
     )
+    if productive:
+        # The windows that were coached produced plenty, so the skipping is just what a
+        # match looks like: most of it is buying, walking and watching someone else.
+        return (
+            f"{summary}. The rest produced {findings} findings, so this is a normal match "
+            "rather than a problem."
+        )
     if set(counts) <= BENIGN_REASONS:
         return f"{summary}. Nothing of your own play was on screen in those windows."
     return (

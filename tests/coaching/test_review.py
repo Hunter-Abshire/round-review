@@ -341,3 +341,61 @@ def test_strengths_come_back_with_the_findings(samples: list[FrameSample]) -> No
 
 def test_a_window_with_no_strengths_is_fine(samples: list[FrameSample]) -> None:
     assert review(FakeTransport(SITUATION, GOOD), samples).strengths == ()
+
+
+def _situation(**overrides: object) -> str:
+    base = json.loads(SITUATION)
+    base.update(overrides)
+    return json.dumps(base)
+
+
+def _coach(category: str, check_id: str, observation: str = "o") -> str:
+    return json.dumps(
+        {
+            "findings": [
+                {
+                    "timestamp_s": 61.0,
+                    "check_id": check_id,
+                    "category": category,
+                    "observation": observation,
+                    "visible_evidence": "v",
+                    "information_available_to_player": "i",
+                    "information_revealed_later": "",
+                    "assumption_flags": ["enemy position"],
+                    "suggested_alternative": "s",
+                    "confidence": 0.8,
+                }
+            ]
+        }
+    )
+
+
+def test_trade_distance_is_dropped_when_no_enemy_is_on_screen(
+    samples: list[FrameSample],
+) -> None:
+    """Being far from a teammate while crossing an empty map is not an untradeable death."""
+    transport = FakeTransport(
+        _situation(enemies_visible=0), _coach("trading", "trading.stay_tradeable")
+    )
+    result = review(transport, samples)
+    assert result.findings == ()
+    assert any("no enemy" in w.lower() for w in result.warnings)
+
+
+def test_trade_distance_survives_when_an_enemy_is_visible(samples: list[FrameSample]) -> None:
+    transport = FakeTransport(
+        _situation(enemies_visible=1), _coach("trading", "trading.stay_tradeable")
+    )
+    assert len(review(transport, samples).findings) == 1
+
+
+def test_other_categories_are_untouched_by_that_rule(samples: list[FrameSample]) -> None:
+    transport = FakeTransport(
+        _situation(enemies_visible=0), _coach("crosshair", "crosshair.head_level")
+    )
+    assert len(review(transport, samples).findings) == 1
+
+
+def test_without_a_situation_read_nothing_is_dropped(samples: list[FrameSample]) -> None:
+    transport = FakeTransport(_coach("trading", "trading.stay_tradeable"))
+    assert len(review(transport, samples, situation_pass=False).findings) == 1

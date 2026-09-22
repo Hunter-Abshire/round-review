@@ -19,6 +19,9 @@ HINDSIGHT_TRIGGER = 0.7
 PLACEHOLDER_LATER_INFO: frozenset[str] = frozenset({"", "none", "n/a", "na", "nothing", "-"})
 
 MAX_STRENGTHS_PER_WINDOW = 2
+# Shapes the model may draw over the frame. More than a few is clutter, not emphasis.
+MAX_FOCUS_SHAPES = 4
+SHAPE_KINDS: frozenset[str] = frozenset({"box", "point", "arrow"})
 
 # Praise has to name the behaviour to reinforce it. Anything this short is filler.
 MIN_PRAISE_CHARACTERS = 25
@@ -51,6 +54,77 @@ REQUIRED_FIELDS: tuple[str, ...] = (
 
 
 @dataclass(frozen=True, slots=True)
+class Shape:
+    """Where on the frame the model is pointing, in fractions of width and height.
+
+    A box uses x, y, w, h; a point uses x, y; an arrow runs from x, y to x2, y2. The model
+    is estimating from a downscaled frame, so treat these as emphasis, not measurement.
+    """
+
+    kind: str
+    label: str
+    x: float
+    y: float
+    w: float = 0.0
+    h: float = 0.0
+    x2: float = 0.0
+    y2: float = 0.0
+
+
+def _fraction(value: object) -> float | None:
+    try:
+        number = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    return number if 0.0 <= number <= 1.0 else None
+
+
+def parse_shapes(raw: object) -> tuple[tuple[Shape, ...], list[str]]:
+    """Validate drawn shapes. A bad shape is dropped with a warning and never costs the
+    finding it came with: the words matter more than the drawing."""
+    if raw in (None, ""):
+        return (), []
+    if not isinstance(raw, list):
+        return (), ["focus was not a list of shapes; ignored"]
+    shapes: list[Shape] = []
+    warnings: list[str] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            warnings.append("dropped a focus shape that was not an object")
+            continue
+        kind = str(item.get("kind", ""))
+        label = str(item.get("label", "")).strip()
+        if kind not in SHAPE_KINDS:
+            warnings.append(f"dropped a focus shape of unknown kind {kind!r}")
+            continue
+        if not label:
+            warnings.append(f"dropped a focus {kind} with no label")
+            continue
+        x, y = _fraction(item.get("x")), _fraction(item.get("y"))
+        if x is None or y is None:
+            warnings.append(f"dropped a focus {kind} outside the frame")
+            continue
+        if kind == "box":
+            w, h = _fraction(item.get("w")), _fraction(item.get("h"))
+            if not w or not h or x + w > 1.0 or y + h > 1.0:
+                warnings.append("dropped a focus box that falls outside the frame")
+                continue
+            shapes.append(Shape(kind, label, x, y, w=w, h=h))
+        elif kind == "arrow":
+            x2, y2 = _fraction(item.get("x2")), _fraction(item.get("y2"))
+            if x2 is None or y2 is None:
+                warnings.append("dropped a focus arrow without an end point")
+                continue
+            shapes.append(Shape(kind, label, x, y, x2=x2, y2=y2))
+        else:
+            shapes.append(Shape(kind, label, x, y))
+    if len(shapes) > MAX_FOCUS_SHAPES:
+        warnings.append(f"more than {MAX_FOCUS_SHAPES} focus shapes offered; truncated")
+        shapes = shapes[:MAX_FOCUS_SHAPES]
+    return tuple(shapes), warnings
+
+
+@dataclass(frozen=True, slots=True)
 class Finding:
     timestamp_s: float
     check_id: str
@@ -63,6 +137,8 @@ class Finding:
     suggested_alternative: str
     confidence: float
     evidence_frame: Path | None
+    # Optional shapes drawn over the evidence frame to show what is being talked about.
+    focus: tuple[Shape, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,6 +154,8 @@ class Strength:
     why_it_worked: str
     confidence: float
     evidence_frame: Path | None
+    # Optional shapes drawn over the evidence frame to show what is being talked about.
+    focus: tuple[Shape, ...] = ()
 
 
 def extract_json(text: str) -> str:
@@ -148,6 +226,9 @@ def _validate(
         )
         confidence = HINDSIGHT_CONFIDENCE_CEILING
 
+    shapes, shape_warnings = parse_shapes(raw.get("focus"))
+    warnings.extend(f"finding at t={timestamp:.1f}s: {w}" for w in shape_warnings)
+
     finding = Finding(
         timestamp_s=timestamp,
         check_id=check_id,
@@ -160,6 +241,7 @@ def _validate(
         suggested_alternative=str(raw["suggested_alternative"]),
         confidence=confidence,
         evidence_frame=_nearest_frame(timestamp, samples),
+        focus=shapes,
     )
     return finding, warnings
 
@@ -262,6 +344,8 @@ def parse_strengths(
         category = str(raw["category"])
         if category not in CATEGORIES:
             category = "other"
+        shapes, shape_warnings = parse_shapes(raw.get("focus"))
+        warnings.extend(f"strength at t={timestamp:.1f}s: {w}" for w in shape_warnings)
         strengths.append(
             Strength(
                 timestamp_s=timestamp,
@@ -272,6 +356,7 @@ def parse_strengths(
                 why_it_worked=str(raw["why_it_worked"]),
                 confidence=confidence,
                 evidence_frame=_nearest_frame(timestamp, samples),
+                focus=shapes,
             )
         )
 

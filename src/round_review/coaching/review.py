@@ -30,6 +30,16 @@ from round_review.vision.hud import HudRead, constrain_phase
 log = logging.getLogger(__name__)
 
 
+# Trade distance is a claim about a fight. With nobody on screen and nothing in the timeline,
+# it is a guess about where people might be, which is exactly what the player cannot act on.
+CONTACT_ONLY_CATEGORIES: frozenset[str] = frozenset({"trading"})
+
+
+def _needs_contact(finding: Finding) -> bool:
+    category = finding.check_id.partition(".")[0]
+    return category in CONTACT_ONLY_CATEGORIES or finding.category in CONTACT_ONLY_CATEGORIES
+
+
 def _relevant_findings(
     findings: list[Finding], situation: Situation | None
 ) -> tuple[list[Finding], list[str]]:
@@ -42,6 +52,8 @@ def _relevant_findings(
         reason = None
         if allowed is not None and category != "other" and category not in allowed:
             reason = "check does not apply to the detected round phase"
+        elif _needs_contact(finding) and situation is not None and not situation.enemies_visible:
+            reason = "no enemy was on screen, so trade distance is a guess about this moment"
         elif category == "crosshair" or finding.category == "crosshair":
             weapon = (situation.weapon or "").lower() if situation else ""
             if not weapon or any(w in weapon for w in ("knife", "melee", "spike", "ability")):

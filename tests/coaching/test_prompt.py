@@ -124,3 +124,9 @@ def test_the_coach_prompt_asks_for_specific_praise_not_filler() -> None:
     lower = text.lower()
     assert "strength" in lower
     assert "vague" in lower or "filler" in lower or "generic" in lower
+
+
+def test_the_prompt_says_that_crossing_the_map_is_not_holding_an_angle() -> None:
+    text = build_system_prompt(load_knowledge(), phase=None).lower()
+    assert "rotating" in text or "crossing" in text
+    assert "trade" in text

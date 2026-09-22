@@ -89,6 +89,9 @@ will not play back inside the desktop app.
 
 ### 4. Create your config file
 
+The quickest way is the app: launch it (step 8) and open **File → Settings**, which lists
+every setting with an explanation and writes the file for you. From the terminal:
+
 ```powershell
 round-review config init --recordings-dir "C:/Users/you/Videos/Outplayed/VALORANT"
 round-review config show
@@ -224,6 +227,20 @@ If you are launching from a VS Code terminal, Electron will fail with
 or `env -u ELECTRON_RUN_AS_NODE npm start` on macOS.
 
 ---
+
+## Settings
+
+**File → Settings** in the app, or `Ctrl+,`. Everything is there: which model to use (a list
+of what Ollama has actually pulled), whether to review the whole clip or the first minute,
+how many frames each pass carries, the round-clock reader, your notes folder. Each setting
+says what it does, and saving applies to your next review without restarting.
+
+Advanced settings are hidden behind a checkbox. If an environment variable has taken a
+setting over, the app disables it and tells you, rather than letting a saved value silently
+do nothing.
+
+The file is still there at `%LOCALAPPDATA%\round-review\config.toml` and you can edit it by
+hand; the app keeps whatever you put in it.
 
 ## Day to day
 

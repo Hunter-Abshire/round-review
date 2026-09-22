@@ -1,6 +1,6 @@
 # round-review requirements
 
-Version 0.9 (local retrieval). Last updated 2026-09-21.
+Version 1.0 (settings in the app). Last updated 2026-09-22.
 
 ## Purpose
 
@@ -47,6 +47,11 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 | FR-24 | A review that abstained on most of its windows says so in plain words, counts the reasons, and points at scene validation, instead of being indistinguishable from a review of flawless play. Reports carry `partial` and `stopped_reason`. |
 | FR-25 | The round clock is read deterministically, with no model involved: ffmpeg crops the timer region to a grayscale raster and the digits are segmented and matched against templates learned from the player's own footage. Reading a HUD never fails a review; an unreadable HUD is simply no evidence. |
 | FR-26 | A clock above `buy_phase_max_s` (default 45 s, above both the buy phase and the post-plant spike timer) proves the round is live and pre-plant, and overrides a model phase of `pre_round`, `post_plant`, `retake` or unreadable. `spectating` is never overridden, because the clock belongs to whoever is being watched. Any override is recorded in the report. |
+| FR-46 | Every editable setting carries a group, label, plain-language help, type, bounds, unit and where its choices come from, so a settings screen can render all of them without knowing what any of them mean. Derived or write-once paths are explicitly excluded. |
+| FR-47 | Settings are readable and writable over the API. A write validates before touching the file, so an invalid value changes nothing, and the file is rewritten grouped and commented. |
+| FR-48 | A saved setting applies to the next queued job without restarting the app. |
+| FR-49 | The app reports which models Ollama has pulled as the choices for the model setting, and flags any setting an environment variable has taken over, since the file would not win. |
+| FR-50 | The desktop app has a settings screen under File, reachable by menu, shortcut and toolbar button, showing advanced settings only on request and keeping unsaved edits when a save fails. |
 | FR-42 | An asked question retrieves reference passages from the whole bundled knowledge base (one per agent, map, check and category drill) plus the sections of any files in `notes_dir`, ranked by keyword relevance with no embedding model, vector store or network access. |
 | FR-43 | Passages about the agent and map in play are favoured, but a favoured passage can never outrank relevance: tags reorder matches, they do not create them. |
 | FR-44 | The prompt states that notes are the player's own and correct about their setups, and that reference material describes the game rather than these frames. |

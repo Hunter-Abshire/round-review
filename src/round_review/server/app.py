@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import os
 import re
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
@@ -16,9 +17,18 @@ from pydantic import BaseModel, Field
 from round_review.coaching.context import context_from_mapping
 from round_review.coaching.knowledge import load_knowledge
 from round_review.coaching.question import QuestionSpec
-from round_review.config import COVERAGE_MODES, Config
+from round_review.config import (
+    COVERAGE_MODES,
+    ENV_PREFIX,
+    FIELDS,
+    GROUPS,
+    Config,
+    load_config,
+    write_config,
+)
 from round_review.errors import LedgerError, RoundReviewError, VideoError
 from round_review.ledger import LedgerEntry, read_ledger
+from round_review.llm.models import list_models
 from round_review.pacing import estimate_seconds, format_duration
 from round_review.pipeline import key_for, report_dir_for
 from round_review.report.json_report import JSON_REPORT_FILENAME, load_report_json
@@ -49,6 +59,19 @@ LEDGER_STATUS_TO_CLIP: dict[str, str] = {
     "failed": "failed",
     "skipped": "skipped",
 }
+
+
+@dataclasses.dataclass(slots=True)
+class ConfigHolder:
+    """The live configuration, so a change from the settings screen applies to the next job
+    without restarting the app. Read it per request; never capture `current` in a closure."""
+
+    current: Config
+    path: Path
+
+
+class SaveConfig(BaseModel):
+    values: dict[str, Any]
 
 
 class AskQuestion(BaseModel):
@@ -137,8 +160,9 @@ def _duration_reader(runner: CommandRunner) -> Callable[[Path, str], float | Non
 
 
 def create_app(
-    config: Config, jobs: JobQueue, probe_runner: CommandRunner | None = None
+    holder: ConfigHolder, jobs: JobQueue, probe_runner: CommandRunner | None = None
 ) -> FastAPI:
+    config = holder.current
     duration_of = _duration_reader(probe_runner or SubprocessRunner(config.ffprobe_path))
 
     @asynccontextmanager
@@ -149,14 +173,16 @@ def create_app(
 
     app = FastAPI(title="round-review", lifespan=lifespan)
     app.state.jobs = jobs
-    app.state.config = config
+    app.state.config = holder
+    app.state.config_path = holder.path
 
     @app.get("/api/health")
     def health() -> dict[str, str]:
-        return {"status": "ok", "model": config.model}
+        return {"status": "ok", "model": holder.current.model}
 
     @app.get("/api/clips")
     def clips() -> dict[str, Any]:
+        config = holder.current
         if config.recordings_dir is None or not config.recordings_dir.is_dir():
             return {"clips": [], "warning": "recordings_dir is not configured or does not exist"}
         try:
@@ -208,6 +234,7 @@ def create_app(
 
     def _clip_path(raw: str) -> Path:
         """Resolve a requested clip, refusing anything outside the recordings folder."""
+        config = holder.current
         if config.recordings_dir is None:
             raise HTTPException(status_code=400, detail="recordings_dir is not configured")
         path = Path(raw).resolve()
@@ -231,6 +258,7 @@ def create_app(
         )
 
     def hud_missing() -> list[str]:
+        config = holder.current
         if not config.hud_templates_path:
             return list(CLOCK_CHARACTERS)
         try:
@@ -241,6 +269,7 @@ def create_app(
     @app.get("/api/settings")
     def settings() -> dict[str, Any]:
         """Review defaults, so the app can show what a review will do before starting one."""
+        config = holder.current
         return {
             "model": config.model,
             "coverage": config.coverage,
@@ -260,6 +289,48 @@ def create_app(
             "hud_ready": not hud_missing() if config.hud_check else False,
             "hud_missing_characters": hud_missing() if config.hud_check else [],
         }
+
+    @app.get("/api/config")
+    def read_config() -> dict[str, Any]:
+        """Every editable setting with its value and what it means, so the app can render a
+        settings screen without knowing anything about the settings."""
+        config = holder.current
+        models = [m.name for m in list_models(config.ollama_url)]
+        fields: list[dict[str, Any]] = []
+        for spec in FIELDS:
+            value = getattr(config, spec.name)
+            env_name = f"{ENV_PREFIX}{spec.name.upper()}"
+            fields.append(
+                {
+                    "name": spec.name,
+                    "group": spec.group,
+                    "label": spec.label,
+                    "help": spec.help,
+                    "kind": spec.kind,
+                    "choices": models
+                    if spec.choices_from == "ollama_models"
+                    else list(spec.choices),
+                    "minimum": spec.minimum,
+                    "maximum": spec.maximum,
+                    "unit": spec.unit,
+                    "advanced": spec.advanced,
+                    "value": str(value) if isinstance(value, Path) else value,
+                    "default": _default_for(spec.name),
+                    # A variable in the environment wins over the file, so say so rather
+                    # than letting a saved value appear to do nothing.
+                    "overridden_by_env": env_name if env_name in os.environ else None,
+                }
+            )
+        return {"path": str(holder.path), "groups": list(GROUPS), "fields": fields}
+
+    @app.put("/api/config")
+    def save_config(body: SaveConfig) -> dict[str, Any]:
+        try:
+            write_config(holder.path, body.values)
+            holder.current = load_config(holder.path, os.environ)
+        except RoundReviewError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return {"saved": True, "path": str(holder.path)}
 
     @app.get("/api/knowledge")
     def knowledge() -> dict[str, Any]:
@@ -337,3 +408,12 @@ def create_app(
         return FileResponse(path, media_type="image/jpeg")
 
     return app
+
+
+def _default_for(name: str) -> Any:
+    """The value a setting falls back to when it is not in the file."""
+    field = next(f for f in dataclasses.fields(Config) if f.name == name)
+    default = field.default
+    if default is dataclasses.MISSING:
+        return None
+    return str(default) if isinstance(default, Path) else default

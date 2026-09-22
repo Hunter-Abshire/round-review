@@ -117,6 +117,351 @@ PATH_KEYS: frozenset[str] = frozenset(
 COVERAGE_MODES: frozenset[str] = frozenset({"full", "sampled"})
 
 
+@dataclass(frozen=True, slots=True)
+class FieldSpec:
+    """Everything the app needs to render one setting without knowing what it means."""
+
+    name: str
+    group: str
+    label: str
+    help: str
+    kind: str  # bool | int | float | text | path | choice
+    choices: tuple[str, ...] = ()
+    # Set when the choices are only known at runtime, e.g. the models Ollama has pulled.
+    choices_from: str = ""
+    minimum: float | None = None
+    maximum: float | None = None
+    unit: str = ""
+    advanced: bool = False
+
+
+# Derived, internal or write-once locations: changing these from a settings form would move
+# where past reviews live, so they stay in the file for anyone who really wants them.
+EXCLUDED_FROM_UI: frozenset[str] = frozenset(
+    {"reports_dir", "ledger_path", "hud_templates_path", "api_port", "player_notes"}
+)
+
+GROUPS: tuple[str, ...] = (
+    "Recordings",
+    "Model",
+    "How much to review",
+    "Reading the scene",
+    "Round clock",
+    "Questions",
+    "Watching",
+    "Tools",
+)
+
+FIELDS: tuple[FieldSpec, ...] = (
+    FieldSpec(
+        "recordings_dir",
+        "Recordings",
+        "Recordings folder",
+        "Where Outplayed writes your clips.",
+        "path",
+    ),
+    FieldSpec(
+        "notes_dir",
+        "Recordings",
+        "Notes folder",
+        "Your own markdown or text notes, searched when you ask a question.",
+        "path",
+    ),
+    FieldSpec(
+        "model",
+        "Model",
+        "Model",
+        "The Ollama vision model that reviews your clips.",
+        "choice",
+        choices_from="ollama_models",
+    ),
+    FieldSpec(
+        "ollama_url",
+        "Model",
+        "Ollama address",
+        "Where Ollama is listening. Local unless you run it elsewhere.",
+        "text",
+        advanced=True,
+    ),
+    FieldSpec(
+        "num_ctx",
+        "Model",
+        "Context window",
+        "Tokens the model may hold. Raise it if findings come back empty or cut off.",
+        "int",
+        minimum=2048,
+        maximum=131072,
+        unit="tokens",
+    ),
+    FieldSpec(
+        "request_timeout_s",
+        "Model",
+        "Call timeout",
+        "How long one model call may take before it is abandoned.",
+        "float",
+        minimum=30,
+        maximum=3600,
+        unit="seconds",
+    ),
+    FieldSpec(
+        "ollama_keep_alive",
+        "Model",
+        "Keep model loaded",
+        "How long Ollama holds the model in memory between calls.",
+        "text",
+        advanced=True,
+    ),
+    FieldSpec(
+        "daily_call_cap",
+        "Model",
+        "Daily call cap",
+        "Model calls allowed per day. 0 means unlimited, which is usual for local inference.",
+        "int",
+        minimum=0,
+    ),
+    FieldSpec(
+        "coverage",
+        "How much to review",
+        "Coverage",
+        "Review the whole recording, or take a few windows spread across it.",
+        "choice",
+        choices=("full", "sampled"),
+    ),
+    FieldSpec(
+        "max_span_s",
+        "How much to review",
+        "Review only the first",
+        "Seconds of gameplay to review. 0 reviews the whole recording.",
+        "float",
+        minimum=0,
+        unit="seconds",
+    ),
+    FieldSpec(
+        "max_windows",
+        "How much to review",
+        "Window budget",
+        "Most windows to review. 0 is unlimited; a budget stays spread across the clip.",
+        "int",
+        minimum=0,
+    ),
+    FieldSpec(
+        "windows_per_file",
+        "How much to review",
+        "Sampled windows",
+        "How many windows sampled coverage takes.",
+        "int",
+        minimum=1,
+        maximum=50,
+    ),
+    FieldSpec(
+        "window_s",
+        "How much to review",
+        "Window length",
+        "Seconds of gameplay judged together.",
+        "float",
+        minimum=0.1,
+        maximum=120,
+        unit="seconds",
+    ),
+    FieldSpec(
+        "edge_skip_s",
+        "How much to review",
+        "Skip start and end",
+        "Seconds ignored at each end, for loading and end screens.",
+        "float",
+        minimum=0,
+        unit="seconds",
+    ),
+    FieldSpec(
+        "fps",
+        "How much to review",
+        "Frames per second",
+        "Frames sampled inside each window. Lower is faster and blinder.",
+        "float",
+        minimum=0.1,
+        maximum=10,
+    ),
+    FieldSpec(
+        "frame_width",
+        "How much to review",
+        "Frame width",
+        "Pixels wide each frame is sent at. Lower is faster and harder to read.",
+        "int",
+        minimum=320,
+        maximum=2560,
+        unit="px",
+    ),
+    FieldSpec(
+        "situation_pass",
+        "Reading the scene",
+        "Read the scene first",
+        "Ask what is on screen before coaching. Off is faster but loses agent and map detection.",
+        "bool",
+    ),
+    FieldSpec(
+        "situation_frames",
+        "Reading the scene",
+        "Frames for the scene read",
+        (
+            "Frames the scene pass carries. It runs for every window, so this drives how "
+            "long a review takes. 0 sends all of them."
+        ),
+        "int",
+        minimum=0,
+        maximum=60,
+    ),
+    FieldSpec(
+        "coach_frames",
+        "Reading the scene",
+        "Frames for coaching",
+        "Frames the coaching pass carries. 0 sends every frame of the window.",
+        "int",
+        minimum=0,
+        maximum=60,
+    ),
+    FieldSpec(
+        "abstain_streak_limit",
+        "Reading the scene",
+        "Give up after",
+        "Windows skipped in a row before a review stops. 0 never gives up.",
+        "int",
+        minimum=0,
+    ),
+    FieldSpec(
+        "hud_check",
+        "Round clock",
+        "Read the round clock",
+        "Read the timer without the model and overrule it when it misreads the phase.",
+        "bool",
+    ),
+    FieldSpec(
+        "hud_timer_region",
+        "Round clock",
+        "Timer region",
+        "Where the timer sits, as x,y,w,h fractions of the frame. Check it with hud crop.",
+        "text",
+        advanced=True,
+    ),
+    FieldSpec(
+        "hud_threshold",
+        "Round clock",
+        "Brightness cutoff",
+        "Separates the white timer from the scene. -1 picks one automatically.",
+        "int",
+        minimum=-1,
+        maximum=255,
+        advanced=True,
+    ),
+    FieldSpec(
+        "hud_min_confidence",
+        "Round clock",
+        "Minimum confidence",
+        "How sure a digit match must be before the clock is trusted.",
+        "float",
+        minimum=0,
+        maximum=1,
+        advanced=True,
+    ),
+    FieldSpec(
+        "buy_phase_max_s",
+        "Round clock",
+        "Buy phase maximum",
+        "A clock above this proves the round is live. Rarely needs changing.",
+        "float",
+        minimum=1,
+        maximum=180,
+        unit="seconds",
+        advanced=True,
+    ),
+    FieldSpec(
+        "question_frames",
+        "Questions",
+        "Frames per question",
+        "Frames sent when you ask about a moment.",
+        "int",
+        minimum=1,
+        maximum=30,
+    ),
+    FieldSpec(
+        "max_question_span_s",
+        "Questions",
+        "Longest question range",
+        "The most footage one question may cover.",
+        "float",
+        minimum=1,
+        maximum=600,
+        unit="seconds",
+    ),
+    FieldSpec(
+        "reference_passages",
+        "Questions",
+        "Reference passages",
+        "How much of the briefs and your notes a question may carry. 0 turns lookup off.",
+        "int",
+        minimum=0,
+        maximum=20,
+    ),
+    FieldSpec(
+        "max_reference_chars",
+        "Questions",
+        "Reference size",
+        "Character budget for retrieved passages.",
+        "int",
+        minimum=0,
+        maximum=40000,
+        advanced=True,
+    ),
+    FieldSpec(
+        "poll_s",
+        "Watching",
+        "Check every",
+        "How often the watcher looks for new recordings.",
+        "float",
+        minimum=1,
+        unit="seconds",
+    ),
+    FieldSpec(
+        "quiet_polls",
+        "Watching",
+        "Unchanged checks",
+        "Checks a file must be unchanged for before it counts as finished.",
+        "int",
+        minimum=1,
+    ),
+    FieldSpec(
+        "min_age_s",
+        "Watching",
+        "Minimum age",
+        "How old a recording must be before it is reviewed.",
+        "float",
+        minimum=0,
+        unit="seconds",
+    ),
+    FieldSpec(
+        "ffmpeg_path",
+        "Tools",
+        "ffmpeg",
+        "Path to ffmpeg, if it is not on PATH.",
+        "text",
+        advanced=True,
+    ),
+    FieldSpec(
+        "ffprobe_path",
+        "Tools",
+        "ffprobe",
+        "Path to ffprobe, if it is not on PATH.",
+        "text",
+        advanced=True,
+    ),
+)
+
+_FIELDS_BY_NAME: dict[str, FieldSpec] = {spec.name: spec for spec in FIELDS}
+
+
+def field_spec(name: str) -> FieldSpec:
+    return _FIELDS_BY_NAME[name]
+
+
 def default_data_dir() -> Path:
     return Path(user_data_dir(APP_NAME, appauthor=False))
 
@@ -243,3 +588,81 @@ def load_config(
         raise ConfigError(f"coverage must be one of {sorted(COVERAGE_MODES)}, got {coverage!r}")
 
     return Config(**values)  # type: ignore[arg-type]
+
+
+def _toml_value(value: object) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int | float):
+        return repr(value)
+    text = str(value).replace("\\", "/").replace('"', '\\"')
+    return f'"{text}"'
+
+
+def _read_raw(path: Path) -> dict[str, object]:
+    """The settings already in the file, so an edit changes one line and keeps the rest."""
+    try:
+        return dict(_read_toml(path))
+    except ConfigError:
+        raise
+    except OSError as exc:  # pragma: no cover - defensive
+        raise ConfigError(f"{path}: cannot read config: {exc}") from exc
+
+
+def write_config(path: Path, updates: Mapping[str, object]) -> Path:
+    """Apply `updates` to the configuration file, validating before anything is written.
+
+    A value of None removes the setting, so it falls back to its default. The file is
+    rewritten grouped and commented from the field metadata, so it stays readable by hand;
+    any comments you added yourself are not preserved.
+    """
+    for key in updates:
+        if key in EXCLUDED_FROM_UI:
+            raise ConfigError(f"{key} is not editable from the app; set it in the file directly")
+        if key not in _FIELDS_BY_NAME:
+            raise ConfigError(f"unknown setting {key}")
+
+    merged: dict[str, object] = _read_raw(path)
+    for key, value in updates.items():
+        if value is None:
+            merged.pop(key, None)
+        else:
+            merged[key] = value
+
+    # Validate by loading what we are about to write, so a bad value never reaches the file.
+    scratch = path.parent / f".{path.name}.check"
+    lines = _render_config(merged)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        scratch.write_text(lines, encoding="utf-8")
+        load_config(scratch, env={}, data_dir=path.parent)
+    finally:
+        scratch.unlink(missing_ok=True)
+
+    path.write_text(lines, encoding="utf-8")
+    return path
+
+
+def _render_config(values: Mapping[str, object]) -> str:
+    lines = [
+        "# round-review configuration.",
+        "# Written by the app; edit by hand if you prefer, the app will keep your values.",
+        "",
+    ]
+    written: set[str] = set()
+    for group in GROUPS:
+        in_group = [f for f in FIELDS if f.group == group and f.name in values]
+        if not in_group:
+            continue
+        lines.append(f"# {group}")
+        for spec in in_group:
+            lines.append(f"# {spec.help}")
+            lines.append(f"{spec.name} = {_toml_value(values[spec.name])}")
+            written.add(spec.name)
+        lines.append("")
+    leftovers = {k: v for k, v in values.items() if k not in written}
+    if leftovers:
+        lines.append("# Set by hand")
+        lines += [f"{key} = {_toml_value(value)}" for key, value in sorted(leftovers.items())]
+        lines.append("")
+    return "\n".join(lines)

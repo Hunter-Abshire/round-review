@@ -12,7 +12,7 @@ from round_review.config import Config
 from round_review.errors import VideoError
 from round_review.ledger import LedgerEntry, append_entry
 from round_review.pipeline import key_for, report_dir_for
-from round_review.server.app import create_app
+from round_review.server.app import ConfigHolder, create_app
 from round_review.server.jobs import JobOptions, JobQueue, ProgressFn
 from tests.video.test_probe import PROBE_JSON
 
@@ -27,6 +27,11 @@ class FakeProbe:
 
 
 NOW = datetime(2026, 9, 20, 12, 0, tzinfo=UTC)
+
+
+def tmp_path_for_config(cfg: Config) -> Path:
+    """Each test gets its own config file next to its ledger."""
+    return cfg.ledger_path.parent / "config.toml"
 
 
 @pytest.fixture
@@ -115,7 +120,8 @@ def client(cfg: Config) -> TestClient:
 
     jobs = JobQueue(run, clock=lambda: NOW, run_question=answer)
     jobs.start()
-    app = create_app(cfg, jobs, probe_runner=FakeProbe())
+    holder = ConfigHolder(cfg, tmp_path_for_config(cfg))
+    app = create_app(holder, jobs, probe_runner=FakeProbe())
     app.state.fake_run = run
     with TestClient(app) as c:
         yield c  # type: ignore[misc]
@@ -154,7 +160,9 @@ def test_clips_status_from_ledger(client: TestClient, cfg: Config, clip: Path) -
 def test_clips_without_recordings_dir(tmp_path: Path) -> None:
     cfg = Config(reports_dir=tmp_path, ledger_path=tmp_path / "l.jsonl")
     jobs = JobQueue(lambda p, c, o, f: None, clock=lambda: NOW)
-    with TestClient(create_app(cfg, jobs, probe_runner=FakeProbe())) as c:
+    with TestClient(
+        create_app(ConfigHolder(cfg, tmp_path_for_config(cfg)), jobs, probe_runner=FakeProbe())
+    ) as c:
         r = c.get("/api/clips")
     assert r.status_code == 200
     assert r.json()["clips"] == []
@@ -353,7 +361,11 @@ def test_settings_reports_a_trained_hud_as_ready(cfg: Config, tmp_path: Path) ->
     DigitTemplates({c: (Glyph(("#",), 0.5),) for c in CLOCK_CHARACTERS}).save(store)
     trained = dataclasses.replace(cfg, hud_templates_path=store)
     jobs = JobQueue(lambda p, c, o, f: None, clock=lambda: NOW)
-    with TestClient(create_app(trained, jobs, probe_runner=FakeProbe())) as c:
+    with TestClient(
+        create_app(
+            ConfigHolder(trained, tmp_path_for_config(trained)), jobs, probe_runner=FakeProbe()
+        )
+    ) as c:
         body = c.get("/api/settings").json()
     assert body["hud_ready"] is True
     assert body["hud_missing_characters"] == []
@@ -447,3 +459,69 @@ def test_settings_publishes_the_question_limits(client: TestClient) -> None:
     body = client.get("/api/settings").json()
     assert body["max_question_span_s"] == 60.0
     assert body["question_frames"] == 6
+
+
+def test_config_lists_every_setting_with_its_value_and_meaning(client: TestClient) -> None:
+    body = client.get("/api/config").json()
+    assert body["path"].endswith("config.toml")
+    names = {f["name"] for f in body["fields"]}
+    assert {"model", "coverage", "max_span_s", "notes_dir", "situation_pass"} <= names
+    coverage = next(f for f in body["fields"] if f["name"] == "coverage")
+    assert coverage["value"] == "full"
+    assert coverage["kind"] == "choice"
+    assert coverage["choices"] == ["full", "sampled"]
+    assert coverage["help"].endswith(".")
+    assert coverage["group"] == "How much to review"
+    assert body["groups"][0] == "Recordings"
+
+
+def test_config_offers_the_models_ollama_has(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from round_review.llm.models import InstalledModel
+
+    monkeypatch.setattr(
+        "round_review.server.app.list_models",
+        lambda url: [InstalledModel("qwen3-vl:8b", 6_000_000_000, "z")],
+    )
+    model = next(f for f in client.get("/api/config").json()["fields"] if f["name"] == "model")
+    assert model["choices"] == ["qwen3-vl:8b"]
+
+
+def test_config_flags_settings_an_environment_variable_has_taken_over(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("ROUND_REVIEW_MODEL", "forced:1b")
+    model = next(f for f in client.get("/api/config").json()["fields"] if f["name"] == "model")
+    assert model["overridden_by_env"] == "ROUND_REVIEW_MODEL"
+
+
+def test_saving_config_writes_the_file_and_takes_effect(client: TestClient, cfg: Config) -> None:
+    r = client.put("/api/config", json={"values": {"coverage": "sampled", "max_span_s": 60}})
+    assert r.status_code == 200, r.text
+    assert r.json()["saved"] is True
+
+    from round_review.config import load_config
+
+    written = load_config(client.app.state.config_path, env={}, data_dir=cfg.reports_dir.parent)  # type: ignore[attr-defined]
+    assert written.coverage == "sampled"
+    # and the running app uses it immediately, without a restart
+    assert client.get("/api/settings").json()["coverage"] == "sampled"
+
+
+def test_saving_an_invalid_value_changes_nothing(client: TestClient) -> None:
+    r = client.put("/api/config", json={"values": {"coverage": "sideways"}})
+    assert r.status_code == 422
+    assert "coverage" in r.json()["detail"]
+    assert client.get("/api/settings").json()["coverage"] == "full"
+
+
+def test_saving_an_unknown_setting_is_refused(client: TestClient) -> None:
+    assert client.put("/api/config", json={"values": {"bogus": 1}}).status_code == 422
+
+
+def test_clearing_a_setting_restores_its_default(client: TestClient) -> None:
+    client.put("/api/config", json={"values": {"max_span_s": 60}})
+    assert client.get("/api/settings").json()["max_span_s"] == 60.0
+    client.put("/api/config", json={"values": {"max_span_s": None}})
+    assert client.get("/api/settings").json()["max_span_s"] == 0.0

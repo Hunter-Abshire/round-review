@@ -21,10 +21,10 @@ from round_review.coaching.question import QuestionSpec
 from round_review.config import Config, default_config_path, default_data_dir, load_config
 from round_review.errors import RoundReviewError
 from round_review.ledger import is_processed, read_ledger, recording_key
-from round_review.pipeline import Deps, answer_question, make_default_deps, review_file
+from round_review.pipeline import Deps, _utc_now, answer_question, make_default_deps, review_file
 from round_review.reference.corpus import build_corpus, load_notes
 from round_review.reference.search import build_index, search
-from round_review.server.app import create_app
+from round_review.server.app import ConfigHolder, create_app
 from round_review.server.jobs import JobOptions, JobQueue, ProgressFn
 from round_review.validation.scenes import (
     SceneCase,
@@ -607,26 +607,26 @@ def scenes_describe(
 @click.pass_obj
 def serve(config: Config, port: int | None) -> None:
     """Run the local API used by the desktop app. Binds to 127.0.0.1 only."""
-    deps: Deps = make_default_deps(config)
+    holder = ConfigHolder(config, default_config_path())
 
     def run_review(
         path: Path, ctx: PlayerContext, options: JobOptions, on_progress: ProgressFn
     ) -> None:
-        """One queued review. Per-job coverage overrides apply to this review only."""
-        job_deps = replace(
-            deps,
-            config=_with_coverage(
-                config, options.coverage, options.max_span_s, options.max_windows
-            ),
+        """One queued review. Settings are read now, so a change saved in the app applies to
+        the next queued job without a restart. Per-job coverage overrides apply to this
+        review only."""
+        live = holder.current
+        job_deps = make_default_deps(
+            _with_coverage(live, options.coverage, options.max_span_s, options.max_windows)
         )
         review_file(path, job_deps, context=ctx, force=options.force, on_progress=on_progress)
 
     def run_question(path: Path, ctx: PlayerContext, spec: QuestionSpec) -> dict[str, object]:
         """One queued question about a moment in a clip."""
-        return asdict(answer_question(path, deps, spec, context=ctx))
+        return asdict(answer_question(path, make_default_deps(holder.current), spec, context=ctx))
 
-    jobs = JobQueue(run_review, clock=deps.clock, run_question=run_question)
-    app = create_app(config, jobs)
+    jobs = JobQueue(run_review, clock=_utc_now, run_question=run_question)
+    app = create_app(holder, jobs)
     uvicorn_run(app, host="127.0.0.1", port=port or config.api_port, log_level="info")
 
 

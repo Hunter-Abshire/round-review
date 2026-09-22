@@ -85,6 +85,14 @@ class Config:
     # -1 = adaptive; a calibrated fixed cutoff separates white text from bright scenery.
     hud_threshold: int = -1
     buy_phase_max_s: float = 45.0
+    # The rest of the HUD, all optional and all off until measured against real footage.
+    # Empty means "not configured", which reads as unknown rather than as a wrong answer.
+    hud_health_region: str = ""
+    hud_credits_region: str = ""
+    # Semicolon-separated x,y,w,h regions, one per ability slot, left to right.
+    hud_ability_regions: str = ""
+    hud_lit_threshold: int = 128
+    hud_lit_min_fraction: float = 0.25
 
 
 def identities_file(config: Config) -> Path:
@@ -368,6 +376,51 @@ FIELDS: tuple[FieldSpec, ...] = (
         advanced=True,
     ),
     FieldSpec(
+        "hud_health_region",
+        "Round clock",
+        "Health region",
+        "Where the health number sits, as x,y,w,h fractions. Empty turns it off. Needed for "
+        "death detection.",
+        "text",
+        advanced=True,
+    ),
+    FieldSpec(
+        "hud_credits_region",
+        "Round clock",
+        "Credits region",
+        "Where the credit total sits, as x,y,w,h fractions. Empty turns it off.",
+        "text",
+        advanced=True,
+    ),
+    FieldSpec(
+        "hud_ability_regions",
+        "Round clock",
+        "Ability icon regions",
+        "One x,y,w,h region per ability slot, separated by semicolons. Empty turns it off.",
+        "text",
+        advanced=True,
+    ),
+    FieldSpec(
+        "hud_lit_threshold",
+        "Round clock",
+        "Ability brightness cutoff",
+        "Pixels brighter than this count as lit when deciding if an ability is available.",
+        "int",
+        minimum=0,
+        maximum=255,
+        advanced=True,
+    ),
+    FieldSpec(
+        "hud_lit_min_fraction",
+        "Round clock",
+        "Ability lit fraction",
+        "How much of an icon must be lit before the ability counts as available.",
+        "float",
+        minimum=0,
+        maximum=1,
+        advanced=True,
+    ),
+    FieldSpec(
         "hud_threshold",
         "Round clock",
         "Brightness cutoff",
@@ -611,14 +664,25 @@ def load_config(
     if not isinstance(threshold, int) or not -1 <= threshold <= 255:
         raise ConfigError("hud_threshold must be -1 (adaptive) or an integer from 0 to 255")
 
-    region = values.get("hud_timer_region")
-    if isinstance(region, str):
-        from round_review.vision.hud import parse_region
+    from round_review.vision.hud import parse_region
 
-        try:
-            parse_region(region)
-        except RoundReviewError as exc:
-            raise ConfigError(f"hud_timer_region: {exc}") from exc
+    for key in ("hud_timer_region", "hud_health_region", "hud_credits_region"):
+        region = values.get(key)
+        if isinstance(region, str) and region.strip():
+            try:
+                parse_region(region)
+            except RoundReviewError as exc:
+                raise ConfigError(f"{key}: {exc}") from exc
+
+    abilities = values.get("hud_ability_regions")
+    if isinstance(abilities, str) and abilities.strip():
+        for part in abilities.split(";"):
+            if not part.strip():
+                continue
+            try:
+                parse_region(part)
+            except RoundReviewError as exc:
+                raise ConfigError(f"hud_ability_regions: {exc}") from exc
 
     coverage = values.get("coverage")
     if coverage is not None and coverage not in COVERAGE_MODES:

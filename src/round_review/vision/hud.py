@@ -84,6 +84,21 @@ def parse_region(text: str) -> Region:
     return Region(x, y, width, height)
 
 
+def optional_region(text: str | None) -> Region | None:
+    """A configured region, or None when the setting is blank. Blank means "not measured
+    yet", which must read as unknown rather than as a guess at where the HUD sits."""
+    if not text or not text.strip():
+        return None
+    return parse_region(text)
+
+
+def parse_regions(text: str | None) -> tuple[Region, ...]:
+    """Several regions in one setting, separated by semicolons. Used for ability slots."""
+    if not text or not text.strip():
+        return ()
+    return tuple(parse_region(part) for part in text.split(";") if part.strip())
+
+
 def build_crop_args(
     path: Path,
     timestamp_s: float,

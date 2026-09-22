@@ -220,3 +220,34 @@ class TestConstrainPhase:
         verdict = constrain_phase("pre_round", None, 45.0, 0.8)
         assert verdict.overridden is False
         assert verdict.phase == "pre_round"
+
+
+class TestOptionalRegions:
+    def test_a_blank_setting_is_not_configured(self) -> None:
+        from round_review.vision.hud import optional_region
+
+        assert optional_region("") is None
+        assert optional_region(None) is None
+        assert optional_region("   ") is None
+
+    def test_a_set_region_parses(self) -> None:
+        from round_review.vision.hud import optional_region
+
+        assert optional_region("0.1,0.2,0.3,0.4") == Region(0.1, 0.2, 0.3, 0.4)
+
+    def test_several_regions_split_on_semicolons(self) -> None:
+        from round_review.vision.hud import parse_regions
+
+        got = parse_regions("0.1,0.2,0.05,0.05; 0.2,0.2,0.05,0.05")
+        assert got == (Region(0.1, 0.2, 0.05, 0.05), Region(0.2, 0.2, 0.05, 0.05))
+
+    def test_no_regions_when_blank(self) -> None:
+        from round_review.vision.hud import parse_regions
+
+        assert parse_regions("") == ()
+
+    def test_a_bad_region_in_a_list_still_raises(self) -> None:
+        from round_review.vision.hud import parse_regions
+
+        with pytest.raises(HudError):
+            parse_regions("0.1,0.2,0.05,0.05; nonsense")

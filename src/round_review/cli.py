@@ -37,7 +37,17 @@ from round_review.validation.scenes import (
 )
 from round_review.video.probe import Recording, SubprocessRunner, probe
 from round_review.vision.digits import DigitTemplates
-from round_review.vision.hud import HudRead, Region, learn_from_crop, parse_region, read_hud
+from round_review.vision.hud import (
+    HudRead,
+    Region,
+    learn_from_crop,
+    optional_region,
+    parse_region,
+    parse_regions,
+    read_hud,
+)
+from round_review.vision.state import find_deaths, read_state
+from round_review.vision.timeline import scan_clock, scan_numbers, segment_rounds
 from round_review.watcher import stat_snapshot, watch_loop
 
 log = logging.getLogger("round_review")
@@ -408,6 +418,131 @@ def hud_read(
             f"  clock {read.clock_text} ({read.clock_s:.0f}s), confidence {read.confidence:.0%}"
         )
         click.echo(f"  {proof}")
+
+
+@hud.command("state")
+@click.argument("file", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--at", "timestamps", type=float, multiple=True, required=True)
+@click.option("--store", type=click.Path(dir_okay=False, path_type=Path), default=None)
+@click.pass_obj
+def hud_state(
+    config: Config, file: Path, timestamps: tuple[float, ...], store: Path | None
+) -> None:
+    """Read health, credits and the ability icons, so the regions can be checked by eye."""
+    path = _templates_path(config, store)
+    try:
+        templates = DigitTemplates.load(path)
+        recording = probe(file, SubprocessRunner(config.ffprobe_path))
+        regions = {
+            name: region
+            for name, raw in (
+                ("health", config.hud_health_region),
+                ("credits", config.hud_credits_region),
+            )
+            if (region := optional_region(raw)) is not None
+        }
+        abilities = parse_regions(config.hud_ability_regions)
+    except RoundReviewError as exc:
+        _fail(exc)
+        return
+    if not regions and not abilities:
+        click.echo(
+            "No health, credits or ability regions configured. Set hud_health_region, "
+            "hud_credits_region or hud_ability_regions first; `hud crop --region` helps "
+            "you find them.",
+            err=True,
+        )
+        return
+    for timestamp in timestamps:
+        state = read_state(
+            recording,
+            timestamp,
+            regions,
+            abilities,
+            SubprocessRunner(config.ffmpeg_path),
+            templates,
+            out_dir=path.parent / "hud-state",
+            min_confidence=config.hud_min_confidence,
+            threshold=config.hud_threshold,
+            lit_threshold=config.hud_lit_threshold,
+            lit_min_fraction=config.hud_lit_min_fraction,
+        )
+        click.echo(f"\nt={timestamp:.1f}s  {state.describe() or 'nothing readable'}")
+        for error in state.errors:
+            click.echo(f"  error: {error}")
+
+
+@hud.command("deaths")
+@click.argument("file", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--store", type=click.Path(dir_okay=False, path_type=Path), default=None)
+@click.pass_obj
+def hud_deaths(config: Config, file: Path, store: Path | None) -> None:
+    """Scan the health number and list the deaths it found.
+
+    Check this against what actually happened before trusting death-anchored reviews: a
+    health region that is a few pixels off will invent deaths rather than find none.
+    """
+    path = _templates_path(config, store)
+    try:
+        templates = DigitTemplates.load(path)
+        recording = probe(file, SubprocessRunner(config.ffprobe_path))
+        region = optional_region(config.hud_health_region)
+    except RoundReviewError as exc:
+        _fail(exc)
+        return
+    if region is None:
+        click.echo("hud_health_region is not set, so deaths cannot be found.", err=True)
+        return
+    samples = scan_numbers(
+        recording,
+        region,
+        SubprocessRunner(config.ffmpeg_path),
+        templates,
+        out_dir=path.parent / "hud-deaths",
+        min_confidence=config.hud_min_confidence,
+        interval_s=config.scan_interval_s,
+        threshold=config.hud_threshold,
+        stem="health",
+    )
+    readable = sum(1 for _t, value in samples if value is not None)
+    deaths = find_deaths(samples)
+    click.echo(f"{len(samples)} sample(s), {readable} readable, {len(deaths)} death(s)")
+    for timestamp in deaths:
+        click.echo(f"  {int(timestamp) // 60}:{int(timestamp) % 60:02d}")
+
+
+@hud.command("rounds")
+@click.argument("file", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--region", default=None)
+@click.option("--store", type=click.Path(dir_okay=False, path_type=Path), default=None)
+@click.pass_obj
+def hud_rounds(config: Config, file: Path, region: str | None, store: Path | None) -> None:
+    """Scan the clock across the whole recording and list the rounds it found."""
+    box = _hud_region(config, region)
+    path = _templates_path(config, store)
+    try:
+        templates = DigitTemplates.load(path)
+        recording = probe(file, SubprocessRunner(config.ffprobe_path))
+    except RoundReviewError as exc:
+        _fail(exc)
+        return
+    samples = scan_clock(
+        recording,
+        box,
+        SubprocessRunner(config.ffmpeg_path),
+        templates,
+        out_dir=path.parent / "hud-rounds",
+        min_confidence=config.hud_min_confidence,
+        interval_s=config.scan_interval_s,
+        threshold=config.hud_threshold,
+    )
+    readable = sum(1 for s in samples if s.clock_s is not None)
+    spans = segment_rounds(samples, min_confidence=config.hud_min_confidence)
+    click.echo(f"{len(samples)} sample(s), {readable} readable, {len(spans)} round(s)")
+    for span in spans:
+        start = f"{int(span.start_s) // 60}:{int(span.start_s) % 60:02d}"
+        end = f"{int(span.end_s) // 60}:{int(span.end_s) % 60:02d}"
+        click.echo(f"  round {span.index}: {start} to {end}")
 
 
 @main.group()

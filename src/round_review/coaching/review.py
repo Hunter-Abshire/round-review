@@ -32,6 +32,7 @@ from round_review.llm.transport import Transport
 from round_review.video.frames import FrameSample, encode_frame_b64
 from round_review.video.windows import Window
 from round_review.vision.hud import HudRead, constrain_phase
+from round_review.vision.state import HudState
 
 log = logging.getLogger(__name__)
 
@@ -72,9 +73,13 @@ def _relevant_findings(
     situation: Situation | None,
     agent: str | None = None,
     agents: Mapping[str, AgentBrief] | None = None,
+    state: HudState | None = None,
 ) -> tuple[list[Finding], list[str]]:
     allowed = relevant_categories(situation.phase if situation else None)
     decided = _decided_round(situation)
+    # An icon that is dark is an ability that is gone. Telling the player to throw it is
+    # the most confident kind of wrong a coach can be.
+    nothing_up = state is not None and bool(state.abilities_lit) and not any(state.abilities_lit)
     kept: list[Finding] = []
     warnings: list[str] = []
     for finding in findings:
@@ -95,6 +100,8 @@ def _relevant_findings(
             )
         elif allowed is not None and category != "other" and category not in allowed:
             reason = "check does not apply to the detected round phase"
+        elif nothing_up and (category == "utility" or finding.category == "utility"):
+            reason = "the HUD shows no ability was available at this moment"
         elif decided and (category in ACTION_CATEGORIES or finding.category in ACTION_CATEGORIES):
             reason = (
                 "the player's side held a decisive numbers advantage with no enemy on "
@@ -153,6 +160,7 @@ def review_window(
     hud_min_confidence: float = 0.8,
     situation_frames: int = 3,
     coach_frames: int = 0,
+    state: HudState | None = None,
 ) -> WindowResult:
     """Pass 1 (optional) asks the model to describe what is on screen; a failed pass 1 is a
     warning. Pass 2 coaches against the checklist and retries once with a JSON-only nudge;
@@ -224,7 +232,7 @@ def review_window(
             )
 
     system = build_system_prompt(knowledge, situation.phase if situation else None)
-    prompt = build_coach_prompt(window, coach_samples, context, situation, knowledge)
+    prompt = build_coach_prompt(window, coach_samples, context, situation, knowledge, state)
     check_ids = knowledge.checklist.check_ids()
     last_error: ParseError | None = None
     for attempt in range(2):
@@ -247,7 +255,7 @@ def review_window(
             continue
         if situation_pass:
             findings, relevance_warnings = _relevant_findings(
-                findings, situation, context.agent, knowledge.agents
+                findings, situation, context.agent, knowledge.agents, state
             )
             parse_warnings.extend(relevance_warnings)
         return WindowResult(

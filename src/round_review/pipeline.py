@@ -62,8 +62,15 @@ from round_review.video.frames import encode_frame_b64, extract_frames, extract_
 from round_review.video.probe import CommandRunner, Recording, SubprocessRunner, probe
 from round_review.video.windows import Window, plan_windows
 from round_review.vision.digits import DigitTemplates
-from round_review.vision.hud import HudRead, parse_region, read_hud
-from round_review.vision.timeline import RoundSpan, round_at, scan_clock, segment_rounds
+from round_review.vision.hud import HudRead, optional_region, parse_region, parse_regions, read_hud
+from round_review.vision.state import HudState, find_deaths, read_state
+from round_review.vision.timeline import (
+    RoundSpan,
+    round_at,
+    scan_clock,
+    scan_numbers,
+    segment_rounds,
+)
 
 log = logging.getLogger(__name__)
 
@@ -190,6 +197,79 @@ def _read_window_hud(
     )
 
 
+def _scan_deaths(
+    recording: Recording, deps: Deps, templates: DigitTemplates, out_dir: Path
+) -> tuple[float, ...]:
+    """Find the player's deaths by scanning the health number. Off until the health region
+    is measured, because an unconfigured crop would invent deaths at random."""
+    cfg = deps.config
+    if not cfg.hud_check or not templates.characters():
+        return ()
+    try:
+        region = optional_region(cfg.hud_health_region)
+    except RoundReviewError as exc:
+        log.warning("hud_health_region is unusable, not scanning for deaths: %s", exc)
+        return ()
+    if region is None:
+        return ()
+    samples = scan_numbers(
+        recording,
+        region,
+        deps.ffmpeg_runner,
+        templates,
+        out_dir=out_dir / "scan",
+        min_confidence=cfg.hud_min_confidence,
+        interval_s=cfg.scan_interval_s,
+        threshold=cfg.hud_threshold,
+        stem="health",
+    )
+    deaths = find_deaths(samples)
+    log.info("health scan: %d sample(s), %d death(s)", len(samples), len(deaths))
+    return deaths
+
+
+def _read_window_state(
+    recording: Recording,
+    window: Window,
+    deps: Deps,
+    templates: DigitTemplates,
+    frames_dir: Path,
+) -> HudState | None:
+    """Read health, credits and lit abilities at the middle of a window. None when nothing
+    is configured, so an uncalibrated HUD costs no ffmpeg calls at all."""
+    cfg = deps.config
+    if not cfg.hud_check or not templates.characters():
+        return None
+    try:
+        regions = {
+            name: region
+            for name, raw in (
+                ("health", cfg.hud_health_region),
+                ("credits", cfg.hud_credits_region),
+            )
+            if (region := optional_region(raw)) is not None
+        }
+        abilities = parse_regions(cfg.hud_ability_regions)
+    except RoundReviewError as exc:
+        log.warning("HUD state regions are unusable, skipping them: %s", exc)
+        return None
+    if not regions and not abilities:
+        return None
+    return read_state(
+        recording,
+        (window.start_s + window.end_s) / 2,
+        regions,
+        abilities,
+        deps.ffmpeg_runner,
+        templates,
+        out_dir=frames_dir / "hud",
+        min_confidence=cfg.hud_min_confidence,
+        threshold=cfg.hud_threshold,
+        lit_threshold=cfg.hud_lit_threshold,
+        lit_min_fraction=cfg.hud_lit_min_fraction,
+    )
+
+
 def _round_of(spans: tuple[RoundSpan, ...], window: Window) -> int | None:
     span = round_at(spans, window.start_s)
     return span.index if span else None
@@ -263,6 +343,7 @@ def review_file(
     try:
         recording = probe(path, deps.probe_runner)
         spans = _scan_rounds(recording, deps, hud_templates, out_dir)
+        deaths = _scan_deaths(recording, deps, hud_templates, out_dir)
         windows = plan_windows(
             recording.duration_s,
             window_s=cfg.window_s,
@@ -272,6 +353,7 @@ def review_file(
             max_windows=cfg.max_windows,
             max_span_s=cfg.max_span_s,
             spans=spans,
+            deaths=deaths,
         )
         # Even a tiled review benefits from round labels, so map any window the scan covers.
         if spans:
@@ -312,6 +394,7 @@ def review_file(
                 hud_min_confidence=cfg.hud_min_confidence,
                 situation_frames=cfg.situation_frames,
                 coach_frames=cfg.coach_frames,
+                state=_read_window_state(recording, window, deps, hud_templates, frames_dir),
             )
         except ParseError as exc:
             # One unreadable window is a warning; every window unreadable fails the file.

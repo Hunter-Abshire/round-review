@@ -56,6 +56,7 @@ def build_scan_args(
     out_dir: Path,
     interval_s: float = DEFAULT_SCAN_INTERVAL_S,
     scale: int = CROP_SCALE,
+    stem: str = "clock",
 ) -> list[str]:
     """One decode of the whole file writing numbered clock crops. Per-frame `-ss` seeking
     would be hundreds of ffmpeg launches for the same result."""
@@ -74,7 +75,7 @@ def build_scan_args(
         ),
         "-vsync",
         "0",
-        str(out_dir / "clock_%05d.pgm"),
+        str(out_dir / f"{stem}_%05d.pgm"),
     ]
 
 
@@ -115,6 +116,39 @@ def scan_clock(
         ]
         text, confidence = read_text(glyphs, templates, min_confidence)
         out.append(ClockSample(timestamp, parse_clock(text), confidence))
+    return tuple(out)
+
+
+def scan_numbers(
+    recording: Recording,
+    region: Region,
+    runner: CommandRunner,
+    templates: DigitTemplates,
+    out_dir: Path,
+    min_confidence: float,
+    interval_s: float = DEFAULT_SCAN_INTERVAL_S,
+    threshold: int = -1,
+    stem: str = "value",
+) -> tuple[tuple[float, int | None], ...]:
+    """Read one numeric HUD field across the whole recording, the same way the clock is
+    scanned. Used for health, which is what turns a review into a review of deaths."""
+    from round_review.vision.state import read_number
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        runner.run(build_scan_args(region, recording, out_dir, interval_s, stem=stem))
+    except (RoundReviewError, OSError):
+        return ()
+    crops = sorted(out_dir.glob(f"{stem}_*.pgm"))
+    times = scan_timestamps(len(crops), interval_s)
+    out: list[tuple[float, int | None]] = []
+    for timestamp, crop in zip(times, crops, strict=True):
+        try:
+            gray = parse_pgm(crop.read_bytes())
+        except (RoundReviewError, OSError):
+            out.append((timestamp, None))
+            continue
+        out.append((timestamp, read_number(gray, templates, min_confidence, threshold)))
     return tuple(out)
 
 

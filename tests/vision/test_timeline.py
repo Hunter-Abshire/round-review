@@ -30,6 +30,10 @@ class TestScanArgs:
         assert chain.endswith("format=gray")
         assert args[-1] == str(Path("/out") / "clock_%05d.pgm")
 
+    def test_the_stem_names_the_output_so_two_scans_can_share_a_directory(self) -> None:
+        args = build_scan_args(REGION, RECORDING, Path("/out"), interval_s=2.0, stem="health")
+        assert args[-1] == str(Path("/out") / "health_%05d.pgm")
+
     def test_frame_numbers_map_back_to_seconds(self) -> None:
         assert scan_timestamps(3, interval_s=2.0) == (0.0, 2.0, 4.0)
 

@@ -479,3 +479,40 @@ def test_a_visible_enemy_keeps_coaching_alive_despite_the_advantage(
     )
     result = review(transport, samples)
     assert len(result.findings) == 1
+
+
+def test_utility_advice_is_dropped_when_the_hud_says_nothing_was_up(
+    samples: list[FrameSample],
+) -> None:
+    from round_review.vision.state import HudState
+
+    transport = FakeTransport(SITUATION, GOOD)  # GOOD is a utility finding
+    result = review(transport, samples, state=HudState(100, 3900, (False, False, False), ()))
+    assert result.findings == ()
+    assert any("no ability was available" in w for w in result.warnings)
+
+
+def test_utility_advice_survives_when_an_ability_was_up(samples: list[FrameSample]) -> None:
+    from round_review.vision.state import HudState
+
+    transport = FakeTransport(SITUATION, GOOD)
+    result = review(transport, samples, state=HudState(100, 3900, (True, False, False), ()))
+    assert len(result.findings) == 1
+
+
+def test_an_unread_hud_does_not_gate_anything(samples: list[FrameSample]) -> None:
+    from round_review.vision.state import HudState
+
+    transport = FakeTransport(SITUATION, GOOD)
+    result = review(transport, samples, state=HudState(None, None, (), ()))
+    assert len(result.findings) == 1
+
+
+def test_measured_hud_values_reach_the_coach_prompt(samples: list[FrameSample]) -> None:
+    from round_review.vision.state import HudState
+
+    transport = FakeTransport(SITUATION, GOOD)
+    review(transport, samples, state=HudState(48, 2400, (True, False), ()))
+    prompt = transport.calls[1].prompt
+    assert "health=48" in prompt and "credits=2400" in prompt
+    assert "abilities up=1 of 2" in prompt

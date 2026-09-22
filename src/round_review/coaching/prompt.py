@@ -23,6 +23,7 @@ from round_review.coaching.knowledge import (
 from round_review.coaching.situation import Situation
 from round_review.video.frames import FrameSample
 from round_review.video.windows import Window
+from round_review.vision.state import HudState
 
 CATEGORIES: tuple[str, ...] = (
     "crosshair",
@@ -313,6 +314,7 @@ def build_coach_prompt(
     context: PlayerContext,
     situation: Situation | None,
     knowledge: CoachingKnowledge,
+    state: HudState | None = None,
 ) -> str:
     sections: list[str] = []
     described = context.describe()
@@ -334,6 +336,13 @@ def build_coach_prompt(
         sections.append(render_map_brief(game_map))
     if situation:
         sections.append(situation.describe())
+    # After the situation read, so a measured value overrides whatever the model said.
+    measured = state.describe() if state else ""
+    if measured:
+        sections.append(
+            f"Measured from the HUD (this is read from the pixels, not inferred, and "
+            f"overrides anything above that disagrees): {measured}"
+        )
     sections.append(_window_line(window, samples))
     sections.append(
         "Identify the most consequential supported decision just before or during combat. "

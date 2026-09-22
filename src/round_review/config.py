@@ -62,6 +62,8 @@ class Config:
     hud_timer_region: str = "0.455,0.020,0.090,0.055"
     hud_templates_path: Path | None = None
     hud_min_confidence: float = 0.8
+    # -1 = adaptive; a calibrated fixed cutoff separates white text from bright scenery.
+    hud_threshold: int = -1
     buy_phase_max_s: float = 45.0
 
 
@@ -198,6 +200,10 @@ def load_config(
             assert isinstance(number, int | float)
             if number < 0:
                 raise ConfigError(f"{key} must be >= 0 (0 means unlimited), got {number}")
+
+    threshold = values.get("hud_threshold", -1)
+    if not isinstance(threshold, int) or not -1 <= threshold <= 255:
+        raise ConfigError("hud_threshold must be -1 (adaptive) or an integer from 0 to 255")
 
     region = values.get("hud_timer_region")
     if isinstance(region, str):

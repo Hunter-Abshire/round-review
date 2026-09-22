@@ -163,6 +163,7 @@ def _read_window_hud(
         templates,
         out_dir=frames_dir / "hud",
         min_confidence=cfg.hud_min_confidence,
+        threshold=cfg.hud_threshold,
     )
 
 

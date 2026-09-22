@@ -21,6 +21,28 @@ from round_review.pipeline import Deps, make_default_deps, review_file
 from tests.llm.test_transport import FakeResponse
 from tests.video.test_probe import PROBE_JSON
 
+
+def test_calibrated_threshold_separates_digits_from_bright_background(tmp_path: Path) -> None:
+    from round_review.pipeline import _read_window_hud
+    from round_review.video.windows import Window
+    from tests.vision.test_hud import RECORDING, FakeFfmpeg, pgm, templates_for_blocks
+
+    # One dark background pixel makes the adaptive midpoint include the light panel.
+    # The calibrated cutoff must keep only the three white glyphs.
+    pixels = [255 if char == "#" else 180 for char in "#.#.##" * 4]
+    pixels[1] = 0
+    deps = make_deps(tmp_path, FakeTransport())
+    deps = replace(
+        deps,
+        config=replace(deps.config, situation_pass=True, hud_threshold=220),
+        ffmpeg_runner=FakeFfmpeg(pgm(6, 4, pixels)),
+    )
+    result = _read_window_hud(
+        RECORDING, Window(0, 0, 12, "tiled"), deps, templates_for_blocks(), tmp_path
+    )
+    assert result is not None and result.glyph_count == 3
+
+
 FIXED_NOW = datetime(2026, 9, 20, 12, 0, tzinfo=UTC)
 
 

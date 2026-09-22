@@ -154,3 +154,18 @@ def test_caps_may_be_zero_but_not_negative(tmp_path: Path) -> None:
     path.write_text("max_windows = -1\n")
     with pytest.raises(ConfigError, match="max_windows"):
         load_config(path, env={}, data_dir=tmp_path)
+
+
+@pytest.mark.parametrize("threshold", [-1, 0, 220, 255])
+def test_hud_threshold_can_be_calibrated(tmp_path: Path, threshold: int) -> None:
+    path = tmp_path / "config.toml"
+    path.write_text(f"hud_threshold = {threshold}\n")
+    assert load_config(path, env={}, data_dir=tmp_path).hud_threshold == threshold
+
+
+@pytest.mark.parametrize("threshold", [-2, 256])
+def test_invalid_hud_threshold_is_rejected(tmp_path: Path, threshold: int) -> None:
+    path = tmp_path / "config.toml"
+    path.write_text(f"hud_threshold = {threshold}\n")
+    with pytest.raises(ConfigError, match="hud_threshold"):
+        load_config(path, env={}, data_dir=tmp_path)

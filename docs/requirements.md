@@ -135,3 +135,10 @@ Valorant is the first supported game profile. The pipeline is game-agnostic; onl
 - Coaching quality from a general vision model is unproven. Validate on real clips against a human coach before trusting `watch` mode.
 - Browser playback needs H.264/AAC. Outplayed can be set to HEVC (H.265), which Chromium will not decode; the UI must show a clear error rather than a black player. ffprobe already reports the codec.
 - Electron packaging must bundle a PyInstaller build of the Python API plus ffmpeg/ffprobe; the dev flow uses the repo `.venv`.
+
+### HUD brightness calibration
+
+`hud_threshold` defaults to -1 (adaptive) and accepts integers 0 through 255 for a
+fixed grayscale cutoff. Learning and every reading path (CLI, scene validation,
+and reviews) use the same configured threshold. Invalid values are configuration
+errors. Recalibrate learned glyphs after changing the region or threshold.

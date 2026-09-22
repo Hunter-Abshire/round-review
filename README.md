@@ -139,6 +139,11 @@ off. If it is, edit `hud_timer_region` in your config (`x,y,w,h` as fractions of
 so `0.455,0.020,0.090,0.055` means 45.5% across, 2% down, 9% wide, 5.5% tall) and crop again
 until the picture is right.
 
+If a clean-looking crop reports too few glyphs, the bright background may be joining
+the digits. Set `hud_threshold = 220` in config as a starting point and verify it on
+your footage. The default `-1` chooses an adaptive cutoff; fixed values range from 0
+to 255. Relearn the templates after changing this setting or the crop.
+
 Then teach it the digits. Pick timestamps where you can read the clock yourself, and tell it
 what you see:
 

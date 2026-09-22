@@ -266,3 +266,7 @@ sequenceDiagram
 | `HudError` | vision | never fails a review | non-zero from the `hud` commands | an unreadable HUD is simply no evidence |
 | `ConfigError` | config | n/a | non-zero | never starts |
 | `AlreadyProcessed` | pipeline | n/a (existing entry) | non-zero unless `--force` | never raised; the watcher filters known files first |
+
+HUD learning, CLI reads, scene validation, and pipeline reads all pass the configured
+`hud_threshold` to segmentation and glyph normalization. The crop and brightness
+cutoff must match those used to learn the digit templates.

@@ -284,6 +284,7 @@ def hud_learn(
             SubprocessRunner(config.ffmpeg_path),
             path.parent / "hud-learn",
             reads,
+            threshold=config.hud_threshold,
         )
         templates = DigitTemplates.load(path).learn(samples)
         templates.save(path)
@@ -336,6 +337,7 @@ def hud_read(
             templates,
             out_dir=path.parent / "hud-read",
             min_confidence=config.hud_min_confidence,
+            threshold=config.hud_threshold,
         )
         click.echo(f"\nt={timestamp:.1f}s  crop: {read.crop_path}")
         if read.error:
@@ -426,6 +428,7 @@ def _hud_reader(config: Config, use_hud: bool) -> object | None:
             templates,
             out_dir=path.parent / "hud-scenes",
             min_confidence=config.hud_min_confidence,
+            threshold=config.hud_threshold,
         )
 
     return read

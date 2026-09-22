@@ -60,7 +60,7 @@ class TestBuildCropArgs:
         assert "scale=688:236" in vf  # upscaled 4x so thin strokes survive thresholding
         assert "format=gray" in vf
         assert args[args.index("-frames:v") + 1] == "1"
-        assert args[-1] == "/tmp/o.pgm"
+        assert args[-1] == str(Path("/tmp/o.pgm"))
 
 
 class FakeFfmpeg:

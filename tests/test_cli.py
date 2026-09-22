@@ -308,7 +308,7 @@ def test_scenes_describe_prints_the_situation_json(
     assert result.exit_code == 0, result.output
     assert "early" in result.output
     assert "Live round." in result.output
-    assert "/f/x.jpg" in result.output
+    assert str(Path("/f/x.jpg")) in result.output
 
 
 def test_hud_crop_saves_a_picture_to_check_the_region(
@@ -355,6 +355,41 @@ def test_hud_learn_teaches_digits_and_reports_what_is_missing(
     assert store.exists()
     assert "Still missing" in result.output
     assert "0" in result.output and "9" in result.output
+
+
+def test_hud_learning_uses_calibrated_threshold(
+    monkeypatch: pytest.MonkeyPatch, cfg: Config, scene_video: Path, tmp_path: Path
+) -> None:
+    from dataclasses import replace
+
+    from round_review.vision.raster import Glyph
+
+    config = replace(cfg, hud_threshold=220)
+    monkeypatch.setattr(cli, "load_config", lambda *a, **k: config)
+    monkeypatch.setattr(cli, "probe", lambda p, r: Recording(p, 300.0, 60.0, 1280, 720, 1, 0.0))
+    seen = []
+
+    def learn(*a, **kw):
+        seen.append(kw["threshold"])
+        return [("1", Glyph(("#",), 0.5))]
+
+    monkeypatch.setattr(cli, "learn_from_crop", learn)
+    result = CliRunner().invoke(
+        cli.main,
+        [
+            "hud",
+            "learn",
+            str(scene_video),
+            "--at",
+            "45",
+            "--reads",
+            "1",
+            "--store",
+            str(tmp_path / "digits.json"),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert seen == [220]
 
 
 def test_hud_learn_reports_a_mismatched_reading(

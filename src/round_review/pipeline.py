@@ -70,8 +70,18 @@ from round_review.video.frames import encode_frame_b64, extract_frames, extract_
 from round_review.video.probe import CommandRunner, Recording, SubprocessRunner, probe
 from round_review.video.windows import Window, plan_windows
 from round_review.vision.agent_icons import AgentTemplates, identify_from_frames
-from round_review.vision.digits import DigitTemplates
-from round_review.vision.hud import HudRead, optional_region, parse_region, parse_regions, read_hud
+from round_review.vision.calibrate import auto_threshold
+from round_review.vision.digits import DigitTemplates, load_templates
+from round_review.vision.hud import (
+    ADAPTIVE_THRESHOLD,
+    AUTO_THRESHOLD,
+    HudRead,
+    Region,
+    optional_region,
+    parse_region,
+    parse_regions,
+    read_hud,
+)
 from round_review.vision.state import HudState, find_deaths, read_state
 from round_review.vision.timeline import (
     RoundSpan,
@@ -182,6 +192,7 @@ def _read_window_hud(
     deps: Deps,
     templates: DigitTemplates,
     frames_dir: Path,
+    threshold: int,
 ) -> HudRead | None:
     """Read the round clock once per window, from the middle frame. Costs one ffmpeg crop
     and no model call; returns None when HUD checking is off or unconfigured."""
@@ -202,12 +213,16 @@ def _read_window_hud(
         templates,
         out_dir=frames_dir / "hud",
         min_confidence=cfg.hud_min_confidence,
-        threshold=cfg.hud_threshold,
+        threshold=threshold,
     )
 
 
 def _identify_agent(
-    recording: Recording, deps: Deps, windows: Sequence[Window], out_dir: Path
+    recording: Recording,
+    deps: Deps,
+    windows: Sequence[Window],
+    out_dir: Path,
+    threshold: int,
 ) -> str | None:
     """Name the agent from the ability icons, when they have been learned.
 
@@ -239,7 +254,7 @@ def _identify_agent(
         templates,
         out_dir=out_dir / "agent-icons",
         min_confidence=cfg.hud_agent_min_confidence,
-        threshold=cfg.hud_threshold,
+        threshold=threshold,
     )
     if name:
         log.info("ability icons identify the agent as %s (%.0f%%)", name, score * 100)
@@ -247,7 +262,11 @@ def _identify_agent(
 
 
 def _scan_deaths(
-    recording: Recording, deps: Deps, templates: DigitTemplates, out_dir: Path
+    recording: Recording,
+    deps: Deps,
+    templates: DigitTemplates,
+    out_dir: Path,
+    threshold: int,
 ) -> tuple[float, ...]:
     """Find the player's deaths by scanning the health number. Off until the health region
     is measured, because an unconfigured crop would invent deaths at random."""
@@ -269,7 +288,7 @@ def _scan_deaths(
         out_dir=out_dir / "scan",
         min_confidence=cfg.hud_min_confidence,
         interval_s=cfg.scan_interval_s,
-        threshold=cfg.hud_threshold,
+        threshold=threshold,
         stem="health",
     )
     deaths = find_deaths(samples)
@@ -283,6 +302,7 @@ def _read_window_state(
     deps: Deps,
     templates: DigitTemplates,
     frames_dir: Path,
+    threshold: int,
 ) -> HudState | None:
     """Read health, credits and lit abilities at the middle of a window. None when nothing
     is configured, so an uncalibrated HUD costs no ffmpeg calls at all."""
@@ -313,10 +333,56 @@ def _read_window_state(
         templates,
         out_dir=frames_dir / "hud",
         min_confidence=cfg.hud_min_confidence,
-        threshold=cfg.hud_threshold,
+        threshold=threshold,
         lit_threshold=cfg.hud_lit_threshold,
         lit_min_fraction=cfg.hud_lit_min_fraction,
     )
+
+
+def _timer_region(cfg: Config) -> Region | None:
+    try:
+        return parse_region(cfg.hud_timer_region)
+    except RoundReviewError as exc:
+        log.warning("hud_timer_region is unusable: %s", exc)
+        return None
+
+
+def _resolve_threshold(
+    recording: Recording, deps: Deps, templates: DigitTemplates, region: Region, out_dir: Path
+) -> int:
+    """Settle on a brightness cutoff for this recording before anything else reads the HUD.
+
+    The per-crop adaptive midpoint moves with whatever scenery sits behind the translucent
+    timer plate, which measured 6 correct clock reads out of 16. Reading a few frames at
+    several cutoffs and keeping the one that produces the most valid times costs a handful
+    of ffmpeg crops once per review and needs nothing from the player.
+    """
+    cfg = deps.config
+    if cfg.hud_threshold != AUTO_THRESHOLD:
+        return cfg.hud_threshold
+    moments = [recording.duration_s * f for f in (0.15, 0.3, 0.45, 0.6, 0.75, 0.9)]
+
+    def read_at(threshold: int) -> list[str | None]:
+        return [
+            read_hud(
+                recording,
+                t,
+                region,
+                deps.ffmpeg_runner,
+                templates,
+                out_dir=out_dir / "calibrate",
+                min_confidence=cfg.hud_min_confidence,
+                threshold=threshold,
+            ).clock_text
+            for t in moments
+        ]
+
+    found = auto_threshold(read_at)
+    if found is None:
+        log.warning("no brightness cutoff read the clock; falling back to the adaptive one")
+        return ADAPTIVE_THRESHOLD
+    log.info("HUD brightness cutoff measured at %d for this recording", found)
+    return found
 
 
 def _round_of(spans: tuple[RoundSpan, ...], window: Window) -> int | None:
@@ -325,7 +391,11 @@ def _round_of(spans: tuple[RoundSpan, ...], window: Window) -> int | None:
 
 
 def _scan_rounds(
-    recording: Recording, deps: Deps, templates: DigitTemplates, out_dir: Path
+    recording: Recording,
+    deps: Deps,
+    templates: DigitTemplates,
+    out_dir: Path,
+    threshold: int,
 ) -> tuple[RoundSpan, ...]:
     """Find the round boundaries by scanning the clock. One ffmpeg pass, no model calls.
 
@@ -348,7 +418,7 @@ def _scan_rounds(
         out_dir=out_dir / "scan",
         min_confidence=cfg.hud_min_confidence,
         interval_s=cfg.scan_interval_s,
-        threshold=cfg.hud_threshold,
+        threshold=threshold,
     )
     spans = segment_rounds(samples, min_confidence=cfg.hud_min_confidence)
     log.info("clock scan: %d sample(s), %d round(s)", len(samples), len(spans))
@@ -383,16 +453,19 @@ def review_file(
     warnings: list[str] = []
     knowledge = load_knowledge()
     started = time.monotonic()
-    hud_templates = (
-        DigitTemplates.load(cfg.hud_templates_path)
-        if cfg.hud_check and cfg.situation_pass and cfg.hud_templates_path
-        else DigitTemplates({})
-    )
+    # Bundled glyphs plus anything this player has taught, so the clock reads with no setup.
+    hud_templates = load_templates(cfg.hud_templates_path) if cfg.hud_check else DigitTemplates({})
 
     try:
         recording = probe(path, deps.probe_runner)
-        spans = _scan_rounds(recording, deps, hud_templates, out_dir)
-        deaths = _scan_deaths(recording, deps, hud_templates, out_dir)
+        timer_region = _timer_region(cfg)
+        threshold = (
+            _resolve_threshold(recording, deps, hud_templates, timer_region, out_dir)
+            if timer_region and hud_templates.characters()
+            else ADAPTIVE_THRESHOLD
+        )
+        spans = _scan_rounds(recording, deps, hud_templates, out_dir, threshold)
+        deaths = _scan_deaths(recording, deps, hud_templates, out_dir, threshold)
         windows = plan_windows(
             recording.duration_s,
             window_s=cfg.window_s,
@@ -416,7 +489,7 @@ def review_file(
 
     # Before any model call: the icons name the agent, and a told agent still wins.
     if context.agent is None:
-        detected = _identify_agent(recording, deps, windows, out_dir)
+        detected = _identify_agent(recording, deps, windows, out_dir, threshold)
         if detected:
             context = replace(context, agent=detected)
             warnings.append(f"agent read from the ability icons as {detected}")
@@ -445,12 +518,14 @@ def review_file(
                 context,
                 knowledge,
                 cfg.situation_pass,
-                hud=_read_window_hud(recording, window, deps, hud_templates, frames_dir),
+                hud=_read_window_hud(recording, window, deps, hud_templates, frames_dir, threshold),
                 buy_phase_max_s=cfg.buy_phase_max_s,
                 hud_min_confidence=cfg.hud_min_confidence,
                 situation_frames=cfg.situation_frames,
                 coach_frames=cfg.coach_frames,
-                state=_read_window_state(recording, window, deps, hud_templates, frames_dir),
+                state=_read_window_state(
+                    recording, window, deps, hud_templates, frames_dir, threshold
+                ),
             )
         except ParseError as exc:
             # One unreadable window is a warning; every window unreadable fails the file.

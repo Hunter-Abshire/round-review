@@ -31,6 +31,11 @@ round-review = "round_review.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+# Coaching knowledge and the learned HUD glyphs are data the package must carry.
+"round_review.coaching.knowledge" = ["*.json"]
+"round_review.vision.templates" = ["*.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"

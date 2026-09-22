@@ -79,18 +79,27 @@ class Config:
     # so it vetoes phase misreads. The region is x,y,w,h as fractions of the frame; check it
     # against your own footage with `round-review hud crop`.
     hud_check: bool = True
-    hud_timer_region: str = "0.455,0.020,0.090,0.055"
+    # Measured against real 720p footage and verified at 1080p and 1440p: Valorant draws the
+    # HUD at fixed fractions of a 16:9 frame, so these work out of the box. Ultrawide or a
+    # changed HUD scale still needs `hud crop --region`.
+    hud_timer_region: str = "0.476,0.022,0.049,0.042"
     hud_templates_path: Path | None = None
     hud_min_confidence: float = 0.8
-    # -1 = adaptive; a calibrated fixed cutoff separates white text from bright scenery.
+    # -1 asks the app to find a cutoff for each recording by reading the clock at a few
+    # moments and keeping whichever value produces the most valid times. -2 is the old
+    # per-crop adaptive midpoint, which measured 6 correct reads out of 16 because it
+    # moves with the scenery behind the translucent timer plate. 0..255 fixes it.
     hud_threshold: int = -1
     buy_phase_max_s: float = 45.0
     # The rest of the HUD, all optional and all off until measured against real footage.
     # Empty means "not configured", which reads as unknown rather than as a wrong answer.
-    hud_health_region: str = ""
+    hud_health_region: str = "0.301,0.930,0.040,0.039"
     hud_credits_region: str = ""
     # Semicolon-separated x,y,w,h regions, one per ability slot, left to right.
-    hud_ability_regions: str = ""
+    hud_ability_regions: str = (
+        "0.397,0.910,0.032,0.049;0.457,0.910,0.032,0.049;"
+        "0.516,0.910,0.032,0.049;0.576,0.910,0.032,0.049"
+    )
     # Measured on real 720p footage: an available icon is a white glyph on a dark plate,
     # so only ~15-27% of the crop is lit, and an unavailable one is under 0.5%. The old
     # 0.25 default read three of four available abilities as spent.
@@ -453,9 +462,10 @@ FIELDS: tuple[FieldSpec, ...] = (
         "hud_threshold",
         "Round clock",
         "Brightness cutoff",
-        "Separates the white timer from the scene. -1 picks one automatically.",
+        "Separates the white timer from the scene. -1 measures one for each recording, "
+        "-2 adapts per frame (worse), 0-255 fixes it.",
         "int",
-        minimum=-1,
+        minimum=-2,
         maximum=255,
         advanced=True,
     ),
@@ -690,8 +700,11 @@ def load_config(
                 raise ConfigError(f"{key} must be >= 0 (0 means unlimited), got {number}")
 
     threshold = values.get("hud_threshold", -1)
-    if not isinstance(threshold, int) or not -1 <= threshold <= 255:
-        raise ConfigError("hud_threshold must be -1 (adaptive) or an integer from 0 to 255")
+    if not isinstance(threshold, int) or not -2 <= threshold <= 255:
+        raise ConfigError(
+            "hud_threshold must be -1 (find it automatically), -2 (adaptive per crop) "
+            "or an integer from 0 to 255"
+        )
 
     from round_review.vision.hud import parse_region
 

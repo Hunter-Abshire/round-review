@@ -37,9 +37,11 @@ from round_review.validation.scenes import (
 )
 from round_review.video.probe import Recording, SubprocessRunner, probe
 from round_review.vision.agent_icons import AgentTemplates, read_kit
-from round_review.vision.calibrate import best_threshold, score_thresholds
-from round_review.vision.digits import DigitTemplates
+from round_review.vision.calibrate import auto_threshold, best_threshold, score_thresholds
+from round_review.vision.digits import DigitTemplates, load_templates
 from round_review.vision.hud import (
+    ADAPTIVE_THRESHOLD,
+    AUTO_THRESHOLD,
     HudRead,
     Region,
     build_crop_args,
@@ -286,6 +288,31 @@ def _templates_path(config: Config, override: Path | None) -> Path:
     return override or config.hud_templates_path or default_data_dir() / "hud-digits.json"
 
 
+def _hud_templates(config: Config, override: Path | None = None) -> DigitTemplates:
+    """The glyphs that ship with the package, plus anything this player has taught."""
+    return load_templates(_templates_path(config, override))
+
+
+def _resolved_threshold(
+    config: Config, recording: Recording, region: Region, templates: DigitTemplates
+) -> int:
+    """Measure a brightness cutoff for this recording when the config asks for one."""
+    if config.hud_threshold != AUTO_THRESHOLD:
+        return config.hud_threshold
+    runner = SubprocessRunner(config.ffmpeg_path)
+    out = default_data_dir() / "hud-auto"
+    moments = [recording.duration_s * f for f in (0.15, 0.3, 0.45, 0.6, 0.75, 0.9)]
+    found = auto_threshold(
+        lambda t: [
+            read_hud(
+                recording, m, region, runner, templates, out, config.hud_min_confidence, t
+            ).clock_text
+            for m in moments
+        ]
+    )
+    return found if found is not None else ADAPTIVE_THRESHOLD
+
+
 def agent_templates_path(config: Config, override: Path | None = None) -> Path:
     return (
         override or config.hud_agent_templates_path or default_data_dir() / "hud-agent-icons.json"
@@ -346,6 +373,8 @@ def hud_learn(
     path = _templates_path(config, store)
     try:
         recording = probe(file, SubprocessRunner(config.ffprobe_path))
+        # Learn at the cutoff the reader will actually use, or the glyphs will not match.
+        threshold = _resolved_threshold(config, recording, box, _hud_templates(config, store))
         samples = learn_from_crop(
             recording,
             timestamp_s,
@@ -353,7 +382,7 @@ def hud_learn(
             SubprocessRunner(config.ffmpeg_path),
             path.parent / "hud-learn",
             reads,
-            threshold=config.hud_threshold,
+            threshold=threshold,
         )
         templates = DigitTemplates.load(path).learn(samples)
         templates.save(path)
@@ -390,13 +419,12 @@ def hud_read(
     box = _hud_region(config, region)
     path = _templates_path(config, store)
     try:
-        templates = DigitTemplates.load(path)
+        templates = _hud_templates(config, store)
         recording = probe(file, SubprocessRunner(config.ffprobe_path))
     except RoundReviewError as exc:
         _fail(exc)
         return
-    if not templates.characters():
-        click.echo(f"No digit templates in {path} yet; run `hud learn` first.", err=True)
+    threshold = _resolved_threshold(config, recording, box, templates)
     for timestamp in timestamps:
         read = read_hud(
             recording,
@@ -406,18 +434,26 @@ def hud_read(
             templates,
             out_dir=path.parent / "hud-read",
             min_confidence=config.hud_min_confidence,
-            threshold=config.hud_threshold,
+            threshold=threshold,
         )
         click.echo(f"\nt={timestamp:.1f}s  crop: {read.crop_path}")
         if read.error:
             click.echo(f"  error: {read.error}")
             continue
         if read.clock_text is None:
-            click.echo(
-                f"  found {read.glyph_count} glyph(s) but could not read them. "
-                "Teach these shapes with `hud learn --at "
-                f"{timestamp:.1f} --reads <what you see>`."
-            )
+            if read.glyph_count == 0:
+                # Normal: the spike icon replaces the timer once the spike is down.
+                click.echo(
+                    "  nothing to read here. That is expected post-plant, when the spike "
+                    "icon replaces the timer. If it happens in live play, check the region "
+                    "with `hud crop --region`."
+                )
+            else:
+                click.echo(
+                    f"  found {read.glyph_count} glyph(s) but could not read them. Your HUD "
+                    "may be scaled or ultrawide: check `hud crop --region`, then teach it "
+                    f"with `hud learn --at {timestamp:.1f} --reads <what you see>`."
+                )
             continue
         proof = (
             "live round, so any buy phase or post-plant call is wrong"
@@ -528,6 +564,9 @@ def hud_learn_agent(
     if not abilities:
         click.echo("hud_ability_regions is not set, so there are no icons to learn.", err=True)
         return
+    threshold = _resolved_threshold(
+        config, recording, _hud_region(config, None), _hud_templates(config, store)
+    )
     learned = 0
     for timestamp in timestamps:
         kit = read_kit(
@@ -536,7 +575,7 @@ def hud_learn_agent(
             abilities,
             SubprocessRunner(config.ffmpeg_path),
             out_dir=path.parent / "agent-icons",
-            threshold=config.hud_threshold,
+            threshold=threshold,
         )
         if not kit:
             click.echo(f"  t={timestamp:.1f}s: could not crop every icon, skipped", err=True)
@@ -562,7 +601,7 @@ def hud_state(
     """Read health, credits and the ability icons, so the regions can be checked by eye."""
     path = _templates_path(config, store)
     try:
-        templates = DigitTemplates.load(path)
+        templates = _hud_templates(config, store)
         recording = probe(file, SubprocessRunner(config.ffprobe_path))
         regions = {
             name: region
@@ -584,6 +623,7 @@ def hud_state(
             err=True,
         )
         return
+    threshold = _resolved_threshold(config, recording, _hud_region(config, None), templates)
     for timestamp in timestamps:
         state = read_state(
             recording,
@@ -594,7 +634,7 @@ def hud_state(
             templates,
             out_dir=path.parent / "hud-state",
             min_confidence=config.hud_min_confidence,
-            threshold=config.hud_threshold,
+            threshold=threshold,
             lit_threshold=config.hud_lit_threshold,
             lit_min_fraction=config.hud_lit_min_fraction,
         )
@@ -615,7 +655,7 @@ def hud_deaths(config: Config, file: Path, store: Path | None) -> None:
     """
     path = _templates_path(config, store)
     try:
-        templates = DigitTemplates.load(path)
+        templates = _hud_templates(config, store)
         recording = probe(file, SubprocessRunner(config.ffprobe_path))
         region = optional_region(config.hud_health_region)
     except RoundReviewError as exc:
@@ -624,6 +664,7 @@ def hud_deaths(config: Config, file: Path, store: Path | None) -> None:
     if region is None:
         click.echo("hud_health_region is not set, so deaths cannot be found.", err=True)
         return
+    threshold = _resolved_threshold(config, recording, _hud_region(config, None), templates)
     samples = scan_numbers(
         recording,
         region,
@@ -632,7 +673,7 @@ def hud_deaths(config: Config, file: Path, store: Path | None) -> None:
         out_dir=path.parent / "hud-deaths",
         min_confidence=config.hud_min_confidence,
         interval_s=config.scan_interval_s,
-        threshold=config.hud_threshold,
+        threshold=threshold,
         stem="health",
     )
     readable = sum(1 for _t, value in samples if value is not None)
@@ -652,11 +693,12 @@ def hud_rounds(config: Config, file: Path, region: str | None, store: Path | Non
     box = _hud_region(config, region)
     path = _templates_path(config, store)
     try:
-        templates = DigitTemplates.load(path)
+        templates = _hud_templates(config, store)
         recording = probe(file, SubprocessRunner(config.ffprobe_path))
     except RoundReviewError as exc:
         _fail(exc)
         return
+    threshold = _resolved_threshold(config, recording, _hud_region(config, None), templates)
     samples = scan_clock(
         recording,
         box,
@@ -665,7 +707,7 @@ def hud_rounds(config: Config, file: Path, region: str | None, store: Path | Non
         out_dir=path.parent / "hud-rounds",
         min_confidence=config.hud_min_confidence,
         interval_s=config.scan_interval_s,
-        threshold=config.hud_threshold,
+        threshold=threshold,
     )
     readable = sum(1 for s in samples if s.clock_s is not None)
     spans = segment_rounds(samples, min_confidence=config.hud_min_confidence)
@@ -727,10 +769,7 @@ def _hud_reader(config: Config, use_hud: bool) -> object | None:
     if not use_hud:
         return None
     path = _templates_path(config, None)
-    templates = DigitTemplates.load(path)
-    if not templates.characters():
-        click.echo(f"No digit templates in {path}; scoring the model only.", err=True)
-        return None
+    templates = _hud_templates(config, None)
     region = parse_region(config.hud_timer_region)
     runner = SubprocessRunner(config.ffmpeg_path)
 
@@ -743,7 +782,7 @@ def _hud_reader(config: Config, use_hud: bool) -> object | None:
             templates,
             out_dir=path.parent / "hud-scenes",
             min_confidence=config.hud_min_confidence,
-            threshold=config.hud_threshold,
+            threshold=_resolved_threshold(config, recording, region, templates),
         )
 
     return read

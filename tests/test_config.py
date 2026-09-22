@@ -163,7 +163,7 @@ def test_hud_threshold_can_be_calibrated(tmp_path: Path, threshold: int) -> None
     assert load_config(path, env={}, data_dir=tmp_path).hud_threshold == threshold
 
 
-@pytest.mark.parametrize("threshold", [-2, 256])
+@pytest.mark.parametrize("threshold", [-3, 256])
 def test_invalid_hud_threshold_is_rejected(tmp_path: Path, threshold: int) -> None:
     path = tmp_path / "config.toml"
     path.write_text(f"hud_threshold = {threshold}\n")

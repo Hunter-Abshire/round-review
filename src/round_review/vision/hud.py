@@ -21,6 +21,9 @@ from round_review.vision.raster import Glyph, normalize_glyph, parse_pgm, segmen
 
 # The crop is upscaled before thresholding so thin strokes survive.
 CROP_SCALE = 4
+# hud_threshold sentinels: measure a cutoff per recording, or adapt per crop.
+AUTO_THRESHOLD = -1
+ADAPTIVE_THRESHOLD = -2
 # Above this the round is live and pre-plant: neither the buy phase nor the spike timer
 # ever shows a clock this high.
 DEFAULT_BUY_PHASE_MAX_S = 45.0

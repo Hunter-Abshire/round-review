@@ -1,5 +1,7 @@
 """Picking the brightness cutoff by measurement instead of by guessing."""
 
+from pathlib import Path
+
 from round_review.vision.calibrate import ThresholdScore, best_threshold, score_thresholds
 from round_review.vision.raster import Gray
 
@@ -69,3 +71,65 @@ class TestBest:
             ThresholdScore(220, 1, 1, ()),
         ]
         assert best_threshold(scores) == 210
+
+
+# ------------------------------------------------------------ calibrating with no help
+
+from round_review.vision.calibrate import auto_threshold, clock_like_score  # noqa: E402
+from round_review.vision.digits import DigitTemplates  # noqa: E402
+
+
+class TestClockLikeScore:
+    """The clock is its own answer key: a cutoff that produces readable M:SS strings is
+    right, and one that produces noise is wrong. No user input needed."""
+
+    def test_counts_only_readings_that_parse_as_a_clock(self) -> None:
+        assert clock_like_score(["1:39", "1:38", None, "garbage", "0:05"]) == 3
+
+    def test_nothing_readable_scores_zero(self) -> None:
+        assert clock_like_score([None, None]) == 0
+
+    def test_an_impossible_clock_does_not_count(self) -> None:
+        # 1:75 is not a time; a cutoff producing it is mis-segmenting.
+        assert clock_like_score(["1:75", "2:99"]) == 0
+
+
+class TestAutoThreshold:
+    def test_picks_the_cutoff_that_reads_the_most_clocks(self) -> None:
+        def reader(threshold: int) -> list[str | None]:
+            return ["1:39", "1:38", "0:17"] if threshold >= 190 else [None, "junk", None]
+
+        assert auto_threshold(reader, candidates=(150, 190, 200, 210)) == 200
+
+    def test_none_when_no_cutoff_reads_anything(self) -> None:
+        assert auto_threshold(lambda _t: [None, None], candidates=(150, 200)) is None
+
+    def test_prefers_the_middle_of_the_best_run(self) -> None:
+        def reader(threshold: int) -> list[str | None]:
+            return ["1:39"] if threshold in (180, 190, 200) else [None]
+
+        assert auto_threshold(reader, candidates=(170, 180, 190, 200, 210)) == 190
+
+
+class TestBundledTemplates:
+    def test_the_package_ships_every_clock_character(self) -> None:
+        from round_review.vision.digits import bundled_templates
+
+        assert bundled_templates().missing() == []
+
+    def test_player_samples_are_added_to_the_bundled_ones(self, tmp_path: Path) -> None:
+        from round_review.vision.digits import bundled_templates, load_templates
+        from round_review.vision.raster import Glyph
+
+        extra = DigitTemplates({"7": (Glyph(("#" * 6,) * 10, 0.5),)})
+        path = extra.save(tmp_path / "mine.json")
+        merged = load_templates(path)
+        assert merged.missing() == []
+        assert len(merged.characters_to_samples["7"]) > len(
+            bundled_templates().characters_to_samples["7"]
+        )
+
+    def test_no_player_file_still_reads_the_clock(self, tmp_path: Path) -> None:
+        from round_review.vision.digits import load_templates
+
+        assert load_templates(tmp_path / "absent.json").missing() == []

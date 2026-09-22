@@ -11,6 +11,8 @@ import json
 import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from functools import cache
+from importlib.resources import files
 from pathlib import Path
 
 from round_review.errors import HudError
@@ -139,3 +141,40 @@ def parse_clock(text: str | None) -> float | None:
     if not match:
         return None
     return int(match.group(1)) * 60 + int(match.group(2))
+
+
+@cache
+def bundled_templates() -> DigitTemplates:
+    """The glyphs that ship with the package, learned from real Valorant footage.
+
+    Valorant's timer font is the same for everyone, and `normalize_glyph` reduces a glyph
+    to a fixed grid, so templates learned at 720p read the clock at 1080p and 1440p too
+    (verified). That is why these can be bundled: nobody should have to teach a program to
+    read digits it will see identically on every machine.
+    """
+    raw = files("round_review.vision.templates").joinpath("hud-digits.json").read_text("utf-8")
+    payload = json.loads(raw)
+    return DigitTemplates(
+        {
+            str(char): tuple(_parse_glyph(sample) for sample in samples)
+            for char, samples in payload["characters"].items()
+        }
+    )
+
+
+def load_templates(path: Path | None) -> DigitTemplates:
+    """What ships with the package, plus anything this player has taught it.
+
+    Merged rather than replaced: a player teaching their own HUD adds samples, it does not
+    throw away the ones that already work.
+    """
+    base = bundled_templates()
+    if path is None or not path.exists():
+        return base
+    learned = DigitTemplates.load(path)
+    if not learned.characters_to_samples:
+        return base
+    merged = {char: list(samples) for char, samples in base.characters_to_samples.items()}
+    for char, samples in learned.characters_to_samples.items():
+        merged.setdefault(char, []).extend(samples)
+    return DigitTemplates({char: tuple(samples) for char, samples in merged.items()})

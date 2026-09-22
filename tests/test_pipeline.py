@@ -38,7 +38,7 @@ def test_calibrated_threshold_separates_digits_from_bright_background(tmp_path: 
         ffmpeg_runner=FakeFfmpeg(pgm(6, 4, pixels)),
     )
     result = _read_window_hud(
-        RECORDING, Window(0, 0, 12, "tiled"), deps, templates_for_blocks(), tmp_path
+        RECORDING, Window(0, 0, 12, "tiled"), deps, templates_for_blocks(), tmp_path, 220
     )
     assert result is not None and result.glyph_count == 3
 
@@ -504,32 +504,39 @@ def test_hud_clock_rescues_windows_the_model_called_buy_phase(
     assert all(r.situation is not None and r.situation.phase == "early" for r in report.results)
 
 
-def test_without_learned_digits_the_hud_is_not_consulted(
+def test_the_hud_is_read_without_the_player_teaching_it_anything(
     video: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """The glyphs ship with the package, so a fresh install reads the clock on its own.
+
+    This used to be the opposite test: no learned digits meant no HUD read, which meant a
+    new user got none of the deterministic checks until they ran `hud learn` by hand.
+    """
     import round_review.pipeline as pipeline_module
+    from round_review.vision.hud import HudRead
     from tests.coaching.test_review import SITUATION
 
     reads: list[object] = []
     monkeypatch.setattr(
         pipeline_module,
         "read_hud",
-        lambda *a, **k: reads.append(a) or None,  # type: ignore[func-returns-value]
+        lambda *a, **k: (reads.append(a), HudRead("1:20", 80.0, 1.0, 4))[1],
     )
     buy = json.loads(SITUATION)
     buy["phase"] = "pre_round"
-    empty = tmp_path / "digits.json"
-    empty.write_text(json.dumps({"characters": {}}))
     deps = make_deps(
         tmp_path,
-        FakeTransport(*[json.dumps(buy)] * 3),
+        # The override lets coaching run, so the coach pass needs answers too.
+        FakeTransport(*([json.dumps(buy), good(65.0)] * 10)),
         situation_pass=True,
         hud_check=True,
-        hud_templates_path=empty,
+        hud_templates_path=tmp_path / "nothing-was-ever-learned.json",
     )
     report = review_file(video, deps)
-    assert reads == []  # nothing to match against, so no crop is taken
-    assert all(r.abstained for r in report.results)
+    assert reads, "the bundled glyphs should be enough to read the clock"
+    # 1:20 is above the buy phase maximum, so the model's pre_round call is overruled.
+    assert not all(r.abstained for r in report.results)
+    assert any("HUD override" in w for r in report.results for w in r.warnings)
 
 
 def test_hud_check_off_never_reads_the_hud(

@@ -12,7 +12,7 @@ cutoff that only just works will stop working on a brighter map.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from round_review.vision.raster import Gray, segment_glyphs
@@ -71,4 +71,40 @@ def best_threshold(scores: Sequence[ThresholdScore]) -> int | None:
             run = []
     if not best_run:
         return None
+    return best_run[len(best_run) // 2]
+
+
+def clock_like_score(readings: Sequence[str | None]) -> int:
+    """How many readings actually parse as a round clock.
+
+    This is what makes calibration need no help from the player: the clock is its own
+    answer key. A cutoff that mis-segments produces strings that are not times, and a
+    cutoff that works produces M:SS. Nobody has to type in what they saw.
+    """
+    from round_review.vision.digits import parse_clock
+
+    return sum(1 for text in readings if parse_clock(text) is not None)
+
+
+def auto_threshold(
+    read_at: Callable[[int], Sequence[str | None]],
+    candidates: Sequence[int] = DEFAULT_CANDIDATES,
+) -> int | None:
+    """The cutoff that reads the most valid clocks, taken from the middle of its run.
+
+    `read_at` is given a cutoff and returns what the clock read at each sampled frame.
+    """
+    scores = [(threshold, clock_like_score(read_at(threshold))) for threshold in candidates]
+    best = max((score for _t, score in scores), default=0)
+    if best == 0:
+        return None
+    run: list[int] = []
+    best_run: list[int] = []
+    for threshold, score in scores:
+        if score == best:
+            run.append(threshold)
+            if len(run) > len(best_run):
+                best_run = list(run)
+        else:
+            run = []
     return best_run[len(best_run) // 2]

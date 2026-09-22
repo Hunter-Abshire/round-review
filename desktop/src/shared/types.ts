@@ -312,3 +312,5 @@ export interface ConfigDocument {
   groups: string[];
   fields: ConfigField[];
 }
+
+export type Verdict = 'useful' | 'wrong';

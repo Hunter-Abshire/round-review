@@ -32,7 +32,13 @@ from round_review.coaching.question import (
 from round_review.coaching.review import WindowResult, review_window
 from round_review.coaching.session import build_session_summary, habit_counts
 from round_review.coaching.situation import Situation, parse_situation
-from round_review.config import Config, default_data_dir, habits_file, identities_file
+from round_review.config import (
+    Config,
+    default_data_dir,
+    feedback_file,
+    habits_file,
+    identities_file,
+)
 from round_review.diagnosis import abstention_warning
 from round_review.errors import (
     AlreadyProcessed,
@@ -43,6 +49,7 @@ from round_review.errors import (
     RoundReviewError,
     VideoError,
 )
+from round_review.feedback import MIN_RATINGS_TO_ACT, dismissal_rate, read_feedback
 from round_review.identity import identity_index, write_identity
 from round_review.ledger import (
     LedgerEntry,
@@ -507,6 +514,10 @@ def review_file(
     counts = habit_counts(results)
     history_path = habits_file(cfg)
     trends = tag_habits(counts, read_history(history_path), windows=len(results))
+    # What the player has already told us is not worth hearing, from the thumbs in the app.
+    dismissed = dismissal_rate(
+        read_feedback(feedback_file(cfg), latest_only=True), min_ratings=MIN_RATINGS_TO_ACT
+    )
 
     report = Report(
         recording,
@@ -520,6 +531,7 @@ def review_file(
             rank=context.rank,
             checklist=knowledge.checklist,
             trends=trends,
+            dismissed=dismissed,
         ),
     )
     report_path = write_report(report, out_dir)

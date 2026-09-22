@@ -269,3 +269,28 @@ def test_the_habit_counts_for_history_come_out_of_the_summary() -> None:
         )
     ]
     assert habit_counts(results) == {"positioning.one_line": 2}
+
+
+def test_a_check_the_player_keeps_dismissing_sorts_last() -> None:
+    from round_review.coaching.session import build_session_summary as build
+
+    results = [
+        result(
+            0,
+            [
+                finding("positioning.one_line", "positioning", 1.0),
+                finding("peeking.wide_swing_known", "peeking", 2.0),
+            ],
+        )
+    ]
+    summary = build(results, None, dismissed={"positioning.one_line": 0.9})
+    assert summary.focus[-1].check_id == "positioning.one_line"
+
+
+def test_a_dismissed_check_is_still_reported() -> None:
+    from round_review.coaching.session import build_session_summary as build
+
+    results = [result(0, [finding("positioning.one_line", "positioning", 1.0)])]
+    summary = build(results, None, dismissed={"positioning.one_line": 1.0})
+    # Being unwelcome is not the same as being wrong: it drops down, it does not vanish.
+    assert [h.check_id for h in summary.focus] == ["positioning.one_line"]

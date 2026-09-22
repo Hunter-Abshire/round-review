@@ -98,6 +98,11 @@ class Config:
     hud_agent_min_confidence: float = 0.75
 
 
+def feedback_file(config: Config) -> Path:
+    """Where thumbs on findings live: beside the ledger, like the rest of the history."""
+    return config.ledger_path.parent / "feedback.jsonl"
+
+
 def habits_file(config: Config) -> Path:
     """Where the cross-match habit history lives: beside the ledger, like identities."""
     return config.ledger_path.parent / "habits.json"

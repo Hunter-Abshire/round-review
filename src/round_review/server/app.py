@@ -7,6 +7,7 @@ import os
 import re
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -23,11 +24,19 @@ from round_review.config import (
     FIELDS,
     GROUPS,
     Config,
+    feedback_file,
     identities_file,
     load_config,
     write_config,
 )
 from round_review.errors import LedgerError, RoundReviewError, VideoError
+from round_review.feedback import (
+    FeedbackEntry,
+    dismissal_rate,
+    hit_rate,
+    read_feedback,
+    record_feedback,
+)
 from round_review.identity import played_at_from, read_identities
 from round_review.ledger import LedgerEntry, read_ledger
 from round_review.llm.models import list_models
@@ -84,6 +93,13 @@ class AskQuestion(BaseModel):
     end_s: float | None = None
 
     context: dict[str, Any] | None = None
+
+
+class RateFinding(BaseModel):
+    key: str
+    check_id: str
+    timestamp_s: float = Field(ge=0)
+    verdict: Literal["useful", "wrong"]
 
 
 class SubmitJob(BaseModel):
@@ -381,6 +397,39 @@ def create_app(
         return _job_json(
             jobs.submit_question(path, key_for(path), spec, context_from_mapping(body.context))
         )
+
+    @app.post("/api/feedback", status_code=201)
+    def rate_finding(body: RateFinding) -> dict[str, Any]:
+        """Record what the player thought of one finding. Appending the same moment again
+        is how you change your mind, so this never rejects a duplicate."""
+        _valid_key(body.key)
+        cfg = holder.current
+        record_feedback(
+            feedback_file(cfg),
+            FeedbackEntry(
+                key=body.key,
+                check_id=body.check_id,
+                timestamp_s=body.timestamp_s,
+                verdict=body.verdict,
+                noted_at=datetime.now(UTC),
+            ),
+        )
+        return {"recorded": True}
+
+    @app.get("/api/feedback")
+    def feedback_stats() -> dict[str, Any]:
+        """The hit rate, and the checks the player throws out most. This is the only
+        measurement of whether any of the coaching is right."""
+        entries = read_feedback(feedback_file(holder.current), latest_only=True)
+        dismissals = dismissal_rate(entries)
+        return {
+            "rated": len(entries),
+            "hit_rate": hit_rate(entries),
+            "worst_checks": [
+                {"check_id": check, "dismissal_rate": rate}
+                for check, rate in sorted(dismissals.items(), key=lambda kv: (-kv[1], kv[0]))[:10]
+            ],
+        }
 
     @app.get("/api/jobs")
     def list_jobs() -> dict[str, Any]:

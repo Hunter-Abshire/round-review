@@ -9,6 +9,7 @@ import {
   type Report,
   type ReviewOptions,
   type Settings,
+  type Verdict,
 } from '../shared/types';
 import {
   collectMarkers,
@@ -85,6 +86,9 @@ export interface State {
   // Whether the sidebar is showing one finding rather than the list. Following the video
   // highlights a finding without opening it, so playback never hijacks what you are reading.
   detailOpen: boolean;
+  // What the player said about each finding, keyed by marker id. Local to this report;
+  // the server keeps the durable record.
+  ratings: Record<string, Verdict>;
 }
 
 export type ContextField = keyof PlayerContext;
@@ -97,6 +101,7 @@ export type Action =
   | { type: 'marker_selected'; id: string }
   | { type: 'marker_opened'; id: string }
   | { type: 'detail_closed' }
+  | { type: 'finding_rated'; id: string; verdict: Verdict }
   | { type: 'side_panel_picked'; panel: SidePanel; timestamp_s?: number }
   | { type: 'marker_stepped'; direction: 1 | -1 }
   | { type: 'back_to_list' }
@@ -146,6 +151,7 @@ export const initialState: State = {
   previousView: VIEW.list,
   sidePanel: SIDE_PANEL.findings,
   detailOpen: false,
+  ratings: {},
 };
 
 const ACTIVE_JOB = new Set<string>(['queued', 'running']);
@@ -192,6 +198,8 @@ export const reduce = (state: State, action: Action): State => {
         selectedMarkerId: markers[0]?.id ?? null,
         sidePanel: SIDE_PANEL.findings,
         detailOpen: false,
+        // Marker ids are per report, so opinions from the last one must not carry over.
+        ratings: {},
         error: null,
       };
     }
@@ -208,6 +216,8 @@ export const reduce = (state: State, action: Action): State => {
             sidePanel: SIDE_PANEL.findings,
           }
         : state;
+    case 'finding_rated':
+      return { ...state, ratings: { ...state.ratings, [action.id]: action.verdict } };
     case 'detail_closed':
       return { ...state, detailOpen: false };
     case 'side_panel_picked': {

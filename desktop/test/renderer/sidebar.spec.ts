@@ -145,3 +145,42 @@ describe('renderFindingDetail', () => {
     expect(root.textContent).toContain('marked on the video');
   });
 });
+
+describe('rating a finding', () => {
+  const marker = collectMarkers(report())[0]!;
+
+  it('offers yes and no when rating is wired up', () => {
+    const root = document.createElement('div');
+    const rated: string[] = [];
+    renderFindingDetail(
+      root,
+      { marker, frameUrl: null, ordinalOf: 1, total: 1 },
+      { onBack: () => undefined, onStep: () => undefined, onRate: v => rated.push(v) },
+    );
+    const buttons = Array.from(root.querySelectorAll('[data-verdict]')) as HTMLElement[];
+    expect(buttons.map(b => b.dataset['verdict'])).toEqual(['useful', 'wrong']);
+    buttons[1]!.click();
+    expect(rated).toEqual(['wrong']);
+  });
+
+  it('marks the verdict the player already gave', () => {
+    const root = document.createElement('div');
+    renderFindingDetail(
+      root,
+      { marker, frameUrl: null, ordinalOf: 1, total: 1, verdict: 'useful' },
+      { onBack: () => undefined, onStep: () => undefined, onRate: () => undefined },
+    );
+    const chosen = root.querySelector('[data-verdict="useful"]');
+    expect(chosen?.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('draws nothing when rating is not wired up', () => {
+    const root = document.createElement('div');
+    renderFindingDetail(
+      root,
+      { marker, frameUrl: null, ordinalOf: 1, total: 1 },
+      { onBack: () => undefined, onStep: () => undefined },
+    );
+    expect(root.querySelector('[data-verdict]')).toBeNull();
+  });
+});

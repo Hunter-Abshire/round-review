@@ -7,6 +7,7 @@ import type {
   Report,
   ReviewOptions,
   Settings,
+  Verdict,
 } from '../shared/types';
 
 export interface FetchResponseLike {
@@ -41,6 +42,12 @@ export interface Api {
     question: string,
     context: PlayerContext,
   ) => Promise<Job>;
+  rateFinding: (
+    key: string,
+    checkId: string,
+    timestampS: number,
+    verdict: Verdict,
+  ) => Promise<{ recorded: boolean }>;
   getJob: (id: string) => Promise<Job>;
   getReport: (key: string) => Promise<Report>;
   videoUrl: (key: string) => string;
@@ -92,6 +99,17 @@ export const createApi = (baseUrl: string, fetchFn: FetchLike): Api => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path, start_s: startS, end_s: endS, question, context }),
+      }),
+    rateFinding: (key, checkId, timestampS, verdict) =>
+      request<{ recorded: boolean }>('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key,
+          check_id: checkId,
+          timestamp_s: timestampS,
+          verdict,
+        }),
       }),
     getJob: id => request<Job>(`/api/jobs/${encodeURIComponent(id)}`),
     getReport: key => request<Report>(`/api/reports/${encodeURIComponent(key)}`),

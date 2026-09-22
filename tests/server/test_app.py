@@ -552,3 +552,44 @@ def test_a_clip_with_nothing_known_says_so_rather_than_guessing(
     assert item["agent"] is None
     assert item["map"] is None
     assert item["played_at"] is not None  # the file's own time always works
+
+
+def test_rating_a_finding_is_recorded_and_counted(client: TestClient) -> None:
+    body = {
+        "key": "0123456789abcdef",
+        "check_id": "positioning.one_line",
+        "timestamp_s": 12.0,
+        "verdict": "wrong",
+    }
+    assert client.post("/api/feedback", json=body).status_code == 201
+    assert client.post("/api/feedback", json={**body, "verdict": "useful"}).status_code == 201
+    stats = client.get("/api/feedback").json()
+    # Same clip, same check, same moment: the later opinion replaces the earlier one.
+    assert stats["rated"] == 1
+    assert stats["hit_rate"] == 1.0
+
+
+def test_an_unknown_verdict_is_rejected(client: TestClient) -> None:
+    response = client.post(
+        "/api/feedback",
+        json={
+            "key": "0123456789abcdef",
+            "check_id": "a.b",
+            "timestamp_s": 1.0,
+            "verdict": "maybe",
+        },
+    )
+    assert response.status_code == 422
+
+
+def test_a_bad_key_is_rejected(client: TestClient) -> None:
+    response = client.post(
+        "/api/feedback",
+        json={"key": "../../etc", "check_id": "a.b", "timestamp_s": 1.0, "verdict": "useful"},
+    )
+    assert response.status_code in {400, 404, 422}
+
+
+def test_no_feedback_yet_has_no_hit_rate(client: TestClient) -> None:
+    stats = client.get("/api/feedback").json()
+    assert stats["rated"] == 0 and stats["hit_rate"] is None

@@ -152,10 +152,20 @@ const run = (api: Api): void => {
             : null,
           ordinalOf: marker.ordinal,
           total: state.markers.length,
+          verdict: state.ratings[marker.id] ?? null,
         },
         {
           onBack: () => dispatch({ type: 'detail_closed' }),
           onStep: direction => step(direction),
+          onRate: verdict => {
+            dispatch({ type: 'finding_rated', id: marker.id, verdict });
+            if (state.reviewKey) {
+              // Fire and forget: a lost opinion must never interrupt what is being read.
+              void api
+                .rateFinding(state.reviewKey, marker.finding.check_id, marker.timestamp_s, verdict)
+                .catch(() => undefined);
+            }
+          },
         },
       );
       return;

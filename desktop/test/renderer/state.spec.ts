@@ -324,3 +324,22 @@ describe('asking, pending state', () => {
     expect(s.ask.start_s).toBe(0);
   });
 });
+
+describe('rating findings', () => {
+  it('remembers the verdict for a finding', () => {
+    const state = reduce(initialState, { type: 'finding_rated', id: 'w0-f0', verdict: 'wrong' });
+    expect(state.ratings['w0-f0']).toBe('wrong');
+  });
+
+  it('lets the player change their mind', () => {
+    const first = reduce(initialState, { type: 'finding_rated', id: 'w0-f0', verdict: 'wrong' });
+    const second = reduce(first, { type: 'finding_rated', id: 'w0-f0', verdict: 'useful' });
+    expect(second.ratings['w0-f0']).toBe('useful');
+  });
+
+  it('forgets ratings when a different report loads', () => {
+    const rated = reduce(initialState, { type: 'finding_rated', id: 'w0-f0', verdict: 'wrong' });
+    const loaded = reduce(rated, { type: 'report_loaded', key: 'abc', report: report() });
+    expect(loaded.ratings).toEqual({});
+  });
+});

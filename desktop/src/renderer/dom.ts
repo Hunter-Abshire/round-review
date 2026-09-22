@@ -12,6 +12,7 @@ import type {
   ReviewOptions,
   Settings,
   StrengthItem,
+  Verdict,
 } from '../shared/types';
 import {
   formatBytes,
@@ -1056,11 +1057,15 @@ export interface FindingDetailProps {
   frameUrl: string | null;
   ordinalOf: number;
   total: number;
+  /** What the player already said about this finding, if anything. */
+  verdict?: Verdict | null;
 }
 
 export interface FindingDetailHandlers {
   onBack: () => void;
   onStep: (direction: 1 | -1) => void;
+  /** Optional: without it the thumbs are not drawn at all. */
+  onRate?: (verdict: Verdict) => void;
 }
 
 /**
@@ -1134,4 +1139,23 @@ export const renderFindingDetail = (
     root.append(section('Assumed, not seen', finding.assumption_flags.join(', ')));
   }
   root.append(el('p', 'confidence', `Confidence: ${Math.round(finding.confidence * 100)}%`));
+
+  // The only measurement of whether any of this is right. Asked plainly, once per finding.
+  if (handlers.onRate) {
+    const rate = el('div', 'rate');
+    rate.append(el('span', 'section-label', 'Was this useful?'));
+    for (const [verdict, label] of [
+      ['useful', 'Yes'],
+      ['wrong', 'No'],
+    ] as const) {
+      const button = el('button', 'btn ghost rate-btn', label);
+      button.dataset['verdict'] = verdict;
+      const chosen = props.verdict === verdict;
+      button.setAttribute('aria-pressed', String(chosen));
+      if (chosen) button.classList.add('selected');
+      button.addEventListener('click', () => handlers.onRate?.(verdict));
+      rate.append(button);
+    }
+    root.append(rate);
+  }
 };

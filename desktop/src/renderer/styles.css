@@ -1287,3 +1287,47 @@ video {
   color: #9fb0c9;
   text-transform: capitalize;
 }
+
+/* Rating a finding: quiet until hovered, so it never competes with the coaching itself. */
+.rate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.rate .section-label {
+  margin: 0;
+}
+
+.rate-btn {
+  padding: 4px 14px;
+  font-size: 12px;
+}
+
+.rate-btn.selected {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* How a habit has behaved across matches, beside the focus card's number. */
+.trend {
+  margin-left: auto;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  background: var(--chip-bg, rgba(255, 255, 255, 0.06));
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.trend-persistent {
+  color: var(--warn, #e4a11b);
+}
+
+.trend-improving {
+  color: var(--good, #4caf7d);
+}

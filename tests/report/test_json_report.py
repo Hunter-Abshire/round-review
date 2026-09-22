@@ -53,3 +53,44 @@ def test_partial_and_abstention_reach_the_json(tmp_path: Path) -> None:
     assert "cap" in data["stopped_reason"]
     assert data["windows"][0]["abstained_reason"] is None
     assert report_to_dict(base, base_dir=tmp_path)["partial"] is False
+
+
+def test_the_session_summary_reaches_the_json(tmp_path: Path) -> None:
+    from dataclasses import replace
+
+    from round_review.coaching.session import build_session_summary
+    from tests.coaching.test_session import finding, result, strength
+
+    results = [
+        result(
+            0,
+            [finding("peeking.no_repeek", "peeking", 3.0)],
+            [strength("utility.has_purpose", "utility", 5.0)],
+        ),
+        result(1, [finding("peeking.no_repeek", "peeking", 15.0)]),
+    ]
+    base = build_report(tmp_path)
+    with_summary = replace(
+        base, results=tuple(results), summary=build_session_summary(results, rank="Gold 2")
+    )
+    data = report_to_dict(with_summary, base_dir=tmp_path)["summary"]
+    assert "peeking" in data["verdict"] and "2 times" in data["verdict"]
+    assert data["rank_focus"]
+    (focus,) = data["focus"]
+    assert focus["check_id"] == "peeking.no_repeek"
+    assert focus["count"] == 2
+    assert focus["timestamps"] == [3.0, 15.0]
+    assert focus["score"] > 0
+    assert data["practice"]["rule"]
+    assert data["strengths"][0]["category"] == "utility"
+
+
+def test_window_strengths_reach_the_json(tmp_path: Path) -> None:
+    from dataclasses import replace
+
+    from tests.coaching.test_session import result, strength
+
+    results = [result(0, strengths=[strength("utility.has_purpose", "utility", 5.0)])]
+    base = replace(build_report(tmp_path), results=tuple(results))
+    window = report_to_dict(base, base_dir=tmp_path)["windows"][0]
+    assert window["strengths"][0]["why_it_worked"] == "it denied the angle"

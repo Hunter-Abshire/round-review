@@ -7,10 +7,61 @@ from dataclasses import asdict as _asdict
 from pathlib import Path
 from typing import Any
 
-from round_review.coaching.knowledge import load_checklist
+from round_review.coaching.knowledge import Checklist, load_checklist
+from round_review.coaching.session import Habit
 from round_review.report.markdown import Report, _relative, check_label
 
 JSON_REPORT_FILENAME = "report.json"
+
+
+def _habit_to_dict(habit: Habit, base_dir: Path, checklist: Checklist) -> dict[str, Any]:
+    return {
+        "check_id": habit.check_id,
+        "check_label": check_label(checklist, habit.check_id),
+        "category": habit.category,
+        "count": habit.count,
+        "windows": list(habit.windows),
+        "score": habit.score,
+        "mean_confidence": habit.mean_confidence,
+        "timestamps": [f.timestamp_s for f in habit.instances],
+        "observation": habit.lead.observation,
+        "visible_evidence": habit.lead.visible_evidence,
+        "information_revealed_later": habit.lead.information_revealed_later,
+        "assumption_flags": list(habit.lead.assumption_flags),
+        "suggested_alternative": habit.lead.suggested_alternative,
+        "evidence_frame": _relative(habit.lead.evidence_frame, base_dir),
+    }
+
+
+def _summary_to_dict(report: Report, base_dir: Path) -> dict[str, Any]:
+    summary = report.summary
+    assert summary is not None
+    checklist = load_checklist()
+    return {
+        "verdict": summary.verdict,
+        "rank_focus": summary.rank_focus,
+        "windows_reviewed": summary.windows_reviewed,
+        "focus": [_habit_to_dict(h, base_dir, checklist) for h in summary.focus],
+        "hindsight": [_habit_to_dict(h, base_dir, checklist) for h in summary.hindsight],
+        "also_seen": [
+            {
+                "check_id": h.check_id,
+                "check_label": check_label(checklist, h.check_id),
+                "category": h.category,
+                "count": h.count,
+            }
+            for h in summary.also_seen
+        ],
+        "strengths": [
+            {
+                **{k: v for k, v in _asdict(s).items() if k != "evidence_frame"},
+                "check_label": check_label(checklist, s.check_id),
+                "evidence_frame": _relative(s.evidence_frame, base_dir),
+            }
+            for s in summary.strengths
+        ],
+        "practice": _asdict(summary.practice) if summary.practice else None,
+    }
 
 
 def report_to_dict(report: Report, base_dir: Path) -> dict[str, Any]:
@@ -29,6 +80,7 @@ def report_to_dict(report: Report, base_dir: Path) -> dict[str, Any]:
         "model": report.model,
         "partial": report.partial,
         "stopped_reason": report.stopped_reason,
+        "summary": _summary_to_dict(report, base_dir) if report.summary else None,
         "windows": [
             {
                 "index": r.window.index,
@@ -38,6 +90,13 @@ def report_to_dict(report: Report, base_dir: Path) -> dict[str, Any]:
                 "context": _asdict(r.context),
                 "abstained_reason": r.abstained_reason,
                 "situation": r.situation.to_dict() if r.situation else None,
+                "strengths": [
+                    {
+                        **{k: v for k, v in _asdict(s).items() if k != "evidence_frame"},
+                        "evidence_frame": _relative(s.evidence_frame, base_dir),
+                    }
+                    for s in r.strengths
+                ],
                 "findings": [
                     {
                         **{k: v for k, v in _asdict(f).items() if k != "evidence_frame"},

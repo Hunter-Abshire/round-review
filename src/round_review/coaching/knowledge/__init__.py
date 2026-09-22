@@ -19,6 +19,24 @@ from round_review.errors import KnowledgeError
 
 ROLES: frozenset[str] = frozenset({"duelist", "initiator", "controller", "sentinel"})
 
+# The feedback categories, in the order a review addresses them: what kept you alive and
+# won rounds first, mechanical polish after.
+CATEGORY_IDS: tuple[str, ...] = (
+    "positioning",
+    "trading",
+    "utility",
+    "timing",
+    "peeking",
+    "info",
+    "postplant",
+    "retake",
+    "economy",
+    "crosshair",
+    "movement",
+    "mental",
+    "other",
+)
+
 RANK_BUCKETS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("iron_bronze", ("iron", "bronze")),
     ("silver_gold", ("silver", "gold")),
@@ -215,6 +233,41 @@ def load_agents() -> dict[str, AgentBrief]:
 @cache
 def load_maps() -> dict[str, MapBrief]:
     return parse_maps(_read("maps.json"))
+
+
+@dataclass(frozen=True, slots=True)
+class Practice:
+    """What to do about a category: one rule for ranked, one drill for outside it."""
+
+    rule: str
+    drill: str
+
+
+@dataclass(frozen=True, slots=True)
+class Drills:
+    by_category: Mapping[str, Practice]
+
+    def for_category(self, category: str) -> Practice | None:
+        return self.by_category.get(category) or self.by_category.get("other")
+
+
+def parse_drills(data: Mapping[str, Any]) -> Drills:
+    raw = _field(data, "categories", "drills")
+    if not isinstance(raw, Mapping):
+        raise KnowledgeError("drills: categories must be an object")
+    out: dict[str, Practice] = {}
+    for category, practice in raw.items():
+        where = f"drill {category}"
+        out[str(category)] = Practice(
+            rule=str(_field(practice, "rule", where)),
+            drill=str(_field(practice, "drill", where)),
+        )
+    return Drills(out)
+
+
+@cache
+def load_drills() -> Drills:
+    return parse_drills(_read("drills.json"))
 
 
 @dataclass(frozen=True, slots=True)

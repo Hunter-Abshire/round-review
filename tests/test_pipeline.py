@@ -303,7 +303,7 @@ def test_end_to_end_real_ffmpeg_fake_model(sample_video: Path, tmp_path: Path) -
     (entry,) = read_ledger(deps.config.ledger_path)
     text = Path(entry.report_path or "").read_text(encoding="utf-8")
     assert "# Review: sample.mp4" in text
-    assert "![t=2.5s](frames/e00_01.jpg)" in text
+    assert "![0:02](frames/e00_01.jpg)" in text  # evidence cut at the finding's timestamp
 
 
 def test_progress_callback_and_json_report(video: Path, tmp_path: Path) -> None:

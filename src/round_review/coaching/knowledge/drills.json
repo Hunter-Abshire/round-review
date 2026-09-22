@@ -1,0 +1,57 @@
+{
+  "note": "One in-game rule and one practice drill per category. The rule forces the habit into ranked play, the drill builds the skill outside it; coaching practice is that the pair sticks where either alone does not. Sourced from published rank training plans and VOD-review guides (see docs/coaching-quality.md).",
+  "categories": {
+    "crosshair": {
+      "rule": "Pre-aim the next corner at head height before you reach it.",
+      "drill": "Practice Range, 5 minutes: pick a head-height reference line, strafe while keeping the crosshair on it, stop and take one shot. Then one deathmatch, headshots only, no crouch spraying."
+    },
+    "movement": {
+      "rule": "Stop moving before the first shot, every time.",
+      "drill": "Practice Range, 5 minutes: stop, fire two to four bullets, reset. Then 4 minutes of strafe-stop-burst repetitions."
+    },
+    "peeking": {
+      "rule": "After you shoot once, reposition. Never re-peek the same angle.",
+      "drill": "Practice Range, 5 minutes: clear corners with a pre-aimed jiggle peek, returning to cover between each one."
+    },
+    "positioning": {
+      "rule": "Only take space you can trade from or escape out of.",
+      "drill": "Custom game, 5 minutes: take one layer of space, freeze, and check how many angles you have exposed before moving again."
+    },
+    "utility": {
+      "rule": "Every ability serves one of four jobs: info, isolate, deny, escape. If it serves none, hold it.",
+      "drill": "Custom game, 5 minutes: cast each ability and say out loud which of the four jobs it served. Then 5 minutes of flash and smoke timing, counting down to the peek."
+    },
+    "trading": {
+      "rule": "No solo first contact. On a pick, reset instead of chasing.",
+      "drill": "Custom game with a friend, 5 minutes: practise trade spacing, close enough to trade, far enough not to die to the same spray."
+    },
+    "economy": {
+      "rule": "Buy with the team or save with the team. Never half-buy alone.",
+      "drill": "Two minutes before each round: check team credits and say the buy out loud before spending."
+    },
+    "info": {
+      "rule": "Check the minimap after every kill and every death.",
+      "drill": "Deathmatch or ranked, 5 minutes: build the habit of a minimap glance immediately after each kill and death."
+    },
+    "timing": {
+      "rule": "Decide before the clock forces it: hit, split, or pivot.",
+      "drill": "Custom game, 5 minutes: set a decision timer and commit to a plan before it expires."
+    },
+    "postplant": {
+      "rule": "For the first five seconds after the plant, no solo swings.",
+      "drill": "Custom game, 5 minutes: rehearse post-plant positions on your usual map, one per site."
+    },
+    "retake": {
+      "rule": "Retake on a countdown together, never one at a time.",
+      "drill": "Custom game, 5 minutes: practise the retake entry with utility first, then bodies."
+    },
+    "mental": {
+      "rule": "Losing twice the same way means change the plan immediately.",
+      "drill": "After the session, two minutes: write down one mistake and the fix in your own words."
+    },
+    "other": {
+      "rule": "Pick one focus for the week and hold it, rather than fixing everything at once.",
+      "drill": "After each session, two minutes: document one mistake and one fix."
+    }
+  }
+}

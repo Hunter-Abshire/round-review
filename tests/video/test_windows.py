@@ -172,3 +172,15 @@ class TestBuyWindows:
         )
         got = round_windows(spans, window_s=12.0, duration_s=600.0, buy_windows=False)
         assert [w for w in got if w.source == "buy"] == []
+
+
+def test_round_start_windows_are_the_ones_the_player_is_alive_for() -> None:
+    """Identifying an agent from ability icons has to sample moments where the player is
+    looking at their OWN kit. While spectating, the HUD shows the dead player's teammate."""
+    spans = (
+        RoundSpan(1, 0.0, 120.0, live_end_s=90.0),
+        RoundSpan(2, 120.0, 240.0, live_end_s=210.0),
+    )
+    got = round_windows(spans, window_s=12.0, duration_s=600.0)
+    starts = [w for w in got if w.source == "round_start"]
+    assert [w.start_s for w in starts] == [0.0, 120.0]

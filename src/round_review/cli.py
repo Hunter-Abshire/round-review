@@ -540,6 +540,44 @@ def hud_calibrate(
     click.echo("Then teach the digits with `hud learn`.")
 
 
+@hud.command("agents")
+@click.option("--store", type=click.Path(dir_okay=False, path_type=Path), default=None)
+@click.pass_obj
+def hud_agents(config: Config, store: Path | None) -> None:
+    """List the agents whose ability icons have been learned."""
+    path = agent_templates_path(config, store)
+    templates = AgentTemplates.load(path)
+    if not templates.agents_to_kits:
+        click.echo(f"Nothing learned yet. Teach one with `hud learn-agent`. ({path})")
+        return
+    for agent in templates.agents():
+        kits = len(templates.agents_to_kits[agent])
+        click.echo(f"  {agent}: {kits} icon set(s)")
+    click.echo(f"\nStored in {path}")
+    click.echo("If one of these is wrong, remove it with `hud forget-agent <name>`.")
+
+
+@hud.command("forget-agent")
+@click.argument("agent")
+@click.option("--store", type=click.Path(dir_okay=False, path_type=Path), default=None)
+@click.pass_obj
+def hud_forget_agent(config: Config, agent: str, store: Path | None) -> None:
+    """Remove one agent's learned icons.
+
+    A wrong entry is worse than a missing one: it produces a confident wrong agent on every
+    later clip, and every ability the coach then suggests belongs to somebody else.
+    """
+    path = agent_templates_path(config, store)
+    templates = AgentTemplates.load(path)
+    match = next((a for a in templates.agents() if a.lower() == agent.lower()), None)
+    if match is None:
+        click.echo(f"{agent} is not in {path}. Known: {templates.agents() or 'nothing'}", err=True)
+        return
+    remaining = AgentTemplates({a: k for a, k in templates.agents_to_kits.items() if a != match})
+    remaining.save(path)
+    click.echo(f"Forgot {match}. Known now: {remaining.agents() or 'nothing'}")
+
+
 @hud.command("learn-agent")
 @click.argument("file", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option("--at", "timestamps", type=float, multiple=True, required=True)

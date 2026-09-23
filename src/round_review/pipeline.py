@@ -245,8 +245,10 @@ def _identify_agent(
         return None
     if not abilities:
         return None
-    # A handful of moments spread across the clip, so one obscured frame cannot decide it.
-    moments = [(w.start_s + w.end_s) / 2 for w in windows[:: max(1, len(windows) // 5)]][:5]
+    # Only the opening of a round. While spectating, the HUD shows the player you are
+    # watching, so a moment sampled after a death reads a TEAMMATE's kit: that is how a Jett
+    # kit ended up learned from a Veto clip and then confidently matched back.
+    moments = _own_kit_moments(windows)
 
     templates = AgentTemplates.load(
         cfg.hud_agent_templates_path or default_data_dir() / "hud-agent-icons.json"
@@ -436,6 +438,19 @@ def _resolve_threshold(
     return found
 
 
+def _own_kit_moments(windows: Sequence[Window]) -> list[float]:
+    """Moments where the player is certainly looking at their own abilities.
+
+    A round opening: the barrier has just dropped, so nobody is dead and nobody is
+    spectating. Falls back to spreading across the clip when no round was found, which is
+    less safe but better than refusing to look at all.
+    """
+    starts = [w for w in windows if w.source == "round_start"]
+    chosen = starts or list(windows[:: max(1, len(windows) // 5)])
+    # Just after the barrier drops, not the middle, to stay clear of the first trades.
+    return [w.start_s + 2.0 for w in chosen][:5]
+
+
 def _learn_agent_icons(
     recording: Recording,
     deps: Deps,
@@ -462,8 +477,7 @@ def _learn_agent_icons(
     templates = AgentTemplates.load(path)
     if agent in templates.agents_to_kits:
         return  # already known; more samples of the same thing buy nothing
-    middles = [(w.start_s + w.end_s) / 2 for w in windows]
-    for moment in middles[:3]:
+    for moment in _own_kit_moments(windows)[:3]:
         kit = read_kit(
             recording, moment, abilities, deps.ffmpeg_runner, out_dir / "agent-learn", threshold
         )

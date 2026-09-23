@@ -90,6 +90,34 @@ def _halve(images: list[str]) -> list[str]:
     return images[::2] if len(images) > 2 else images[:1]
 
 
+def _distinct_findings(findings: list[Finding]) -> tuple[list[Finding], list[str]]:
+    """Drop findings that repeat one already kept.
+
+    A model asked for up to three findings will pad to three, and on a buy window that came
+    back as two checks carrying byte-for-byte identical text. Two ids for one thought is
+    one finding, and a report that prints it twice looks broken whatever the advice says.
+    """
+    kept: list[Finding] = []
+    warnings: list[str] = []
+    seen: set[str] = set()
+    for finding in findings:
+        # A check firing twice for one moment is always the model padding, whatever the
+        # wording: one check is one thought about one thing.
+        fingerprint = " ".join(
+            f"{finding.observation} {finding.suggested_alternative}".lower().split()
+        )
+        if finding.check_id in seen or fingerprint in seen:
+            warnings.append(
+                f"dropped finding {finding.check_id}: it says the same thing as one already "
+                "reported for this moment"
+            )
+            continue
+        seen.add(fingerprint)
+        seen.add(finding.check_id)
+        kept.append(finding)
+    return kept, warnings
+
+
 def _relevant_findings(
     findings: list[Finding],
     situation: Situation | None,
@@ -326,6 +354,8 @@ def review_window(
             warnings.append(f"coach attempt {attempt + 1} unparseable, retry issued: {exc}")
             continue
         if situation_pass:
+            findings, duplicate_warnings = _distinct_findings(findings)
+            parse_warnings.extend(duplicate_warnings)
             findings, relevance_warnings = _relevant_findings(
                 findings, situation, context.agent, knowledge.agents, state
             )

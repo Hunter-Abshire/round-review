@@ -667,3 +667,62 @@ def test_an_ordinary_pre_round_window_still_abstains(samples: list[FrameSample])
     transport = FakeTransport(_situation(phase="pre_round"), GOOD)
     result = review(transport, samples)
     assert result.abstained_reason == "buy phase"
+
+
+def test_two_findings_saying_the_same_thing_become_one(samples: list[FrameSample]) -> None:
+    """A real buy window produced eco_discipline and bonus_round_awareness with byte-for-byte
+    identical observations and fixes. Two checks, one thought, and the report reads broken."""
+    base = json.loads(GOOD)["findings"][0]
+    twin = dict(base, check_id="economy.eco_discipline", category="economy")
+    same = dict(twin, check_id="economy.bonus_round_awareness")
+    transport = FakeTransport(_situation(phase="pre_round"), json.dumps({"findings": [twin, same]}))
+    result = _buy_review(transport, samples)
+    assert len(result.findings) == 1
+    assert any("same" in w.lower() or "duplicate" in w.lower() for w in result.warnings)
+
+
+def test_findings_that_differ_are_both_kept(samples: list[FrameSample]) -> None:
+    base = json.loads(GOOD)["findings"][0]
+    one = dict(base, check_id="economy.eco_discipline", category="economy")
+    two = dict(
+        base,
+        check_id="economy.team_sync",
+        category="economy",
+        observation="Three teammates are saving while this player buys a rifle.",
+        suggested_alternative="Save with them so all five clear the full-buy line next round.",
+    )
+    transport = FakeTransport(_situation(phase="pre_round"), json.dumps({"findings": [one, two]}))
+    assert len(_buy_review(transport, samples).findings) == 2
+
+
+def _buy_review(transport: FakeTransport, samples: list[FrameSample]) -> WindowResult:
+    """Economy findings only survive on a buy window; everywhere else the phase gate drops
+    them, which is correct."""
+    return review_window(
+        Window(index=0, start_s=60.0, end_s=72.0, source="buy"),
+        samples,
+        transport,
+        model="m",
+        calls_today=0,
+        cap=10,
+        timeout_s=1.0,
+        context=PlayerContext(rank="Gold 2"),
+        knowledge=KNOWLEDGE,
+        situation_pass=True,
+    )
+
+
+def test_one_check_fires_once_per_moment(samples: list[FrameSample]) -> None:
+    """A real buy window reported economy.team_sync twice with different wording. One check
+    is one thought about one thing, so the second is padding however it is phrased."""
+    base = json.loads(GOOD)["findings"][0]
+    first = dict(base, check_id="economy.team_sync", category="economy")
+    second = dict(
+        first,
+        observation="Put another way, the team is not buying together at all.",
+        suggested_alternative="Agree a buy before anyone opens the menu.",
+    )
+    transport = FakeTransport(
+        _situation(phase="pre_round"), json.dumps({"findings": [first, second]})
+    )
+    assert len(_buy_review(transport, samples).findings) == 1
